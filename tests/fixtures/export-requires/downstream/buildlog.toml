@@ -1,0 +1,3 @@
+# A consumer of pkgy (tests/test_export_requires.py); pkgx comes with it.
+uses = ["buildlog-cpp"]
+spec = ["spec.toml"]

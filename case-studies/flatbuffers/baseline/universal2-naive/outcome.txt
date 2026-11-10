@@ -1,0 +1,10 @@
+build exit status: 0
+flatc: x86_64 arm64
+flattests: x86_64 arm64
+flatsamplebinary: x86_64 arm64
+libflatbuffers.a: x86_64 arm64
+===== flatc runs during the build (custom commands)
+10
+===== ctest
+1/1 Test #1: flattests ........................   Passed
+100% tests passed out of 1

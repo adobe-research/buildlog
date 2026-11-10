@@ -1,0 +1,175 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# python_bindings/halide/tutorial/CMakeLists.txt (python_tutorials.dl).
+halide_py_test = [
+  ["lesson_01_basics", "python_bindings/halide/tutorial/lesson_01_basics.py", "python_tutorial"],
+  [
+    "lesson_02_input_image",
+    "python_bindings/halide/tutorial/lesson_02_input_image.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_03_debugging_1",
+    "python_bindings/halide/tutorial/lesson_03_debugging_1.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_04_debugging_2",
+    "python_bindings/halide/tutorial/lesson_04_debugging_2.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_05_scheduling_1",
+    "python_bindings/halide/tutorial/lesson_05_scheduling_1.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_06_realizing_over_shifted_domains",
+    "python_bindings/halide/tutorial/lesson_06_realizing_over_shifted_domains.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_07_multi_stage_pipelines",
+    "python_bindings/halide/tutorial/lesson_07_multi_stage_pipelines.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_08_scheduling_2",
+    "python_bindings/halide/tutorial/lesson_08_scheduling_2.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_09_update_definitions",
+    "python_bindings/halide/tutorial/lesson_09_update_definitions.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_10_aot_compilation_generate",
+    "python_bindings/halide/tutorial/lesson_10_aot_compilation_generate.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_10_aot_compilation_run",
+    "python_bindings/halide/tutorial/lesson_10_aot_compilation_run.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_11_cross_compilation",
+    "python_bindings/halide/tutorial/lesson_11_cross_compilation.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_12_using_the_gpu",
+    "python_bindings/halide/tutorial/lesson_12_using_the_gpu.py",
+    "python_tutorial"
+  ],
+  ["lesson_13_tuples", "python_bindings/halide/tutorial/lesson_13_tuples.py", "python_tutorial"],
+  ["lesson_14_types", "python_bindings/halide/tutorial/lesson_14_types.py", "python_tutorial"],
+  [
+    "lesson_15_runtime",
+    "python_bindings/halide/tutorial/lesson_15_runtime.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_16_rgb_run",
+    "python_bindings/halide/tutorial/lesson_16_rgb_run.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_17_predicated_rdom",
+    "python_bindings/halide/tutorial/lesson_17_predicated_rdom.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_18_parallel_associative_reductions",
+    "python_bindings/halide/tutorial/lesson_18_parallel_associative_reductions.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_19_wrapper_funcs",
+    "python_bindings/halide/tutorial/lesson_19_wrapper_funcs.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_20_cloning_funcs",
+    "python_bindings/halide/tutorial/lesson_20_cloning_funcs.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_21_auto_scheduler_run",
+    "python_bindings/halide/tutorial/lesson_21_auto_scheduler_run.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_22_jit_performance",
+    "python_bindings/halide/tutorial/lesson_22_jit_performance.py",
+    "python_tutorial"
+  ],
+  [
+    "lesson_23_serialization",
+    "python_bindings/halide/tutorial/lesson_23_serialization.py",
+    "python_tutorial"
+  ],
+  ["lesson_24_async", "python_bindings/halide/tutorial/lesson_24_async.py", "python_tutorial"],
+]
+halide_py_tut_generator = [
+  ["lesson_15", "lesson_15_generators.py"],
+  ["lesson_16", "lesson_16_rgb_generate.py"],
+  ["lesson_21", "lesson_21_auto_scheduler_generate.py"],
+]
+# (library, generator script, generator, function name, python extension module)
+halide_py_tut_lib = [
+  ["python_my_first_generator", "lesson_15", "my_first_generator", "", ""],
+  ["python_my_second_generator_1", "lesson_15", "my_second_generator", "", ""],
+  ["python_my_second_generator_2", "lesson_15", "my_second_generator", "", ""],
+  ["python_my_second_generator_3", "lesson_15", "my_second_generator", "", ""],
+  ["python_brighten_planar", "lesson_16", "brighten", "brighten_planar", "brighten_planar"],
+  [
+    "python_brighten_interleaved",
+    "lesson_16",
+    "brighten",
+    "brighten_interleaved",
+    "brighten_interleaved"
+  ],
+  ["python_brighten_either", "lesson_16", "brighten", "brighten_either", "brighten_either"],
+  [
+    "python_brighten_specialized",
+    "lesson_16",
+    "brighten",
+    "brighten_specialized",
+    "brighten_specialized"
+  ],
+  [
+    "python_auto_schedule_false",
+    "lesson_21",
+    "auto_schedule_gen",
+    "auto_schedule_false",
+    "auto_schedule_false"
+  ],
+  [
+    "python_auto_schedule_true",
+    "lesson_21",
+    "auto_schedule_gen",
+    "auto_schedule_true",
+    "auto_schedule_true"
+  ],
+]
+halide_py_tut_lib_param = [
+  ["python_my_second_generator_1", "parallel=false"],
+  ["python_my_second_generator_1", "scale=3.0"],
+  ["python_my_second_generator_1", "rotation=ccw"],
+  ["python_my_second_generator_1", "output.type=uint16"],
+  ["python_my_second_generator_2", "scale=9.0"],
+  ["python_my_second_generator_2", "rotation=ccw"],
+  ["python_my_second_generator_2", "output.type=float32"],
+  ["python_my_second_generator_3", "parallel=false"],
+  ["python_my_second_generator_3", "output.type=float64"],
+  ["python_brighten_planar", "layout=planar"],
+  ["python_brighten_interleaved", "layout=interleaved"],
+  ["python_brighten_either", "layout=either"],
+  ["python_brighten_specialized", "layout=specialized"],
+  ["python_auto_schedule_true", "autoscheduler.parallelism=32"],
+  ["python_auto_schedule_true", "autoscheduler.last_level_cache_size=16777216"],
+  ["python_auto_schedule_true", "autoscheduler.balance=40"],
+]

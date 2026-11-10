@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# A TinyCC bootstrap (case-studies/tcc/README.md): one configure, one Ninja
+# graph. tcc_stage1 is built by the user's C toolchain; it is the toolchain
+# tcc-stage1, which builds tcc_stage2 (the toolchain tcc-stage2), which builds
+# tcc_stage3; a test checks stage 2 and stage 3 are the same file. A small
+# library and program are built with tcc-stage2 and run. Configure with:
+#   uv run --frozen buildlog configure --user case-studies/tcc/project/presets/apple-clang-arm64.toml \
+#     -C BUILD case-studies/tcc/project
+uses = ["buildlog-cpp", "tcc"]
+source_root = "${REPO_ROOT}/case-studies/tcc"
+spec = ["spec.toml"]
+config_decl = { release = "arm64-macos" }
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = ["tcc_stage3", "hello"]

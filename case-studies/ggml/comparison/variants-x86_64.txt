@@ -1,0 +1,235 @@
+# variants-x86_64 (CMake) vs buildlog x86_64-macos.release.none
+# not compared (toolchain spelling): compiler path, -arch vs --target/-isysroot,
+# -o/-c/-MD/-MF/-MT
+
+## compiles
+objects: cmake 240 (all targets), buildlog 237, compared 236
+  only buildlog: simple-backend:examples/simple/simple-backend.cpp
+- 15 objects of ggml-cpu-alderlake-feats, ggml-cpu-cannonlake-feats, ggml-cpu-cascadelake-feats, ggml-cpu-cooperlake-feats, ggml-cpu-haswell-feats, ggml-cpu-icelake-feats, ggml-cpu-ivybridge-feats, ggml-cpu-piledriver-feats, ggml-cpu-sandybridge-feats, ggml-cpu-sapphirerapids-feats, ggml-cpu-skylakex-feats, ggml-cpu-sse42-feats, ggml-cpu-x64-feats, ggml-cpu-zen4-feats, test-backend-ops
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-alderlake
+    define only cmake:    -Dggml_cpu_alderlake_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-cannonlake
+    define only cmake:    -Dggml_cpu_cannonlake_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-cascadelake
+    define only cmake:    -Dggml_cpu_cascadelake_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-cooperlake
+    define only cmake:    -Dggml_cpu_cooperlake_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-haswell
+    define only cmake:    -Dggml_cpu_haswell_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-icelake
+    define only cmake:    -Dggml_cpu_icelake_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-ivybridge
+    define only cmake:    -Dggml_cpu_ivybridge_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-piledriver
+    define only cmake:    -Dggml_cpu_piledriver_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-sandybridge
+    define only cmake:    -Dggml_cpu_sandybridge_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-sapphirerapids
+    define only cmake:    -Dggml_cpu_sapphirerapids_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-skylakex
+    define only cmake:    -Dggml_cpu_skylakex_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-sse42
+    define only cmake:    -Dggml_cpu_sse42_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-x64
+    define only cmake:    -Dggml_cpu_x64_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 12 objects of ggml-cpu-zen4
+    define only cmake:    -Dggml_cpu_zen4_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 6 objects of ggml-base
+    define only cmake:    -Dggml_base_EXPORTS
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 3 objects of ggml-base
+    define only cmake:    -Dggml_base_EXPORTS
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-alderlake
+    define only cmake:    -Dggml_cpu_alderlake_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-cannonlake
+    define only cmake:    -Dggml_cpu_cannonlake_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-cascadelake
+    define only cmake:    -Dggml_cpu_cascadelake_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-cooperlake
+    define only cmake:    -Dggml_cpu_cooperlake_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-haswell
+    define only cmake:    -Dggml_cpu_haswell_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-icelake
+    define only cmake:    -Dggml_cpu_icelake_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-ivybridge
+    define only cmake:    -Dggml_cpu_ivybridge_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-piledriver
+    define only cmake:    -Dggml_cpu_piledriver_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-sandybridge
+    define only cmake:    -Dggml_cpu_sandybridge_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-sapphirerapids
+    define only cmake:    -Dggml_cpu_sapphirerapids_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-skylakex
+    define only cmake:    -Dggml_cpu_skylakex_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-sse42
+    define only cmake:    -Dggml_cpu_sse42_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-x64
+    define only cmake:    -Dggml_cpu_x64_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu-zen4
+    define only cmake:    -Dggml_cpu_zen4_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 2 objects of ggml
+    define only cmake:    -Dggml_EXPORTS
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+
+## links
+- libggml-base.0.25.3.dylib
+    cmake:    -dynamiclib -Wl,-headerpad_max_install_names -lm
+    buildlog: -dynamiclib -lm
+- libggml-cpu-alderlake.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-cannonlake.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-cascadelake.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-cooperlake.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-haswell.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-icelake.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-ivybridge.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-piledriver.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-sandybridge.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-sapphirerapids.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-skylakex.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-sse42.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-x64.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml-cpu-zen4.so
+    cmake:    -bundle -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -bundle -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- libggml.0.25.3.dylib
+    cmake:    -dynamiclib -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib
+    buildlog: -dynamiclib libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+- test-backend-ops
+    cmake:    -Wl,-search_paths_first -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml.0.25.3.dylib libggml-base.0.25.3.dylib
+    buildlog: libggml.0.25.3.dylib libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/x86_64-macos.release.none
+  linked only by buildlog: simple-backend
+
+## global symbols and load commands
+- libggml-base.0.25.3.dylib: 701 vs 701 global symbols, same
+    loads: /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-alderlake.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-cannonlake.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-cascadelake.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-cooperlake.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-haswell.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-icelake.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-ivybridge.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-piledriver.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-sandybridge.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-sapphirerapids.so: 449 vs 449 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-skylakex.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-sse42.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-x64.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu-zen4.so: 442 vs 442 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml.0.25.3.dylib: 19 vs 19 global symbols, same
+    loads: /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib, @rpath/libggml.0.dylib

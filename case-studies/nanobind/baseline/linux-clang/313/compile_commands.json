@@ -1,0 +1,74 @@
+[
+{
+  "directory": "/work/buildlog/build/case-nanobind/baseline-raw/313/build",
+  "command": "/usr/bin/clang++ -DPy_LIMITED_API=0x030C0000 -Dnanobind_example_ext_EXPORTS -I$PY/include/python3.13 -I$NB/include -O3 -DNDEBUG -fPIC -fvisibility=hidden -fno-stack-protector -Os -ffunction-sections -fdata-sections -o CMakeFiles/nanobind_example_ext.dir/src/nanobind_example_ext.cpp.o -c $SRC/src/nanobind_example_ext.cpp",
+  "file": "$SRC/src/nanobind_example_ext.cpp",
+  "output": "/work/buildlog/build/case-nanobind/baseline-raw/313/build/CMakeFiles/nanobind_example_ext.dir/src/nanobind_example_ext.cpp.o"
+},
+{
+  "directory": "/work/buildlog/build/case-nanobind/baseline-raw/313/build",
+  "command": "/usr/bin/clang++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -DPy_LIMITED_API=0x030C0000 -I$PY/include/python3.13 -I$NB/include -isystem $NB/ext/robin_map/include -O3 -DNDEBUG -fPIC -fvisibility=hidden -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-stack-protector -o CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_internals.cpp.o -c $NB/src/nb_internals.cpp",
+  "file": "$NB/src/nb_internals.cpp",
+  "output": "/work/buildlog/build/case-nanobind/baseline-raw/313/build/CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_internals.cpp.o"
+},
+{
+  "directory": "/work/buildlog/build/case-nanobind/baseline-raw/313/build",
+  "command": "/usr/bin/clang++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -DPy_LIMITED_API=0x030C0000 -I$PY/include/python3.13 -I$NB/include -isystem $NB/ext/robin_map/include -O3 -DNDEBUG -fPIC -fvisibility=hidden -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-stack-protector -o CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_func.cpp.o -c $NB/src/nb_func.cpp",
+  "file": "$NB/src/nb_func.cpp",
+  "output": "/work/buildlog/build/case-nanobind/baseline-raw/313/build/CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_func.cpp.o"
+},
+{
+  "directory": "/work/buildlog/build/case-nanobind/baseline-raw/313/build",
+  "command": "/usr/bin/clang++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -DPy_LIMITED_API=0x030C0000 -I$PY/include/python3.13 -I$NB/include -isystem $NB/ext/robin_map/include -O3 -DNDEBUG -fPIC -fvisibility=hidden -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-stack-protector -o CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_type.cpp.o -c $NB/src/nb_type.cpp",
+  "file": "$NB/src/nb_type.cpp",
+  "output": "/work/buildlog/build/case-nanobind/baseline-raw/313/build/CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_type.cpp.o"
+},
+{
+  "directory": "/work/buildlog/build/case-nanobind/baseline-raw/313/build",
+  "command": "/usr/bin/clang++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -DPy_LIMITED_API=0x030C0000 -I$PY/include/python3.13 -I$NB/include -isystem $NB/ext/robin_map/include -O3 -DNDEBUG -fPIC -fvisibility=hidden -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-stack-protector -o CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_enum.cpp.o -c $NB/src/nb_enum.cpp",
+  "file": "$NB/src/nb_enum.cpp",
+  "output": "/work/buildlog/build/case-nanobind/baseline-raw/313/build/CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_enum.cpp.o"
+},
+{
+  "directory": "/work/buildlog/build/case-nanobind/baseline-raw/313/build",
+  "command": "/usr/bin/clang++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -DPy_LIMITED_API=0x030C0000 -I$PY/include/python3.13 -I$NB/include -isystem $NB/ext/robin_map/include -O3 -DNDEBUG -fPIC -fvisibility=hidden -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-stack-protector -o CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_ndarray.cpp.o -c $NB/src/nb_ndarray.cpp",
+  "file": "$NB/src/nb_ndarray.cpp",
+  "output": "/work/buildlog/build/case-nanobind/baseline-raw/313/build/CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_ndarray.cpp.o"
+},
+{
+  "directory": "/work/buildlog/build/case-nanobind/baseline-raw/313/build",
+  "command": "/usr/bin/clang++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -DPy_LIMITED_API=0x030C0000 -I$PY/include/python3.13 -I$NB/include -isystem $NB/ext/robin_map/include -O3 -DNDEBUG -fPIC -fvisibility=hidden -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-stack-protector -o CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_static_property.cpp.o -c $NB/src/nb_static_property.cpp",
+  "file": "$NB/src/nb_static_property.cpp",
+  "output": "/work/buildlog/build/case-nanobind/baseline-raw/313/build/CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_static_property.cpp.o"
+},
+{
+  "directory": "/work/buildlog/build/case-nanobind/baseline-raw/313/build",
+  "command": "/usr/bin/clang++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -DPy_LIMITED_API=0x030C0000 -I$PY/include/python3.13 -I$NB/include -isystem $NB/ext/robin_map/include -O3 -DNDEBUG -fPIC -fvisibility=hidden -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-stack-protector -o CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_datetime.cpp.o -c $NB/src/nb_datetime.cpp",
+  "file": "$NB/src/nb_datetime.cpp",
+  "output": "/work/buildlog/build/case-nanobind/baseline-raw/313/build/CMakeFiles/nanobind-static-abi3.dir$NB/src/nb_datetime.cpp.o"
+},
+{
+  "directory": "/work/buildlog/build/case-nanobind/baseline-raw/313/build",
+  "command": "/usr/bin/clang++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -DPy_LIMITED_API=0x030C0000 -I$PY/include/python3.13 -I$NB/include -isystem $NB/ext/robin_map/include -O3 -DNDEBUG -fPIC -fvisibility=hidden -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-stack-protector -o CMakeFiles/nanobind-static-abi3.dir$NB/src/common.cpp.o -c $NB/src/common.cpp",
+  "file": "$NB/src/common.cpp",
+  "output": "/work/buildlog/build/case-nanobind/baseline-raw/313/build/CMakeFiles/nanobind-static-abi3.dir$NB/src/common.cpp.o"
+},
+{
+  "directory": "/work/buildlog/build/case-nanobind/baseline-raw/313/build",
+  "command": "/usr/bin/clang++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -DPy_LIMITED_API=0x030C0000 -I$PY/include/python3.13 -I$NB/include -isystem $NB/ext/robin_map/include -O3 -DNDEBUG -fPIC -fvisibility=hidden -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-stack-protector -o CMakeFiles/nanobind-static-abi3.dir$NB/src/error.cpp.o -c $NB/src/error.cpp",
+  "file": "$NB/src/error.cpp",
+  "output": "/work/buildlog/build/case-nanobind/baseline-raw/313/build/CMakeFiles/nanobind-static-abi3.dir$NB/src/error.cpp.o"
+},
+{
+  "directory": "/work/buildlog/build/case-nanobind/baseline-raw/313/build",
+  "command": "/usr/bin/clang++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -DPy_LIMITED_API=0x030C0000 -I$PY/include/python3.13 -I$NB/include -isystem $NB/ext/robin_map/include -O3 -DNDEBUG -fPIC -fvisibility=hidden -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-stack-protector -o CMakeFiles/nanobind-static-abi3.dir$NB/src/trampoline.cpp.o -c $NB/src/trampoline.cpp",
+  "file": "$NB/src/trampoline.cpp",
+  "output": "/work/buildlog/build/case-nanobind/baseline-raw/313/build/CMakeFiles/nanobind-static-abi3.dir$NB/src/trampoline.cpp.o"
+},
+{
+  "directory": "/work/buildlog/build/case-nanobind/baseline-raw/313/build",
+  "command": "/usr/bin/clang++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -DPy_LIMITED_API=0x030C0000 -I$PY/include/python3.13 -I$NB/include -isystem $NB/ext/robin_map/include -O3 -DNDEBUG -fPIC -fvisibility=hidden -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-stack-protector -o CMakeFiles/nanobind-static-abi3.dir$NB/src/implicit.cpp.o -c $NB/src/implicit.cpp",
+  "file": "$NB/src/implicit.cpp",
+  "output": "/work/buildlog/build/case-nanobind/baseline-raw/313/build/CMakeFiles/nanobind-static-abi3.dir$NB/src/implicit.cpp.o"
+}
+]

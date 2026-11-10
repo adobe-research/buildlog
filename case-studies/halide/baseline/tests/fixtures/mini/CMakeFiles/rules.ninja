@@ -1,0 +1,43 @@
+# CMAKE generated file: DO NOT EDIT!
+# Miniature of CMake's rules.ninja for the normalizer tests.
+
+rule CXX_COMPILER__Halide_unscanned_Release
+  depfile = $DEP_FILE
+  deps = gcc
+  command = /usr/bin/c++ $DEFINES $INCLUDES $FLAGS -MD -MT $out -MF $DEP_FILE -o $out -c $in
+  description = Building CXX object $out
+
+rule CXX_SHARED_LIBRARY_LINKER__Halide_Release
+  command = $PRE_LINK && /usr/bin/c++ $LANGUAGE_COMPILE_FLAGS $ARCH_FLAGS -dynamiclib $LINK_FLAGS -o $TARGET_FILE $SONAME_FLAG $INSTALLNAME_DIR$SONAME $in $LINK_PATH $LINK_LIBRARIES && $POST_BUILD
+  description = Linking CXX shared library $TARGET_FILE
+  restat = $RESTAT
+
+rule CXX_EXECUTABLE_LINKER__binary2cpp_Release
+  command = $PRE_LINK && /usr/bin/c++ $FLAGS $LINK_FLAGS $in -o $TARGET_FILE $LINK_PATH $LINK_LIBRARIES && $POST_BUILD
+  description = Linking CXX executable $TARGET_FILE
+
+
+rule CMAKE_SYMLINK_LIBRARY
+  command = /work/cmake/bin/cmake -E cmake_symlink_library $in $SONAME $out && $POST_BUILD
+  description = Creating library symlink $out
+
+rule CUSTOM_COMMAND
+  command = $COMMAND
+  description = $DESC
+
+rule RERUN_CMAKE
+  command = /work/cmake/bin/cmake --regenerate-during-build -S/work/src -B/work/build
+  description = Re-running CMake...
+  generator = 1
+
+rule CXX_COMPILER__binary2cpp_unscanned_Release
+  depfile = $DEP_FILE
+  deps = gcc
+  command = /usr/bin/c++ $DEFINES $INCLUDES $FLAGS -MD -MT $out -MF $DEP_FILE -o $out -c $in
+  description = Building CXX object $out
+
+rule CXX_COMPILER__Halide_initmod_unscanned_Release
+  depfile = $DEP_FILE
+  deps = gcc
+  command = /usr/bin/c++ $DEFINES $INCLUDES $FLAGS -MD -MT $out -MF $DEP_FILE -o $out -c $in
+  description = Building CXX object $out

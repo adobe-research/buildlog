@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Qt6Core as Qt would install it (<prefix>/share/buildlog/Qt6Core, next to
+# lib/cmake/Qt6Core): QtCore's own export file, imported, and the rule that a
+# target compiling against QtCore has its headers run through moc
+# (Qt6Core.dl). Nothing in buildlog's core or buildlog-cpp knows Qt.
+name = "Qt6Core"
+version = "6.11.3"
+rank = 6
+namespace = "qt"
+layers = ["Qt6Core.dl"]
+requires = { Qt6 = "==6.11.3", Qt6CoreTools = "==6.11.3", WrapAtomic = ">=0", buildlog-cpp = ">=0.1" }
+imports = [
+  { format = "cmake", file = "../../../lib/cmake/Qt6Core/Qt6CoreTargets.cmake", namespace = "Qt6" }
+]
+extends = [
+  "error",
+  "condition",
+  "prop_when",
+  "source_claimed",
+  "path_want",
+  "cxx_generated_source",
+  "action",
+  "action_arg",
+  "action_arg_set",
+  "action_in",
+  "action_run",
+  "action_depfile",
+  "target_action",
+]
+accepts = ["qt_moc_exclude"]
+# `why` drops it: a path computed from the input's.
+elide = ["qt_sub"]

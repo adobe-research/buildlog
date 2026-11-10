@@ -1,0 +1,7 @@
+host_platform("toy").
+platform("toy", "toy-none").
+// Two slices and a multi-platform over them, for coverage tests.
+platform("toy-a", "toy-a-none").
+platform("toy-b", "toy-b-none").
+platform_slice("toy-fat", "toy-a").
+platform_slice("toy-fat", "toy-b").

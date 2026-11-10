@@ -1,0 +1,8 @@
+# Rejected: a namespaced package declares relations outside its namespace.
+name = "bad-namespace"
+version = "0.1.0"
+rank = 5
+namespace = "bns"
+layers = ["bad_namespace.dl"]
+accepts = ["bns_item", "item"]
+extends = ["action"]

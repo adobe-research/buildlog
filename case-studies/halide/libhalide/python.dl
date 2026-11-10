@@ -1,0 +1,144 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Halide's Python bindings over buildlog-python. pybind11_add_module for
+// the modules (pybind11_module facts), and add_python_test for the tests
+// (halide_py_test(stem, script, label)): the interpreter runs the script
+// with the package tree first on PYTHONPATH, after that tree is staged.
+.decl pybind11_module(t:symbol)
+.decl halide_py_test(stem:symbol, script:symbol, label:symbol)
+
+// pybind11_add_module: a module library, hidden visibility, pybind11's
+// headers from the interpreter's environment, stripped.
+.decl pybind11_user(t:symbol)
+pybind11_user(t) :- pybind11_module(t).
+native_kind(t, "module_library"), dep(t, "Python::Module", "private"),
+prop(t, "cc.compile_flag", "-fvisibility=hidden", "private") :- pybind11_module(t).
+prop(t, "cxx.std", "17", "private") :- pybind11_user(t).
+prop_in(t, c, "cc.include_dir", cat(d, "/include"), "private") :-
+  pybind11_user(t), needed(t, c), python_package_dir(c, "pybind11", d).
+prop_in(t, c, "native.link_option", "-Wl,-x", "private") :-
+  pybind11_module(t), needed(t, c), config_setting(c, "native.opt", "release").
+
+// Only a configuration with an interpreter runs the Python tests.
+condition("halide.python", $Not($Eq("python.interpreter", "none"))).
+.decl halide_py_test_name(n:symbol, script:symbol, label:symbol)
+halide_py_test_name(cat(l, "_", s), f, l) :- halide_py_test(s, f, l).
+test_when(n, "halide.python"),
+halide_build_test(n, "Python::Interpreter"), halide_build_test_exit_code_only(n),
+halide_build_test_group(n, l),
+test_arg(n, 0, cat("src:", f)) :- halide_py_test_name(n, f, l).
+test_config_env_path(n, c, "PYTHONPATH", 0, root) :- halide_py_test_name(n, _, _), python_tree(c, root).
+test_config_need(n, c, o) :- halide_py_test_name(n, _, _), python_staged(c, _, o).
+
+// ---- the Python test fixtures (python_bindings/halide/test/generators) ----
+// Halide_PyStubs (stub/CMakeLists.txt): the glue every PYSTUB module links.
+target("Halide_PyStubs"), native_kind("Halide_PyStubs", "library"),
+linkage_require("Halide_PyStubs", "static", "add_library(Halide_PyStubs STATIC): linked into each stub module"),
+cxx_source("Halide_PyStubs", "python_bindings/halide/stub/PyStubImpl.cpp"),
+dep("Halide_PyStubs", "Halide", "private"), dep("Halide_PyStubs", "Python::Headers", "private"),
+prop("Halide_PyStubs", "cc.compile_flag", "-fvisibility=hidden", "private"),
+prop("Halide_PyStubs", "cc.compile_flag", "-fvisibility-inlines-hidden", "private"),
+prop("Halide_PyStubs", "cc.pic", "on", "private") :- halide_py_fixtures().
+pybind11_user("Halide_PyStubs") :- halide_py_fixtures().
+
+// add_halide_generator(py_gen_<n> PYSTUB <n> SOURCES <src>): the generator
+// executable, and the <n>_pystub module (a generated source that expands
+// HALIDE_GENERATOR_PYSTUB, the generator's own source, Halide_PyStubs).
+.decl halide_py_cpp_generator(n:symbol, src:symbol)
+.decl halide_py_py_generator(n:symbol, script:symbol)
+// _add_python_aot_and_stub_extension's GENERATORS: group generator g makes
+// the Halide library py_aot_<l> and the extension module pyext_<l>.
+.decl halide_py_lib(gen:symbol, l:symbol)
+.decl halide_py_lib_feature(l:symbol, f:symbol)
+.decl halide_py_lib_param(l:symbol, p:symbol)
+.decl halide_py_lib_runtime(l:symbol, rt:symbol)
+// add_halide_python_extension_library with several libraries.
+.decl halide_py_multi(ext:symbol, module:symbol)
+.decl halide_py_multi_lib(ext:symbol, i:number, l:symbol)
+.decl halide_py_fixtures()
+halide_py_fixtures() :- halide_py_cpp_generator(_, _).
+
+target(cat("py_gen_", n)), native_kind(cat("py_gen_", n), "executable"),
+dep(cat("py_gen_", n), "Halide_Generator", "private"), dep(cat("py_gen_", n), "halide_generator_options", "private"), cxx_source(cat("py_gen_", n), cat("python_bindings/halide/test/generators/", src)) :-
+  halide_py_cpp_generator(n, src).
+.decl halide_py_stub(t:symbol, n:symbol, module:symbol)
+halide_py_stub(cat("py_gen_", n, "_pystub"), n, cat(n, "_pystub")) :- halide_py_cpp_generator(n, _).
+target(t), native_kind(t, "module_library"), python_extension(t, "", m), dep(t, "Python::Module", "private"),
+dep(t, "Halide_PyStubs", "private"), dep(t, "Halide", "private"), dep(t, "Python::Headers", "private"),
+prop(t, "cc.compile_flag", "-fvisibility=hidden", "private"), prop(t, "cc.compile_flag", "-fvisibility-inlines-hidden", "private"),
+prop(t, "cc.pic", "on", "private"), prop(t, "cxx.std", "17", "private"),
+configure_file(t, "stub.cpp"), configure_file_text(t, "stub.cpp", 0, "#include <Python.h>"),
+configure_file_text(t, "stub.cpp", 1, "#include \"Halide.h\""),
+configure_file_text(t, "stub.cpp", 2, cat("HALIDE_GENERATOR_PYSTUB(", n, ", ", m, ")")),
+cxx_source(t, cat("python_bindings/halide/test/generators/", src)) :- halide_py_stub(t, n, m), halide_py_cpp_generator(n, src).
+cxx_generated_source(t, c, p) :- halide_py_stub(t, _, _), configured_file(t, c, "stub.cpp", p).
+pybind11_user(t) :- halide_py_stub(t, _, _).
+
+// The libraries: PARAMS, FEATURES, the three autoscheduler plugins, the
+// python_extension output; a generator that is a script is run by the
+// configuration's interpreter with the Halide package on PYTHONPATH.
+.decl halide_py_lib_gen(l:symbol, from:symbol)
+halide_py_lib_gen(l, cat("py_gen_", g)) :- halide_py_lib(g, l).
+halide_build_library(cat("py_aot_", l), from, l, l, rt) :- halide_py_lib_gen(l, from), halide_py_lib_runtime(l, rt).
+halide_build_library(cat("py_aot_", l), from, l, l, "") :- halide_py_lib_gen(l, from), !halide_py_lib_runtime(l, _).
+halide_build_library_emit(cat("py_aot_", l), "python_extension") :- halide_py_lib_gen(l, _).
+halide_build_library_plugin(cat("py_aot_", l), 0, "autoschedule_adams2019"),
+halide_build_library_plugin(cat("py_aot_", l), 1, "autoschedule_li2018"),
+halide_build_library_plugin(cat("py_aot_", l), 2, "autoschedule_mullapudi2016") :- halide_py_lib_gen(l, _).
+halide_build_library_feature(cat("py_aot_", l), 0, f) :- halide_py_lib_feature(l, f).
+halide_build_library_param_set(cat("py_aot_", l), l) :- halide_py_lib_param(l, _).
+halide_build_params(l, j, p) :- halide_py_lib_param(l, p), j = count : { halide_py_lib_param(l, q), q < p }.
+halide_build_runtime_library("multi_lib_runtime", g, h) :- halide_py_fixtures(), halide_build_runtime_defaults(g, h).
+
+halide_build_pyext(cat("pyext_", l), l) :- halide_py_lib_gen(l, _).
+halide_build_pyext_library(cat("pyext_", l), 0, cat("py_aot_", l)) :- halide_py_lib_gen(l, _).
+halide_build_pyext(e, m) :- halide_py_multi(e, m).
+halide_build_pyext_library(e, i, cat("py_aot_", l)) :- halide_py_multi_lib(e, i, l).
+
+.decl halide_py_ext(t:symbol, m:symbol)
+halide_py_ext(t, m) :- halide_build_pyext(t, m).
+python_extension(t, "", m), dep(t, "Python::Module", "private") :- halide_py_ext(t, m).
+
+// A script generator: the interpreter, the script, and the Halide package.
+.decl halide_py_script(gen:symbol, script:symbol)
+halide_py_script(cat("py_gen_", g), cat("python_bindings/halide/test/generators/", f)) :- halide_py_py_generator(g, f).
+// halide_py_launched(lib, script): library lib's generator is a Python script.
+.decl halide_py_launched(l:symbol, f:symbol)
+halide_py_launched(cat("py_aot_", l), f) :- halide_py_lib_gen(l, g), halide_py_script(g, f).
+halide_build_launcher_words(l, 4) :- halide_py_launched(l, _).
+halide_build_launcher(l, c, 0, "", "env"),
+halide_build_launcher(l, c, 1, "PYTHONPATH=", root),
+halide_build_launcher(l, c, 2, "", p),
+halide_build_launcher(l, c, 3, "", cat("src:", f)),
+halide_build_launcher_in(l, c, cat("src:", f)) :-
+  halide_py_launched(l, f), python_cfg(c, _, p), python_tree(c, root), needed(l, c).
+halide_build_launcher_in(l, c, o) :- halide_py_launched(l, _), needed(l, c), python_staged(c, r, o), substr(r, 0, 7) = "halide/".
+
+// _Halide_target_export_single_symbol: the module exports PyInit_<module>
+// and nothing else (an ld64 exported-symbols list, a GNU version script).
+.decl halide_py_single(t:symbol, sym:symbol)
+halide_py_single(t, cat("PyInit_", m)) :- halide_py_ext(t, m).
+halide_py_single(t, cat("PyInit_", m)) :- halide_py_stub(t, _, m).
+configure_file(t, "exports.apple"), configure_file_text(t, "exports.apple", 0, cat("_", s)),
+configure_file(t, "exports.ld"), configure_file_text(t, "exports.ld", 0, cat("{ global: ", s, "; local: *; };")) :-
+  halide_py_single(t, s).
+action_arg(a, 4, x, f), action_in(a, f, "implicit") :- module_library(t, c, a), halide_py_single(t, _),
+  module_spell(t, c, "exported_symbols", x), configured_file(t, c, "exports.apple", f).
+action_arg(a, 4, x, f), action_in(a, f, "implicit") :- module_library(t, c, a), halide_py_single(t, _),
+  module_spell(t, c, "version_script", x), configured_file(t, c, "exports.ld", f).
+
+// The generators directory is on PYTHONPATH of the tests that import the
+// script generators (PYTHON_PATH_* in test/correctness/CMakeLists.txt).
+.decl halide_py_generators_path(stem:symbol)
+halide_py_generators_path("callable"). halide_py_generators_path("pystub"). halide_py_generators_path("user_context_test").
+test_config_env_path(n, c, "PYTHONPATH", 1, "src:python_bindings/halide/test/generators") :-
+  halide_py_test_name(n, _, _), halide_py_test(s, _, _), n = cat("python_correctness_", s), halide_py_generators_path(s),
+  python_tree(c, _).
+
+// add_library(the_sort_function MODULE the_sort_function.c): extern.py's
+// library (the test itself skips).
+target("the_sort_function"), native_kind("the_sort_function", "module_library"),
+c_source("the_sort_function", "python_bindings/halide/test/correctness/the_sort_function.c"),
+dep("the_sort_function", "Halide_Runtime", "private") :- halide_py_fixtures().
+request_all("the_sort_function") :- halide_py_fixtures().

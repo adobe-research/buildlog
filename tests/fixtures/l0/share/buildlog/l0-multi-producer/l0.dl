@@ -1,0 +1,6 @@
+action("out:x", "GEN").
+action("out:y", "GEN").
+action_out("out:x", "out:shared.h").
+action_out("out:y", "out:shared.h").
+action_arg("out:x", 0, "", "/bin/gen").
+action_arg("out:y", 0, "", "/bin/gen").

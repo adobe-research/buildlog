@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# zlib (CMakeLists.txt, v1.3.2) in the Release configuration its baseline
+# builds (CMAKE_BUILD_TYPE=Release). CMake builds zlib twice in one tree,
+# shared (zlib) and static (zlibstatic); here zlib is one library whose
+# linkage is chosen, and the static flavour is a second configuration
+# (native.linkage = static). The test programs are tests.toml's.
+config_decl = { release = "arm64-macos", release-static = "arm64-macos" }
+config_decl_setting = [
+  ["release", "native.opt", "release"],
+  ["release-static", "native.opt", "release"],
+  ["release-static", "native.linkage", "static"]
+]
+request_all = ["zlib"]
+
+# CMakeLists.txt's configure checks, as questions to the C toolchain of each
+# configuration (buildlog-cpp's cc_check); the answers are discovered
+# (or stated by the user) and each configuration has cc.check.<name> =
+# yes | no. check_type_size includes sys/types.h, stdint.h and stddef.h
+# where they exist; here that prelude is stated.
+[cc_check_include]
+HAVE_STDARG_H = "stdarg.h"
+HAVE_UNISTD_H = "unistd.h"
+
+[cc_check_function]
+HAVE_FSEEKO = "fseeko"
+
+[cc_check_type]
+HAVE_OFF64_T = "off64_t"
+
+[cc_check_compiles]
+HAVE___ATTR__VIS_HIDDEN = 'static void f(void) __attribute__ ((visibility("hidden"))); int main(void) {return 0;}'
+
+[cc_check_headers]
+HAVE_OFF64_T = "sys/types.h stdint.h stddef.h"
+HAVE___ATTR__VIS_HIDDEN = "stdlib.h"
+
+[cc_check_args]
+HAVE_OFF64_T = "-D_LARGEFILE64_SOURCE=1"
+HAVE___ATTR__VIS_HIDDEN = "-Werror"
+
+# ZLIB_SRCS, in CMakeLists.txt's order; the headers are found by the compiler.
+[target.zlib]
+kind = "library"
+sources = [
+  "adler32.c",
+  "compress.c",
+  "crc32.c",
+  "deflate.c",
+  "gzclose.c",
+  "gzlib.c",
+  "gzread.c",
+  "gzwrite.c",
+  "inflate.c",
+  "infback.c",
+  "inftrees.c",
+  "inffast.c",
+  "trees.c",
+  "uncompr.c",
+  "zutil.c",
+]
+# Shared unless the configuration or the user says otherwise (CMake's zlib
+# is the shared target; zlibstatic, OUTPUT_NAME z, is a second configuration).
+default_linkage = "shared"
+native_output_name = "z"
+# SOVERSION ${zlib_VERSION_MAJOR}, VERSION ${zlib_VERSION}; DEFINE_SYMBOL,
+# which only the shared flavour has.
+native_version = [["1.3.2", "1"]]
+# CMakeLists.txt:187, UNIX AND NOT APPLE: -Wl,--version-script,zlib.map. No
+# list is stated for Mach-O, so the library says that the lists are optional.
+native_version_script = "src:zlib.map"
+native_export_list_optional = "CMake links the version script on ELF only"
+linkage_prop = [["shared", "cc.define", "ZLIB_DLL", "private"]]
+# The source tree is the library's own public include dir, after the
+# configured zconf.h's (configured.toml; the order is configured.toml's).
+private = { "cc.define" = "ZLIB_BUILD", "configure.undefine" = "Z_PREFIX" }
+public = { "cc.include_dir" = "src:" }
+# The definitions the checks decide. NO_FSEEKO where fseeko is missing (the
+# CMakeLists.txt spells this $<$<BOOL:NOT:${HAVE_FSEEKO}>:NO_FSEEKO>, which
+# is always true; see the README's ledger).
+when."cc.check.HAVE___ATTR__VIS_HIDDEN".private."cc.define" = "HAVE_HIDDEN"
+when."!cc.check.HAVE_FSEEKO".private."cc.define" = "NO_FSEEKO"
+when."cc.check.HAVE_OFF64_T".public."cc.define" = "_LARGEFILE64_SOURCE=1"

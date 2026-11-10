@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+llvm_version = [["22", "1", "8"]]
+llvm_enable_rtti = "on"
+llvm_enable_eh = "off"
+llvm_define = [
+  ["__STDC_CONSTANT_MACROS"],
+  ["__STDC_FORMAT_MACROS"],
+  ["__STDC_LIMIT_MACROS"],
+]
+llvm_define_on = [
+  ["arm64-linux", "_GNU_SOURCE"],
+  ["arm64-linux", "_GLIBCXX_USE_CXX11_ABI=1"],
+]
+llvm_include_dir_on = [
+  ["arm64-macos", "/opt/homebrew/opt/llvm@22/include"],
+  ["arm64-linux", "${SYSROOT}/usr/lib/llvm-22/include"],
+]
+llvm_target_on = [
+  ["arm64-macos", "AArch64"],
+  ["arm64-macos", "AMDGPU"],
+  ["arm64-macos", "ARM"],
+  ["arm64-macos", "AVR"],
+  ["arm64-macos", "BPF"],
+  ["arm64-macos", "Hexagon"],
+  ["arm64-macos", "Lanai"],
+  ["arm64-macos", "LoongArch"],
+  ["arm64-macos", "Mips"],
+  ["arm64-macos", "MSP430"],
+  ["arm64-macos", "NVPTX"],
+  ["arm64-macos", "PowerPC"],
+  ["arm64-macos", "RISCV"],
+  ["arm64-macos", "Sparc"],
+  ["arm64-macos", "SPIRV"],
+  ["arm64-macos", "SystemZ"],
+  ["arm64-macos", "VE"],
+  ["arm64-macos", "WebAssembly"],
+  ["arm64-macos", "X86"],
+  ["arm64-macos", "XCore"],
+  ["arm64-linux", "AArch64"],
+  ["arm64-linux", "AMDGPU"],
+  ["arm64-linux", "ARM"],
+  ["arm64-linux", "AVR"],
+  ["arm64-linux", "BPF"],
+  ["arm64-linux", "Hexagon"],
+  ["arm64-linux", "Lanai"],
+  ["arm64-linux", "LoongArch"],
+  ["arm64-linux", "Mips"],
+  ["arm64-linux", "MSP430"],
+  ["arm64-linux", "NVPTX"],
+  ["arm64-linux", "PowerPC"],
+  ["arm64-linux", "RISCV"],
+  ["arm64-linux", "Sparc"],
+  ["arm64-linux", "SPIRV"],
+  ["arm64-linux", "SystemZ"],
+  ["arm64-linux", "VE"],
+  ["arm64-linux", "WebAssembly"],
+  ["arm64-linux", "X86"],
+  ["arm64-linux", "XCore"],
+  ["arm64-linux", "M68k"],
+  ["arm64-linux", "Xtensa"],
+]

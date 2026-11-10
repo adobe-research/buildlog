@@ -1,0 +1,24 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// flatbuffers' CMakeLists.txt, the shapes it uses that buildlog has no
+// vocabulary for. Project rules, not a plugin: one case study is not enough
+// to fix a vocabulary (as zlib's library abstraction).
+
+// ---- source lists ----
+// CMake's set(FlatBuffers_Library_SRCS ...) and friends: named lists of
+// sources that several targets compile, each its own objects (flatc,
+// flattests and two samples recompile the library's sources instead of
+// linking libflatbuffers.a). A list may splice another (${...}); the C++
+// sources of every list a target names are its cxx_source. Headers in the
+// CMake lists are not stated: the compiler finds them.
+.decl srclist(list:symbol)
+.decl srclist_source(list:symbol, src:symbol)
+.decl srclist_splice(list:symbol, other:symbol)
+.decl srclist_use(t:symbol, list:symbol)
+.decl srclist_all(list:symbol, src:symbol)
+srclist_all(l, s) :- srclist_source(l, s).
+srclist_all(l, s) :- srclist_splice(l, o), srclist_all(o, s).
+cxx_source(t, s) :- srclist_use(t, l), srclist_all(l, s).
+error("unknown source list", cat(t, ": ", l)) :- srclist_use(t, l), !srclist(l).
+error("unknown source list", cat(l, ": ", o)) :- srclist_splice(l, o), !srclist(o).

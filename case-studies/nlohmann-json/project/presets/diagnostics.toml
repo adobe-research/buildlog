@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# CMake's -DJSON_Diagnostics=ON: extended diagnostics in exceptions, an
+# interface definition (JSON_DIAGNOSTICS=1) every consumer compiles with.
+option_value = [["JSON_Diagnostics", "on"]]

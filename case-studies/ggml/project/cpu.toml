@@ -1,0 +1,412 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The CPU backend (src/ggml-cpu/CMakeLists.txt): one logical library,
+# instantiated per ISA level (rules.dl). What an instance is: its sources,
+# its usage requirements, its feature-detection object. Which levels exist
+# and what they need are facts, below; which instances a build makes follows
+# from the options (spec.toml) and the configuration's platform.
+
+# ---- ISA facts ----
+# ggml's feature names, as buildlog-cpp's ISA extensions (step 4, design
+# input §2): what each architecture has and how clang spells it (the x86
+# -m<ext> flags, ARM's -march=<base>+<tag>... with its base version and tag
+# order) are buildlog-cpp's knowledge. AVX512 is five extensions.
+ggml_feature_ext = [
+  ["DOTPROD", "dotprod"],
+  ["FP16_VECTOR_ARITHMETIC", "fp16"],
+  ["SVE", "sve"],
+  ["MATMUL_INT8", "i8mm"],
+  ["SVE2", "sve2"],
+  ["SME", "sme"],
+  ["SSE42", "sse4.2"],
+  ["F16C", "f16c"],
+  ["FMA", "fma"],
+  ["BMI2", "bmi2"],
+  ["AVX", "avx"],
+  ["AVX2", "avx2"],
+  ["AVX_VNNI", "avxvnni"],
+  ["AVX512", "avx512f"],
+  ["AVX512", "avx512cd"],
+  ["AVX512", "avx512vl"],
+  ["AVX512", "avx512dq"],
+  ["AVX512", "avx512bw"],
+  ["AVX512_VBMI", "avx512vbmi"],
+  ["AVX512_VNNI", "avx512vnni"],
+  ["AVX512_BF16", "avx512bf16"],
+  ["AMX_TILE", "amx-tile"],
+  ["AMX_INT8", "amx-int8"],
+]
+# Each architecture's directory under src/ggml-cpu/arch/.
+ggml_arch_dir = [["arm64", "arm"], ["x86_64", "x86"]]
+
+# ---- ggml's use of them ----
+# GGML_CPU_ALL_VARIANTS: the levels built for each (os, arch). The x86_64
+# list has no OS restriction upstream (MSVC drops five of them); the ARM
+# lists are per OS (CMAKE_SYSTEM_NAME): Apple's and Linux's, named for the
+# Arm architecture version that first had the features. Android's own list
+# (android_armv8.0_1 …) is not stated.
+ggml_cpu_variant = [
+  ["linux", "arm64", "armv8.0_1"],
+  ["linux", "arm64", "armv8.2_1"],
+  ["linux", "arm64", "armv8.2_2"],
+  ["linux", "arm64", "armv8.2_3"],
+  ["linux", "arm64", "armv8.6_1"],
+  ["linux", "arm64", "armv8.6_2"],
+  ["linux", "arm64", "armv9.2_1"],
+  ["linux", "arm64", "armv9.2_2"],
+  ["macos", "arm64", "apple_m1"],
+  ["macos", "arm64", "apple_m2_m3"],
+  ["macos", "arm64", "apple_m4"],
+  ["macos", "x86_64", "x64"],
+  ["macos", "x86_64", "sse42"],
+  ["macos", "x86_64", "sandybridge"],
+  ["macos", "x86_64", "ivybridge"],
+  ["macos", "x86_64", "piledriver"],
+  ["macos", "x86_64", "haswell"],
+  ["macos", "x86_64", "skylakex"],
+  ["macos", "x86_64", "cannonlake"],
+  ["macos", "x86_64", "cascadelake"],
+  ["macos", "x86_64", "icelake"],
+  ["macos", "x86_64", "cooperlake"],
+  ["macos", "x86_64", "zen4"],
+  ["macos", "x86_64", "alderlake"],
+  ["macos", "x86_64", "sapphirerapids"],
+]
+# The macro that tells ggml's sources a level has a feature: GGML_USE_<F> on
+# ARM, GGML_<F> on x86 (every x86 feature has one; AMX_TILE's is unused).
+ggml_isa_define = [
+  ["DOTPROD", "GGML_USE_DOTPROD"],
+  ["FP16_VECTOR_ARITHMETIC", "GGML_USE_FP16_VECTOR_ARITHMETIC"],
+  ["SVE", "GGML_USE_SVE"],
+  ["MATMUL_INT8", "GGML_USE_MATMUL_INT8"],
+  ["SVE2", "GGML_USE_SVE2"],
+  ["SME", "GGML_USE_SME"],
+  ["SSE42", "GGML_SSE42"],
+  ["F16C", "GGML_F16C"],
+  ["FMA", "GGML_FMA"],
+  ["BMI2", "GGML_BMI2"],
+  ["AVX", "GGML_AVX"],
+  ["AVX2", "GGML_AVX2"],
+  ["AVX_VNNI", "GGML_AVX_VNNI"],
+  ["AVX512", "GGML_AVX512"],
+  ["AVX512_VBMI", "GGML_AVX512_VBMI"],
+  ["AVX512_VNNI", "GGML_AVX512_VNNI"],
+  ["AVX512_BF16", "GGML_AVX512_BF16"],
+  ["AMX_TILE", "GGML_AMX_TILE"],
+  ["AMX_INT8", "GGML_AMX_INT8"],
+]
+# The weight ggml_backend_score() gives each feature (arch/*/cpu-feats.cpp:
+# 1 plus these, or 0 where the machine lacks one; the loader takes the
+# highest). rules.dl predicts the loader's choice from them.
+# (The weight is a string: a TOML number fills a list-position column.)
+ggml_isa_score = [
+  ["DOTPROD", "2"],
+  ["FP16_VECTOR_ARITHMETIC", "4"],
+  ["SVE", "8"],
+  ["MATMUL_INT8", "16"],
+  ["SVE2", "32"],
+  ["SME", "64"],
+  ["FMA", "1"],
+  ["F16C", "2"],
+  ["SSE42", "4"],
+  ["BMI2", "8"],
+  ["AVX", "16"],
+  ["AVX2", "32"],
+  ["AVX_VNNI", "64"],
+  ["AVX512", "128"],
+  ["AVX512_VBMI", "256"],
+  ["AVX512_BF16", "512"],
+  ["AVX512_VNNI", "1024"],
+  ["AMX_INT8", "2048"],
+]
+
+# GCC has no -mcpu=native+<tag>: upstream reads the native CPU as a
+# -march=armv8-a+... list from `gcc -mcpu=native -E -v` and tries <list>+<tag>
+# (GGML_NATIVE_CPU, spec.toml, is that list). The tag is accepted or not on
+# GCC's armv8-a base (GCC 13 has no +sme).
+cc_check_args_family = [
+  ["GGML_NATIVE_PLUS_DOTPROD", "gcc", "-march=armv8-a+dotprod"],
+  ["GGML_NATIVE_NO_DOTPROD", "gcc", "-march=armv8-a+nodotprod"],
+  ["GGML_NATIVE_PLUS_MATMUL_INT8", "gcc", "-march=armv8-a+i8mm"],
+  ["GGML_NATIVE_NO_MATMUL_INT8", "gcc", "-march=armv8-a+noi8mm"],
+  ["GGML_NATIVE_PLUS_SVE", "gcc", "-march=armv8-a+sve"],
+  ["GGML_NATIVE_NO_SVE", "gcc", "-march=armv8-a+nosve"],
+  ["GGML_NATIVE_PLUS_SME", "gcc", "-march=armv8-a+sme"],
+  ["GGML_NATIVE_NO_SME", "gcc", "-march=armv8-a+nosme"],
+  ["GGML_MACHINE_FP16_VECTOR_ARITHMETIC", "gcc", "-march=armv8-a+fp16"],
+  ["GGML_MACHINE_SVE2", "gcc", "-march=armv8-a+sve2"],
+]
+
+# ---- the backend ----
+# ggml_add_cpu_backend_variant_impl, as core target templates. Every
+# instance of ggml-cpu-backend compiles these, plus its architecture's
+# (arch/<arch_dir>/). An instance with an ISA level (rules.dl) is also a
+# ggml-cpu-variant: a module with the level's definitions, linking a
+# feature-detection object <name>-feats (ggml-cpu-feats), which is compiled
+# with the definitions but without the level's flags, so that the loader
+# can call its score function on any machine. The native instance is
+# ggml-cpu, below.
+[target_template.ggml-cpu-backend]
+param = ["arch_dir"]
+sources = [
+  "src/ggml-cpu/ggml-cpu.c",
+  "src/ggml-cpu/quants.c",
+  "src/ggml-cpu/arch/{arch_dir}/quants.c",
+  "src/ggml-cpu/ggml-cpu.cpp",
+  "src/ggml-cpu/repack.cpp",
+  "src/ggml-cpu/iqp.cpp",
+  "src/ggml-cpu/hbm.cpp",
+  "src/ggml-cpu/traits.cpp",
+  "src/ggml-cpu/amx/amx.cpp",
+  "src/ggml-cpu/amx/mmq.cpp",
+  "src/ggml-cpu/binary-ops.cpp",
+  "src/ggml-cpu/unary-ops.cpp",
+  "src/ggml-cpu/vec.cpp",
+  "src/ggml-cpu/ops.cpp",
+  "src/ggml-cpu/arch/{arch_dir}/repack.cpp",
+]
+# ggml_add_backend_library: the backend's own build and its private include
+# dirs (src/.., src/., src/ggml-cpu). A shared or module backend also gets
+# GGML_BACKEND_BUILD and, for its users, GGML_BACKEND_SHARED (if
+# BUILD_SHARED_LIBS): ggml-cpu-variant's, and ggml-cpu's linkage_prop.
+# GGML_ACCELERATE (default on) links Accelerate on Apple platforms;
+# GGML_CPU_REPACK (default on) adds its definition.
+private = { "cc.define" = "GGML_USE_CPU_REPACK", "cc.include_dir" = [
+  "src:",
+  "src:src",
+  "src:src/ggml-cpu",
+], "cxx.std" = "17" }
+when.GGML_BACKEND_DL.private."cc.define" = "GGML_BACKEND_DL"
+when."platform.os == macos".private = { "cc.define" = [
+  "GGML_USE_ACCELERATE",
+  "ACCELERATE_NEW_LAPACK",
+  "ACCELERATE_LAPACK_ILP64",
+], "native.link_option" = "-Wl,-framework,Accelerate" }
+prop_when = [
+  ["cc.define", "GGML_USE_OPENMP", "private", "GGML_OPENMP & cc.check.GGML_HAVE_OPENMP"],
+  ["cc.compile_flag", "-fopenmp", "private", "GGML_OPENMP & cc.check.GGML_HAVE_OPENMP"],
+  ["native.link_option", "-fopenmp", "private", "GGML_OPENMP & cc.check.GGML_HAVE_OPENMP"],
+]
+deps = { private = ["ggml-base"] }
+
+[target_template.ggml-cpu-variant]
+param = ["level", "isa_define"]
+kind = "module_library"
+private = { "cc.define" = ["{isa_define}", "GGML_BACKEND_BUILD"] }
+public = { "cc.define" = "GGML_BACKEND_SHARED" }
+deps = { private = ["{name}-feats"] }
+
+[target_template.ggml-cpu-feats]
+param = ["level", "arch_dir", "isa_define"]
+kind = "object_library"
+sources = ["src/ggml-cpu/arch/{arch_dir}/cpu-feats.cpp"]
+private = { "cc.define" = [
+  "{isa_define}",
+  "GGML_BACKEND_DL",
+  "GGML_BACKEND_BUILD",
+  "GGML_BACKEND_SHARED",
+], "cc.include_dir" = [
+  "src:src",
+  "src:include",
+], "cc.compile_flag" = "-fno-lto", "cc.pic" = "on", "cxx.std" = "17" }
+
+# The native instance (no variants): linked, and versioned like the core
+# libraries. Its architecture is its configuration's platform's, which a
+# target's sources cannot depend on (they are not per configuration): it is
+# stated for arm64, the one this study builds natively.
+[target.ggml-cpu]
+instance_of = "ggml-cpu-backend"
+instance_param = [["arch_dir", "arm"]]
+kind = "library"
+default_linkage = "shared"
+linkage_prop = [
+  ["shared", "cc.define", "GGML_BACKEND_BUILD", "private"],
+  ["shared", "cc.define", "GGML_BACKEND_SHARED", "public"],
+]
+native_version = [["0.25.3", "0"]]
+
+# ---- GGML_NATIVE: the build machine's features ----
+# CMake builds and runs a program per feature with <native flag>+<tag>
+# (check_cxx_source_runs; for a feature that fails, check_cxx_source_compiles
+# with <native flag>+no<tag>). The runs kind does the same: the answer is what
+# this machine can run, not what the compiler thinks of it (Clang 18 does not
+# know every CPU and leaves out features its -mcpu=native cannot see). The
+# native flag is -mcpu=native; for GCC it is the -march= list GGML_NATIVE_CPU
+# states (spec.toml), which these checks stand in for with GCC's armv8-a base.
+# A user file can state the answers instead (cc_check_known), e.g. for a
+# machine other than the one that configures.
+[defaults.cc_check]
+lang = "cxx"
+kind = "runs"
+cc_check_args = "-mcpu=native"
+
+# find_package(OpenMP) (FindOpenMP's test program: it compiles with -fopenmp
+# and links the runtime): GCC finds libgomp; Clang without libomp does not.
+[cc_check.GGML_HAVE_OPENMP]
+kind = "compiles"
+cc_check_headers = "omp.h"
+subject = "int main(void) { return omp_get_num_threads(); }"
+cc_check_args = "-fopenmp"
+
+[cc_check.GGML_NATIVE_PLUS_DOTPROD]
+cc_check_headers = "arm_neon.h"
+subject = "int main() { int8x16_t _a, _b; volatile int32x4_t _s = vdotq_s32(_s, _a, _b); return 0; }"
+cc_check_args = "-mcpu=native+dotprod"
+
+[cc_check.GGML_NATIVE_PLUS_MATMUL_INT8]
+cc_check_headers = "arm_neon.h"
+subject = "int main() { int8x16_t _a, _b; volatile int32x4_t _s = vmmlaq_s32(_s, _a, _b); return 0; }"
+cc_check_args = "-mcpu=native+i8mm"
+
+[cc_check.GGML_NATIVE_PLUS_SVE]
+cc_check_headers = "arm_sve.h"
+subject = "int main() { svfloat32_t _a, _b; volatile svfloat32_t _c = svadd_f32_z(svptrue_b8(), _a, _b); return 0; }"
+cc_check_args = "-mcpu=native+sve"
+
+[cc_check.GGML_NATIVE_PLUS_SME]
+cc_check_headers = "arm_sme.h"
+subject = "__arm_locally_streaming int main() { __asm__ volatile(\"smstart; smstop;\"); return 0; }"
+cc_check_args = "-mcpu=native+sme"
+
+# Features the machine has that no -mcpu flag of ggml's depends on, for the
+# loader's choice (arch/arm/cpu-feats.cpp asks the kernel; these ask the CPU).
+[cc_check.GGML_MACHINE_FP16_VECTOR_ARITHMETIC]
+cc_check_headers = "arm_neon.h"
+subject = "int main() { float16x8_t _a = {}; volatile float16x8_t _s = vaddq_f16(_a, _a); return 0; }"
+cc_check_args = "-mcpu=native+fp16"
+
+[cc_check.GGML_MACHINE_SVE2]
+cc_check_headers = "arm_sve.h"
+subject = "int main() { svint32_t _a, _b; volatile svint32_t _c = svhadd_s32_z(svptrue_b8(), _a, _b); return 0; }"
+cc_check_args = "-mcpu=native+sve2"
+
+# +no<tag>: where the machine lacks a feature, CMake adds it (and
+# -U__ARM_FEATURE_<F>) only if the compiler accepts it.
+[cc_check.GGML_NATIVE_NO_DOTPROD]
+kind = "compiles"
+subject = "int main() { return 0; }"
+cc_check_args = "-mcpu=native+nodotprod"
+
+[cc_check.GGML_NATIVE_NO_MATMUL_INT8]
+kind = "compiles"
+subject = "int main() { return 0; }"
+cc_check_args = "-mcpu=native+noi8mm"
+
+[cc_check.GGML_NATIVE_NO_SVE]
+kind = "compiles"
+subject = "int main() { return 0; }"
+cc_check_args = "-mcpu=native+nosve"
+
+[cc_check.GGML_NATIVE_NO_SME]
+kind = "compiles"
+subject = "int main() { return 0; }"
+cc_check_args = "-mcpu=native+nosme"
+
+# ---- the ISA levels ----
+# The feature levels, each for one architecture (a platform's cpu
+# constraint), and the features each adds to its parent's. A level also names
+# what it builds without (apple_m4: +nosve). Each level is a buildlog-cpp ISA
+# set, which spells its flags. The parent chain stands in for generic CPU
+# microarchitecture knowledge (haswell is a skylakex without AVX-512): that
+# belongs in a layer below buildlog-cpp, and is project-local until then.
+[isa_level.apple_m1]
+arch = "arm64"
+isa_level_feature = "DOTPROD"
+
+[isa_level.apple_m2_m3]
+parent = "apple_m1"
+isa_level_feature = "MATMUL_INT8"
+
+[isa_level.apple_m4]
+parent = "apple_m2_m3"
+isa_level_feature = "SME"
+isa_level_excludes = "SVE"
+
+# Linux's: each adds to its predecessor's features (armv9.2_1 branches from
+# armv8.6_1, which has no SVE2).
+[isa_level."armv8.0_1"]
+arch = "arm64"
+
+[isa_level."armv8.2_1"]
+parent = "armv8.0_1"
+isa_level_feature = "DOTPROD"
+
+[isa_level."armv8.2_2"]
+parent = "armv8.2_1"
+isa_level_feature = "FP16_VECTOR_ARITHMETIC"
+
+[isa_level."armv8.2_3"]
+parent = "armv8.2_2"
+isa_level_feature = "SVE"
+
+[isa_level."armv8.6_1"]
+parent = "armv8.2_3"
+isa_level_feature = "MATMUL_INT8"
+
+[isa_level."armv8.6_2"]
+parent = "armv8.6_1"
+isa_level_feature = "SVE2"
+
+[isa_level."armv9.2_1"]
+parent = "armv8.6_1"
+isa_level_feature = "SME"
+
+[isa_level."armv9.2_2"]
+parent = "armv8.6_2"
+isa_level_feature = "SME"
+
+[isa_level.x64]
+arch = "x86_64"
+
+[isa_level.sse42]
+parent = "x64"
+isa_level_feature = "SSE42"
+
+[isa_level.sandybridge]
+parent = "sse42"
+isa_level_feature = "AVX"
+
+[isa_level.ivybridge]
+parent = "sandybridge"
+isa_level_feature = "F16C"
+
+[isa_level.piledriver]
+parent = "ivybridge"
+isa_level_feature = "FMA"
+
+[isa_level.haswell]
+parent = "piledriver"
+isa_level_feature = ["AVX2", "BMI2"]
+
+[isa_level.skylakex]
+parent = "haswell"
+isa_level_feature = "AVX512"
+
+[isa_level.cannonlake]
+parent = "skylakex"
+isa_level_feature = "AVX512_VBMI"
+
+[isa_level.cascadelake]
+parent = "skylakex"
+isa_level_feature = "AVX512_VNNI"
+
+[isa_level.icelake]
+parent = "cannonlake"
+isa_level_feature = "AVX512_VNNI"
+
+[isa_level.cooperlake]
+parent = "cascadelake"
+isa_level_feature = "AVX512_BF16"
+
+[isa_level.zen4]
+parent = "icelake"
+isa_level_feature = "AVX512_BF16"
+
+[isa_level.alderlake]
+parent = "haswell"
+isa_level_feature = "AVX_VNNI"
+
+[isa_level.sapphirerapids]
+parent = "zen4"
+isa_level_feature = ["AMX_TILE", "AMX_INT8"]

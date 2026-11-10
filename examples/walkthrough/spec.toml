@@ -1,0 +1,18 @@
+config_decl = [["debug", "arm64-macos"]]
+request_all = [["viewer"]]
+default_linkage = [["codec", "shared"]]  # a preference: the user may change it
+linkage_prop = [["codec", "static", "cc.define", "CODEC_STATIC", "public"]]
+
+[target.codec]
+kind = "library"
+sources = "src/codec.c"
+
+[target.filters]
+kind = "library"
+sources = "src/filters.c"
+linkage = { require = "static", why = "registers filters from static initializers" }
+
+[target.viewer]
+kind = "executable"
+sources = "src/viewer.c"
+deps = { private = ["codec", "filters"] }

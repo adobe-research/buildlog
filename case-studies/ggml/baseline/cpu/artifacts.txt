@@ -1,0 +1,77 @@
+===== bin/
+gpt-2-alloc
+gpt-2-backend
+gpt-2-batched
+gpt-2-ctx
+gpt-2-quantize
+gpt-2-sched
+gpt-j
+gpt-j-quantize
+magika
+mnist-eval
+mnist-train
+sam
+simple-backend
+simple-ctx
+test-arange
+test-backend-ops
+test-cont
+test-conv-transpose
+test-conv-transpose-1d
+test-conv1d
+test-conv1d-dw-c1
+test-conv1d-dw-c2
+test-conv2d
+test-conv2d-dw
+test-customop
+test-dup
+test-interpolate
+test-opt
+test-pad-reflect-1d
+test-pool
+test-quantize-fns
+test-quantize-perf
+test-rel-pos
+test-roll
+test-timestep_embedding
+yolov3-tiny
+===== src/*.dylib
+libggml-base.0.25.3.dylib
+libggml-base.0.dylib
+libggml-base.dylib
+libggml-cpu.0.25.3.dylib
+libggml-cpu.0.dylib
+libggml-cpu.dylib
+libggml.0.25.3.dylib
+libggml.0.dylib
+libggml.dylib
+===== libggml-base.0.25.3.dylib
+Mach-O 64-bit dynamically linked shared library arm64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+         name @rpath/libggml-base.0.dylib (offset 24)
+===== libggml-base.0.dylib -> libggml-base.0.25.3.dylib
+===== libggml-base.dylib -> libggml-base.0.dylib
+===== libggml-cpu.0.25.3.dylib
+Mach-O 64-bit dynamically linked shared library arm64
+	@rpath/libggml-cpu.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         name @rpath/libggml-cpu.0.dylib (offset 24)
+         path $BUILD/src (offset 12)
+===== libggml-cpu.0.dylib -> libggml-cpu.0.25.3.dylib
+===== libggml-cpu.dylib -> libggml-cpu.0.dylib
+===== libggml.0.25.3.dylib
+Mach-O 64-bit dynamically linked shared library arm64
+	@rpath/libggml.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	@rpath/libggml-cpu.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         name @rpath/libggml.0.dylib (offset 24)
+         path $BUILD/src (offset 12)
+===== libggml.0.dylib -> libggml.0.25.3.dylib
+===== libggml.dylib -> libggml.0.dylib

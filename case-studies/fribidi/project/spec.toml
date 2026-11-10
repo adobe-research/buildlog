@@ -1,0 +1,94 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# fribidi (meson.build, lib/meson.build; v1.0.17) in the release configuration
+# its baseline builds (meson setup --buildtype=release). The generated tables
+# are gen.toml's, the configured headers configured.toml's, and the programs
+# and tests programs.toml's.
+config_decl = [["release", "arm64-macos"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = [["libfribidi"]]
+
+# The project version and the library's interface numbers (meson.build:
+# project(version: '1.0.17'), interface_age 0, interface_version 4,
+# soversion 0). rules.dl derives the library version 0.4.0 and the
+# fribidi-config.h version variables from them.
+project_version = "1.0.17"
+
+# meson_options.txt's `deprecated` (boolean, default true). The other
+# options (docs, bin, tests, fuzzer_ldflags) are the README's ledger.
+[option.deprecated]
+default = "on"
+
+[profile.incs]
+private = { "cc.include_dir" = ["src:", "src:lib", "src:gen.tab"] }
+# Meson itself adds large-file support to every compile on Linux (its
+# compilers' get_largefile_args); not in any meson.build.
+when."platform.os == linux".private."cc.define" = "_FILE_OFFSET_BITS=64"
+
+# meson.build's configure checks: cc.has_function for memmove, memset and
+# strdup; cc.has_header for stdlib.h, string.h, memory.h, strings.h and
+# sys/times.h; lib/meson.build's cc.sizeof('int'). Each is a question to the
+# C toolchain of every configuration that builds something, the exec
+# configuration of the table generators included (gen.tab/meson.build asks
+# its own has_header checks; here they are the same checks, answered in the
+# generators' configuration).
+[cc_check_include]
+HAVE_STDLIB_H = "stdlib.h"
+HAVE_STRING_H = "string.h"
+HAVE_MEMORY_H = "memory.h"
+HAVE_STRINGS_H = "strings.h"
+HAVE_SYS_TIMES_H = "sys/times.h"
+
+[cc_check_function]
+HAVE_MEMMOVE = "memmove"
+HAVE_MEMSET = "memset"
+HAVE_STRDUP = "strdup"
+
+[cc_check_type]
+SIZEOF_INT = "int"
+
+# lib/meson.build: library('fribidi', ..., c_args: ['-DHAVE_CONFIG_H'],
+# gnu_symbol_visibility: 'hidden', version: libversion, soversion: 0).
+# default_library is Meson's built-in option, shared by default: the target
+# is a shared library (the README's design input on linkage). Its public
+# interface is libfribidi_dep's: the headers' dir and the generated
+# headers (fribidi-config.h and fribidi-unicode-version.h, whose owners'
+# dirs it gets as a member).
+# library() in lib/meson.build: the linkage is the user's (Meson's
+# default_library, whose built-in default is shared; here the configuration's
+# native.linkage, or -Dfribidi:default_library as library_linkage).
+# FRIBIDI_LIB_STATIC is a usage requirement of the static flavour only, where
+# meson.build reads the build-wide option (on Windows; it is read under
+# _WIN32 only, so it is harmless elsewhere).
+[target.libfribidi]
+kind = "library"
+profile = "incs"
+default_linkage = "shared"
+linkage_prop = [["static", "cc.define", "FRIBIDI_LIB_STATIC", "public"]]
+native_output_name = "fribidi"
+library_interface = [["0", "4", "0"]]
+sources = [
+  "lib/fribidi.c",
+  "lib/fribidi-arabic.c",
+  "lib/fribidi-bidi.c",
+  "lib/fribidi-bidi-types.c",
+  "lib/fribidi-char-sets.c",
+  "lib/fribidi-char-sets-cap-rtl.c",
+  "lib/fribidi-char-sets-cp1255.c",
+  "lib/fribidi-char-sets-cp1256.c",
+  "lib/fribidi-char-sets-iso8859-6.c",
+  "lib/fribidi-char-sets-iso8859-8.c",
+  "lib/fribidi-char-sets-utf8.c",
+  "lib/fribidi-deprecated.c",
+  "lib/fribidi-joining.c",
+  "lib/fribidi-joining-types.c",
+  "lib/fribidi-mirroring.c",
+  "lib/fribidi-brackets.c",
+  "lib/fribidi-run.c",
+  "lib/fribidi-shape.c",
+]
+private = { "cc.define" = "HAVE_CONFIG_H", "cc.compile_flag" = "-fvisibility=hidden" }
+public = { "cc.include_dir" = "src:lib" }
+gen_user = ["tables", "unicode_version"]
+deps = { public = ["unicode_version", "tables"] }

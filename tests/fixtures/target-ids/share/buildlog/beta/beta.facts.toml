@@ -1,0 +1,4 @@
+target = [["beta::util"], ["beta::api"]]
+native_kind = [["beta::util", "library"], ["beta::api", "library"]]
+cxx_source = [["beta::util", "vendor/beta/util.cpp"], ["beta::api", "vendor/beta/api.cpp"]]
+dep = [["beta::api", "util", "public"]]

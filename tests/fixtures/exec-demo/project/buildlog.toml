@@ -1,0 +1,2 @@
+uses = ["toy-platform", "exec-demo"]
+spec = ["spec.toml"]

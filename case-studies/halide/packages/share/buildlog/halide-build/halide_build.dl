@@ -1,0 +1,65 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Halide's LLVM policy. Halide::Halide depends on halide-build::llvm, an
+// interface target that carries what libHalide needs from LLVM:
+//
+// - the LLVM definitions, minus _GLIBCXX_ASSERTIONS (Halide works around
+//   https://reviews.llvm.org/D142279), plus LLVM_VERSION=<major><minor>;
+// - LLVM's include dirs (and LLD's, for WebAssembly), as system includes;
+// - WITH_<TARGET> for each backend the build enables, and the LLVM
+//   components they need (always OrcJIT, BitWriter, Linker, Passes);
+// - LLD::lldWasm and LLD::lldCommon for WebAssembly.
+//
+// LLVM, Clang and LLD are tier-2 packages (LLVM's own CMake exports plus
+// the facts and rules they ship, found by name under the invoker's search
+// directories; core selection and the invoker's linkage pin), per platform
+// and from use ([M3 phase 7] L3_discovery.dl): libHalide's LLVM:<component>
+// and LLD::lldWasm deps bind on the target platform, the tools the runtime
+// runs (Clang::clang, LLVM::llvm-as) on the exec platform. This reads their
+// package-level facts, package_version and package_attr, which are keyed by a
+// platform, so what it contributes holds only there (platform_condition).
+// A check, an error, never a downgrade: every enabled backend must be in the
+// target LLVM's LLVM_TARGETS_TO_BUILD (no found = requested ∩ built). That
+// Clang and LLD are the LLVM's exact version is their packages' `requires`.
+// RTTI/exceptions compatibility with LLVM is buildlog-cpp's generic C++ ABI
+// relation. A missing Clang or LLD is core's unresolved reference.
+
+.decl halide_build_llvm_backend(name:symbol, define:symbol)
+
+.decl halide_build_component(c:symbol)
+halide_build_component("OrcJIT"). halide_build_component("BitWriter").
+halide_build_component("Linker"). halide_build_component("Passes").
+halide_build_component(c) :- halide_build_llvm_backend(c, _).
+
+.decl halide_build_wasm()
+halide_build_wasm() :- halide_build_llvm_backend("WebAssembly", _).
+
+target("halide-build::llvm").
+dep("halide-build::llvm", cat("LLVM:", c), "public") :- halide_build_component(c).
+
+// Definitions: a rule over the package's structured facts, no string
+// surgery. Each holds on its platform (its condition m); so does its copy.
+.decl halide_build_dropped_define(d:symbol)
+halide_build_dropped_define("_GLIBCXX_ASSERTIONS").
+prop_when("halide-build::llvm", "cc.define", d, "interface", m) :-
+  package_attr("LLVM", p, "llvm.define", d), platform_condition(p, m), !halide_build_dropped_define(d).
+.decl halide_build_llvm_version_define(p:symbol, d:symbol)
+halide_build_llvm_version_define(p, cat("LLVM_VERSION=", a, b)) :- package_version("LLVM", p, a, b, _).
+prop_when("halide-build::llvm", "cc.define", d, "interface", m) :-
+  halide_build_llvm_version_define(p, d), platform_condition(p, m).
+prop("halide-build::llvm", "cc.define", d, "interface") :- halide_build_llvm_backend(_, d).
+prop_when("halide-build::llvm", "cc.system_include_dir", i, "interface", m) :-
+  package_attr("LLVM", p, "llvm.system_include_dir", i), platform_condition(p, m).
+
+// WebAssembly links LLD's libraries and needs its headers.
+prop_when("halide-build::llvm", "cc.system_include_dir", i, "interface", m) :- halide_build_wasm(),
+  package_attr("LLD", p, "lld.system_include_dir", i), platform_condition(p, m).
+dep("halide-build::llvm", "LLD::lldWasm", "public"), dep("halide-build::llvm", "LLD::lldCommon", "public") :-
+  halide_build_wasm().
+
+// ---- checks ----
+error("Halide LLVM backend not built",
+  cat(b, " (", d, ") is enabled but the bound LLVM does not build it (LLVM_TARGETS_TO_BUILD)")) :-
+  halide_build_llvm_backend(b, d), package_version("LLVM", p, _, _, _),
+  !package_attr("LLVM", p, "llvm.built_target", b).

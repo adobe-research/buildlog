@@ -1,0 +1,6 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// CMake's FindThreads target: threads are libc's on macOS.
+imported("Threads::Threads").
+imported_kind("Threads::Threads", "interface").

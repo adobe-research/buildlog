@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# buildlog-emsdk: Emscripten as a plugin (provisional, just enough for the
+# case studies; stands in for what emsdk would ship, as Emscripten.cmake does
+# for CMake). Discovery (EMSDK), em++/emcc/emar as the `emscripten` toolchain
+# family for the wasm32-emscripten platform, its settings and its program
+# format (<name>.js plus <name>.wasm).
+name = "buildlog-emsdk"
+version = "0.1.0"
+rank = 3
+layers = ["layers/L2_emsdk.dl", "layers/F_emscripten.dl"]
+requires = { buildlog = ">=0.1", buildlog-cpp = ">=0.1" }
+extends = [
+  "platform",
+  "platform_constraint",
+  "platform_vocabulary",
+  "platform_os_threads_arg",
+  "platform_os_dl_lib",
+  "toolchain",
+  "toolchain_tool",
+  "toolchain_runs_on",
+  "cross_target",
+  "family_setting_arg",
+  "family_pic_arg",
+  "family_cxx_off_arg",
+  "family_werror_arg",
+  "linker_cycle_policy",
+  "platform_executable_suffix",
+  "platform_link_side_file",
+  "setting_key",
+  "setting_value",
+  "setting_default",
+  "setting_exec_value",
+  "setting_name_elide",
+  "config_cpu_feature",
+  "imported",
+  "imported_kind",
+  "prop",
+  "error",
+]
+
+[[probe]]
+kind = "emsdk_inventory"
+request = "req_emsdk_inventory"
+domain = "domain_emsdk_inventory"
+result = [
+  "res_cross_emsdk_status",
+  "res_cross_emsdk_platform",
+  "res_cross_emsdk_platform_constraint",
+  "res_cross_emsdk_toolchain",
+  "res_cross_emsdk_toolchain_tool",
+  "res_cross_emsdk_toolchain_runs_on",
+  "res_cross_emsdk_toolchain_target",
+]
+entry = "buildlog_emsdk.emsdk:inventory"
+fingerprint = "buildlog_emsdk.emsdk:inventory_fingerprint"

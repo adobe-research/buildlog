@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# buildlog-ndk: the Android NDK as a plugin (provisional, just enough for the
+# case studies; stands in for what the NDK would ship, as android.toolchain.cmake
+# does for CMake). Discovery (ANDROID_NDK_ROOT), the NDK's clang as a
+# toolchain, the arm64-android and x86_64-android platforms, and the NDK's
+# default compile and link arguments. The API level is the project's
+# (platform_os_level, buildlog-cpp).
+name = "buildlog-ndk"
+version = "0.1.0"
+rank = 3
+layers = ["layers/L2_ndk.dl"]
+requires = { buildlog = ">=0.1", buildlog-cpp = ">=0.1" }
+extends = [
+  "platform",
+  "platform_constraint",
+  "platform_vocabulary",
+  "platform_os_threads_arg",
+  "platform_os_dl_lib",
+  "toolchain",
+  "toolchain_tool",
+  "toolchain_runs_on",
+  "tc_platform_arg",
+  "tc_link_arg",
+  "cross_target",
+  "elf_driver",
+  "error",
+  "imported",
+  "imported_kind",
+  "prop",
+]
+
+[[probe]]
+kind = "ndk_inventory"
+request = "req_ndk_inventory"
+domain = "domain_ndk_inventory"
+result = [
+  "res_cross_ndk_status",
+  "res_cross_ndk_platform",
+  "res_cross_ndk_platform_constraint",
+  "res_cross_ndk_toolchain",
+  "res_cross_ndk_toolchain_tool",
+  "res_cross_ndk_toolchain_runs_on",
+  "res_cross_ndk_toolchain_target",
+  "res_cross_ndk_toolchain_arg",
+  "res_cross_ndk_toolchain_probe_triple",
+]
+entry = "buildlog_ndk.ndk:inventory"
+fingerprint = "buildlog_ndk.ndk:inventory_fingerprint"

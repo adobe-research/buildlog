@@ -1,0 +1,139 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# libHalide, as src/CMakeLists.txt builds it in the Release configuration
+# (the macOS preset). Sources: sources.toml; the headers of Halide.h:
+# headers.toml; bindings and pins: bindings.toml. tools/ and the
+# autoschedulers (phase 4): autoschedulers.toml.
+# regexp_replace is built by CMake's `all` but nothing runs it (yet).
+# Requested in every declared configuration; --config picks which are built.
+request_all = [["Halide"], ["regexp_replace"]]
+
+# Generated sources (halide-build, phase 2). The C and HTML templates:
+# binary2cpp SYMBOL < template > file, compiled into libHalide.
+halide_build_embed = [
+  [
+    "Halide",
+    "binary2cpp",
+    "halide_c_template_CodeGen_C_prologue",
+    "src/CodeGen_C_prologue.template.cpp",
+    "c_template.CodeGen_C_prologue.template.cpp"
+  ],
+  [
+    "Halide",
+    "binary2cpp",
+    "halide_c_template_CodeGen_C_vectors",
+    "src/CodeGen_C_vectors.template.cpp",
+    "c_template.CodeGen_C_vectors.template.cpp"
+  ],
+  [
+    "Halide",
+    "binary2cpp",
+    "halide_html_template_StmtToHTML_dependencies_html",
+    "src/irvisualizer/html_template_StmtToHTML_dependencies.html",
+    "html_template.StmtToHTML_dependencies.html.cpp"
+  ],
+  [
+    "Halide",
+    "binary2cpp",
+    "halide_html_template_StmtToHTML_js",
+    "src/irvisualizer/html_template_StmtToHTML.js",
+    "html_template.StmtToHTML.js.cpp"
+  ],
+  [
+    "Halide",
+    "binary2cpp",
+    "halide_html_template_StmtToHTML_css",
+    "src/irvisualizer/html_template_StmtToHTML.css",
+    "html_template.StmtToHTML.css.cpp"
+  ],
+]
+# The mono-header: build_halide_h LICENSE.txt headers... > Halide.h.
+halide_build_mono_header = [["Halide", "build_halide_h", "LICENSE.txt", "Halide.h"]]
+# The runtime (phase 3; CMake's Halide_initmod): src/runtime's modules,
+# compiled to LLVM IR by the bound Clang, assembled by llvm-as and embedded
+# by binary2cpp into libHalide (the module lists are halide-build's). The
+# version defines, and find_package(VulkanHeaders)'s include dir.
+halide_build_runtime = [["Halide", "binary2cpp", "src/runtime", "22.0.0", "22", "0", "0"]]
+halide_build_runtime_include = [["Halide", "dependencies/vulkan/include"]]
+# Serialization (phase 5): flatc halide_ir.fbs -> halide_ir.fbs.h, a private
+# generated header of libHalide.
+halide_build_flatc = [["Halide", "flatbuffers::flatc", "src/halide_ir.fbs", "halide_ir.fbs.h"]]
+# The LLVM backends (Halide_LLVM's COMPONENTS and OPTIONAL_COMPONENTS, all
+# enabled): each must be built by the bound LLVM (halide-build checks).
+halide_build_llvm_backend = [
+  ["AArch64", "WITH_AARCH64"],
+  ["ARM", "WITH_ARM"],
+  ["Hexagon", "WITH_HEXAGON"],
+  ["NVPTX", "WITH_NVPTX"],
+  ["PowerPC", "WITH_POWERPC"],
+  ["RISCV", "WITH_RISCV"],
+  ["WebAssembly", "WITH_WEBASSEMBLY"],
+  ["X86", "WITH_X86"],
+]
+
+[target.Halide]
+kind = "library"
+# add_library(Halide) under option(BUILD_SHARED_LIBS ... ON)
+default_linkage = "shared"
+native_version = [["22.0.0", "22"]]
+# target_export_script(Halide APPLE_LD ... GNU_LD ...): the list in the
+# format each platform's linker takes.
+native_exported_symbols = "src:src/exported_symbols.osx"
+native_version_script = "src:src/exported_symbols.ldscript"
+deps = { interface = ["Halide_Runtime"], private = [
+  "halide-build::llvm",
+  "SPIRV-Headers::SPIRV-Headers",
+  "flatbuffers::flatbuffers",
+  "wabt::wabt",
+] }
+public = { "cxx.std" = "17", "cc.define" = [
+  "HALIDE_VERSION_MAJOR=22",
+  "HALIDE_VERSION_MINOR=0",
+  "HALIDE_VERSION_PATCH=0",
+  "HALIDE_ENABLE_RTTI",
+  "HALIDE_WITH_EXCEPTIONS",
+] }
+private = { "cc.define" = [
+  "Halide_EXPORTS",
+  "WITH_D3D12",
+  "WITH_METAL",
+  "WITH_OPENCL",
+  "WITH_SPIRV",
+  "WITH_VULKAN",
+  "WITH_WEBGPU",
+  "WITH_SERIALIZATION",
+  "WITH_WABT",
+], "cc.include_dir" = "src:src", "cc.compile_flag" = [
+  "-Wall",
+  "-Wcast-qual",
+  "-Wignored-qualifiers",
+  "-Wimplicit-fallthrough",
+  "-Woverloaded-virtual",
+  "-Wdeprecated-declarations",
+] }
+
+# Halide::Runtime: FILE_SET HEADERS of src/runtime (phase 4).
+[target.Halide_Runtime]
+interface = { "cc.include_dir" = "src:src/runtime" }
+
+# tools/CMakeLists.txt's host tools (phase 2). Nothing says they run on the
+# build machine: the actions below run them, so core builds them for the exec
+# configuration.
+[target.binary2cpp]
+profile = "halide-tool"
+kind = "executable"
+sources = "tools/binary2cpp.cpp"
+
+[target.build_halide_h]
+profile = "halide-tool"
+kind = "executable"
+sources = "tools/build_halide_h.cpp"
+
+[target.regexp_replace]
+profile = "halide-tool"
+kind = "executable"
+sources = "tools/regexp_replace.cpp"
+
+[profile.halide-tool]
+private = { "cxx.std" = "17" }

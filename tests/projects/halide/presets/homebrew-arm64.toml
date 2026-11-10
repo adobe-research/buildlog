@@ -1,0 +1,24 @@
+# The toolchain for each (language, exec platform, target platform) the
+# workspace builds: the tools run on arm64-macos, the products target it or
+# x86_64-macos (the universal2 slices and the x86_64 configuration).
+toolchain_pin = [
+  ["c", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["cxx", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["c", "arm64-macos", "x86_64-macos", "apple-clang"],
+  ["cxx", "arm64-macos", "x86_64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "x86_64-macos", "apple-clang"],
+]
+
+# Binding source: Halide names its dependencies abstractly (libpng,
+# libjpeg, zlib). buildlog-cpp's importers search those names as pkg-config
+# modules (and CPS packages) in Homebrew's installed metadata; the importer
+# that finds `libpng.pc` defines `pc:libpng` and states the binding
+# `alias("libpng", "pc:libpng")`. zlib is the macOS system library; Homebrew
+# describes it in its per-OS pkgconfig directory, which is not under the
+# prefix's standard layout. Halide links libpng and libjpeg only if the
+# universe defines them (rules on core's `defined`), so no edge asks for
+# them; the workspace opts in with package_want.
+package_prefix = [["${HOMEBREW_PREFIX}"]]
+package_search_dir = [["pc", "${HOMEBREW_SYSTEM_PKGCONFIG}"]]
+halide_imported_tool = [["Halide::gengen", "${HALIDE_PREFIX}/bin/gengen"]]

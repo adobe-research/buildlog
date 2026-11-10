@@ -1,0 +1,74 @@
+===== lipo -archs
+libz-ng.2.3.3.dylib: x86_64
+libz-ng.a: x86_64
+example: x86_64
+minigzip: x86_64
+===== links
+libz-ng.2.dylib -> libz-ng.2.3.3.dylib
+libz-ng.dylib -> libz-ng.2.dylib
+===== otool -L libz-ng.2.3.3.dylib
+	@rpath/libz-ng.2.dylib (compatibility version 2.0.0, current version 2.3.3)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== otool -L example
+	@rpath/libz-ng.2.dylib (compatibility version 2.0.0, current version 2.3.3)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== otool -L minigzip
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== otool -L minideflate
+	@rpath/libz-ng.2.dylib (compatibility version 2.0.0, current version 2.3.3)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== otool -L infcover
+	@rpath/libz-ng.2.dylib (compatibility version 2.0.0, current version 2.3.3)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== ar -t libz-ng.a
+--- x86_64
+__.SYMDEF SORTED
+adler32_avx2.c.o
+adler32_avx512_vnni.c.o
+adler32_avx512.c.o
+adler32_c.c.o
+adler32_fold_c.c.o
+adler32_sse42.c.o
+adler32_ssse3.c.o
+adler32.c.o
+chorba_sse2.c.o
+chorba_sse41.c.o
+chunkset_avx2.c.o
+chunkset_avx512.c.o
+chunkset_sse2.c.o
+chunkset_ssse3.c.o
+compare256_avx2.c.o
+compare256_avx512.c.o
+compare256_sse2.c.o
+compress.c.o
+cpu_features.c.o
+crc32_braid_c.c.o
+crc32_braid_comb.c.o
+crc32_chorba_c.c.o
+crc32_fold_c.c.o
+crc32_pclmulqdq.c.o
+crc32_vpclmulqdq.c.o
+crc32.c.o
+deflate_fast.c.o
+deflate_huff.c.o
+deflate_medium.c.o
+deflate_quick.c.o
+deflate_rle.c.o
+deflate_slow.c.o
+deflate_stored.c.o
+deflate.c.o
+functable.c.o
+gzlib.c.o
+gzread.c.o
+gzwrite.c.o
+infback.c.o
+inflate.c.o
+inftrees.c.o
+insert_string_roll.c.o
+insert_string.c.o
+slide_hash_avx2.c.o
+slide_hash_sse2.c.o
+trees.c.o
+uncompr.c.o
+x86_features.c.o
+zutil.c.o

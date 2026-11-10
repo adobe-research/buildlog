@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# CMakeLists.txt: nanobind_add_module(nanobind_example_ext STABLE_ABI
+# NB_STATIC src/nanobind_example_ext.cpp), installed into the package
+# directory nanobind_example. pyproject.toml: build-system.requires
+# nanobind >=1.3.2, and [tool.scikit-build] wheel.py-api = "cp312" (the
+# stable ABI of 3.12 where the interpreter allows it). The package's
+# pure-Python file is scikit-build-core's wheel.packages default
+# (src/nanobind_example).
+python_py_api = ["cp312"]
+python_package_file = { "src/nanobind_example/__init__.py" = "nanobind_example/__init__.py" }
+
+[python_requires.nanobind]
+module = "nanobind"
+spec = ">=1.3.2"
+
+[nanobind_module.nanobind_example_ext]
+
+[target.nanobind_example_ext]
+sources = ["src/nanobind_example_ext.cpp"]
+nanobind_module_option = ["STABLE_ABI", "NB_STATIC"]
+python_extension = [["nanobind_example", "nanobind_example_ext"]]
+private = { "cxx.std" = "17" }

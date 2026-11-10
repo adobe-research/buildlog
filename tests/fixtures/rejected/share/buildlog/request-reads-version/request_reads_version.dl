@@ -1,0 +1,1 @@
+request(t, "x") :- config_attr(_, "cxx.version", _), t = "extra".

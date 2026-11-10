@@ -1,0 +1,4 @@
+// Only::Only -> amba::only directly; Util::A -> U2 -> amba::util as a chain.
+alias("Only::Only", "amba::only").
+alias("Util::A", "U2").
+alias("U2", "amba::util").

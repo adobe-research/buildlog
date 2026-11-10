@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# With in-tree.toml: build the in-tree nlohmann_json with JSON_Diagnostics
+# on (its option, qualified by the source project's name).
+option_value = [["nlohmann_json.JSON_Diagnostics", "on"]]

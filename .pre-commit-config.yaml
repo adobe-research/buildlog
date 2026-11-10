@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Uses the ruff pinned in uv.lock, so hooks and `uv run ruff` never disagree.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --frozen ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --frozen ruff check --force-exclude
+        language: system
+        types_or: [python, pyi]
+      - id: tombi-format
+        name: tombi format
+        entry: uv run --frozen tombi format
+        language: system
+        types: [toml]
+        exclude: '((^|/)buildlog\.lock$|^uv\.lock$)'

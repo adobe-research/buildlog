@@ -1,0 +1,11 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// LLD's facts, as LLD would ship them next to lib/cmake/lld: the targets are
+// LLDTargets.cmake's (imported by the manifest).
+.decl lld_version(major:symbol, minor:symbol, patch:symbol)
+.decl lld_include_dir(d:symbol)        // LLD_INCLUDE_DIRS
+.decl lld_include_dir_on(p:symbol, d:symbol)  // for one platform's installation
+package_attr("LLD", p, "lld.system_include_dir", d) :- import_target_on("LLD::lldWasm", p), lld_include_dir_on(p, d).
+package_version("LLD", p, a, b, c) :- import_target_on("LLD::lldWasm", p), lld_version(a, b, c).
+package_attr("LLD", p, "lld.system_include_dir", d) :- import_target_on("LLD::lldWasm", p), lld_include_dir(d).

@@ -1,0 +1,7 @@
+# Core-only: defines alpha2::util. A project reference to a bare util it does
+# not own must not resolve to it.
+name = "alpha2"
+version = "0.1.0"
+rank = 1
+layers = []
+facts = ["facts.toml"]

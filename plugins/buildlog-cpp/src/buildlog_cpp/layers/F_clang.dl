@@ -1,0 +1,195 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Toolchain-family plugin (sits beside L2): how a clang-family toolchain
+// instance is aimed at a platform. Used by both L3 (link driver) and L4
+// (compile). A gcc-cross family would instead contribute nothing here and
+// declare one toolchain per target binary. The relations are core L2's
+// (open); the clang spellings are here.
+
+// Core L3 links with the toolchain's "link" tool: for clang, the C++
+// driver (clang++), so C++ runtime libraries are linked.
+toolchain_tool(tc, "link", p) :- toolchain(tc, "clang", _), toolchain_tool(tc, "cxx", p).
+// A platform with an OS level (Android's API level, L2_cross.dl) spells it
+// into the triple.
+tc_platform_arg(tc, p, "--target=", tr) :- toolchain(tc, "clang", _), platform(p, tr), !platform_leveled(p).
+tc_platform_arg(tc, p, "--target=", cat(tr, l)) :- toolchain(tc, "clang", _), platform(p, tr),
+  platform_constraint(p, "os", os), platform_os_level(os, l).
+tc_platform_arg(tc, p, "-isysroot ", s) :- toolchain(tc, "clang", _), platform_sdk(p, s).
+
+// How L3's settings are spelled by this family, per phase (compile | link).
+family_setting_arg("clang", "compile", "native.opt", "debug", "-O0").
+family_setting_arg("clang", "compile", "native.opt", "debug", "-g").
+family_setting_arg("clang", "compile", "native.opt", "release", "-O3").
+family_setting_arg("clang", "compile", "native.opt", "release", "-DNDEBUG").
+family_setting_arg("clang", "compile", "native.sanitize", "address", "-fsanitize=address").
+family_setting_arg("clang", "link", "native.sanitize", "address", "-fsanitize=address").
+
+// How a static link resolves a cycle among archives depends on the *linker*
+// for the target platform: ld64 (Mach-O) and lld search archives repeatedly,
+// so cycles need nothing; GNU ld needs --start-group/--end-group. This is a
+// fact about (toolchain, platform), so it lives in the family plugin.
+linker_cycle_policy(tc, p, "none") :- toolchain(tc, "clang", _), platform_constraint(p, "os", "macos").
+linker_cycle_policy(tc, p, "group") :- toolchain(tc, "clang", _), platform_constraint(p, "os", "linux").
+// ELF shared libraries and modules: F_gcc.dl, for either family.
+linker_group_delims(tc, p, "-Wl,--start-group", "-Wl,--end-group") :- linker_cycle_policy(tc, p, "group").
+
+// Whole-archive link edges (imported targets' imported_whole_archive):
+// the prefix that makes the linker load every member of one archive.
+whole_archive_prefix(tc, p, "-Wl,-force_load,") :- toolchain(tc, "clang", _), platform_constraint(p, "os", "macos").
+
+// Shared libraries (L3): how the family's driver links one for a platform.
+// Mach-O: a dylib with an install name under @rpath (the common
+// convention), compatibility and current versions, and an exported-symbols
+// list passed through to ld64. Linking a shared library for a platform
+// without these spellings is an error (L3).
+shared_link_spelling(tc, p, "shared", "-dynamiclib"),
+shared_link_spelling(tc, p, "install_name", "-install_name "),
+shared_link_spelling(tc, p, "install_name_dir", "@rpath/"),
+shared_link_spelling(tc, p, "compatibility_version", "-compatibility_version "),
+shared_link_spelling(tc, p, "current_version", "-current_version "),
+shared_link_spelling(tc, p, "exported_symbols", "-Xlinker -exported_symbols_list -Xlinker "),
+shared_link_spelling(tc, p, "suffix", ".dylib") :-
+  toolchain(tc, "clang", _), platform_constraint(p, "os", "macos").
+
+// Module libraries (L3; CMake's MODULE): a Mach-O bundle, CMake's .so
+// suffix for modules on macOS. Build-tree rpaths are relative to the
+// linked artifact (@loader_path).
+module_link_spelling(tc, p, "module", "-bundle"),
+module_link_spelling(tc, p, "exported_symbols", "-Xlinker -exported_symbols_list -Xlinker "),
+module_link_spelling(tc, p, "suffix", ".so"),
+rpath_origin_prefix(tc, p, "-Wl,-rpath,@loader_path/") :-
+  toolchain(tc, "clang", _), platform_constraint(p, "os", "macos").
+
+// Position-independent code for objects of shared and module libraries (every shared
+// library's objects; on Darwin it is also clang's default).
+.decl family_pic_arg(family:symbol, arg:symbol)
+family_pic_arg("clang", "-fPIC").
+
+// C++ ABI settings (L4 cxx.rtti, cxx.exceptions) turned off.
+.decl family_cxx_off_arg(family:symbol, key:symbol, arg:symbol)
+family_cxx_off_arg("clang", "cxx.rtti", "-fno-rtti").
+family_cxx_off_arg("clang", "cxx.exceptions", "-fno-exceptions").
+
+// Warnings as errors (L4 cc_werror, a user decision).
+.decl family_werror_arg(family:symbol, arg:symbol)
+family_werror_arg("clang", "-Werror").
+
+// ISA extension spellings. x86: one additive
+// flag per extension (-m<ext>). AArch64: one non-additive
+// -march=<base>+<sfx>+... per TU: the suffixes in rank order (an excluded
+// extension as +no<sfx>, at its own rank), and the base the latest
+// architecture version any of the extensions needs (the first, armv8-a,
+// without any). The ranks merge the orders zlib-ng's and ggml's
+// CMakeLists.txt write. GCC spells these the same (F_gcc.dl, checked by
+// tests/test_gcc_family.py).
+.decl family_isa_flag(fam:symbol, ext:symbol, flag:symbol)
+.decl family_isa_march_ext(fam:symbol, ext:symbol, suffix:symbol, rank:number)
+.decl family_isa_march_off(fam:symbol, ext:symbol, suffix:symbol, rank:number)
+.decl family_isa_march_version(fam:symbol, cpu:symbol, version:symbol, rank:number)
+.decl family_isa_ext_version(fam:symbol, ext:symbol, version:symbol)
+family_isa_flag("clang", "sse2", "-msse2").
+family_isa_flag("clang", "ssse3", "-mssse3").
+family_isa_flag("clang", "sse4.1", "-msse4.1").
+family_isa_flag("clang", "sse4.2", "-msse4.2").
+family_isa_flag("clang", "pclmul", "-mpclmul").
+family_isa_flag("clang", "avx", "-mavx").
+family_isa_flag("clang", "f16c", "-mf16c").
+family_isa_flag("clang", "fma", "-mfma").
+family_isa_flag("clang", "avx2", "-mavx2").
+family_isa_flag("clang", "bmi2", "-mbmi2").
+family_isa_flag("clang", "avxvnni", "-mavxvnni").
+family_isa_flag("clang", "avx512f", "-mavx512f").
+family_isa_flag("clang", "avx512cd", "-mavx512cd").
+family_isa_flag("clang", "avx512dq", "-mavx512dq").
+family_isa_flag("clang", "avx512bw", "-mavx512bw").
+family_isa_flag("clang", "avx512vl", "-mavx512vl").
+family_isa_flag("clang", "avx512vbmi", "-mavx512vbmi").
+family_isa_flag("clang", "avx512vnni", "-mavx512vnni").
+family_isa_flag("clang", "avx512bf16", "-mavx512bf16").
+family_isa_flag("clang", "vpclmulqdq", "-mvpclmulqdq").
+family_isa_flag("clang", "xsave", "-mxsave").
+family_isa_flag("clang", "amx-tile", "-mamx-tile").
+family_isa_flag("clang", "amx-int8", "-mamx-int8").
+family_isa_march_version("clang", "arm64", "armv8-a", 0).
+family_isa_march_version("clang", "arm64", "armv8.2-a", 1).
+family_isa_march_version("clang", "arm64", "armv8.6-a", 2).
+family_isa_march_version("clang", "arm64", "armv9.2-a", 3).
+family_isa_march_ext("clang", "crc", "crc", 0).
+family_isa_march_ext("clang", "neon", "simd", 1).
+family_isa_march_ext("clang", "dotprod", "dotprod", 2).
+family_isa_march_ext("clang", "fp16", "fp16", 3).
+family_isa_march_ext("clang", "sve", "sve", 4).
+family_isa_march_ext("clang", "i8mm", "i8mm", 5).
+family_isa_march_ext("clang", "sve2", "sve2", 6).
+family_isa_march_off("clang", "sve", "nosve", 7).
+family_isa_march_ext("clang", "sme", "sme", 8).
+family_isa_ext_version("clang", "dotprod", "armv8.2-a").
+family_isa_ext_version("clang", "fp16", "armv8.2-a").
+family_isa_ext_version("clang", "sve", "armv8.2-a").
+family_isa_ext_version("clang", "i8mm", "armv8.6-a").
+family_isa_ext_version("clang", "sve2", "armv8.6-a").
+family_isa_ext_version("clang", "sme", "armv9.2-a").
+
+// ---- C++ modules (L4_modules.dl): what the family spells ----
+// How a family's build scans a source for its imports: "tool" (a separate
+// scanner, clang-scan-deps, run on the compile's argv) or "driver" (the
+// compiler preprocesses with a P1689 output option).
+.decl family_scan_style(fam:symbol, style:symbol)
+family_scan_style("clang", "tool").
+// A compile flag that starts with one of these changes what a BMI may be
+// used with: a consumer whose flags differ gets its own BMI. Written by hand
+// per family, from its documentation (not probed): language and ABI
+// options, sanitizers, target features. Warnings, optimization, debug info
+// and defines do not.
+.decl family_bmi_flag(fam:symbol, prefix:symbol)
+family_bmi_flag("clang", "-fno-exceptions").
+family_bmi_flag("clang", "-fexceptions").
+family_bmi_flag("clang", "-fno-rtti").
+family_bmi_flag("clang", "-frtti").
+family_bmi_flag("clang", "-fsanitize").
+family_bmi_flag("clang", "-fno-sanitize").
+family_bmi_flag("clang", "-fvisibility").
+family_bmi_flag("clang", "-fpic").
+family_bmi_flag("clang", "-fPIC").
+family_bmi_flag("clang", "-fpie").
+family_bmi_flag("clang", "-fPIE").
+family_bmi_flag("clang", "-fms-").
+family_bmi_flag("clang", "-fno-char8_t").
+family_bmi_flag("clang", "-fchar8_t").
+family_bmi_flag("clang", "-fwrapv").
+family_bmi_flag("clang", "-fno-strict-").
+family_bmi_flag("clang", "-fstrict-").
+family_bmi_flag("clang", "-fno-signed-char").
+family_bmi_flag("clang", "-funsigned-char").
+family_bmi_flag("clang", "-fsigned-char").
+family_bmi_flag("clang", "-fcoroutines").
+family_bmi_flag("clang", "-fopenmp").
+family_bmi_flag("clang", "-ffast-math").
+family_bmi_flag("clang", "-fno-fast-math").
+family_bmi_flag("clang", "-ffp-").
+family_bmi_flag("clang", "-fcf-protection").
+family_bmi_flag("clang", "-fassume-").
+family_bmi_flag("clang", "-m").
+family_bmi_flag("clang", "-stdlib=").
+family_bmi_flag("clang", "-std=").
+// A BMI-only compile: the same compile as the unit's object, writing the BMI
+// instead (rank, prefix, value; the input and output spellings follow).
+.decl family_bmi_only_arg(fam:symbol, rank:number, prefix:symbol, value:symbol)
+.decl family_bmi_only_input(fam:symbol, prefix:symbol)
+.decl family_bmi_only_output(fam:symbol, prefix:symbol)
+family_bmi_only_arg("clang", 39, "-x ", "c++-module").
+family_bmi_only_input("clang", "--precompile ").
+family_bmi_only_output("clang", "-o ").
+// How a compile is given the BMIs it imports: a module map file (clang: an
+// @-response file of -fmodule-file=name=path lines), and an argument every
+// module-aware compile takes.
+.decl family_modmap_arg(fam:symbol, prefix:symbol)
+family_modmap_arg("clang", "@").
+.decl family_modules_arg(fam:symbol, arg:symbol)
+// Extra arguments for a module-aware object compile (GCC does not know .cppm
+// as C++).
+// The compiler's depfile names imported BMIs, so header deps come from the scan.
+.decl family_scan_deps(fam:symbol)
+family_scan_deps("clang").
+.decl family_module_object_arg(fam:symbol, rank:number, prefix:symbol, value:symbol)

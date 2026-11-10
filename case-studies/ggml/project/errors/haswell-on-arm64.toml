@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Error demo: ask for an x86_64 variant in the arm64 configuration.
+request = [["ggml-cpu-haswell", "release"]]

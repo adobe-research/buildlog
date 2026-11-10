@@ -1,0 +1,7 @@
+imported = [
+  ["zlib"],
+]
+
+prop = [
+  ["zlib", "native.link_flag", "-lz", "interface"],
+]

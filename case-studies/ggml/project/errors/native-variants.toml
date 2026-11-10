@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Error demo: GGML_NATIVE=ON (the default) with GGML_CPU_ALL_VARIANTS=ON,
+# which upstream rejects on x86 but on arm64 builds three unrankable modules.
+option_value = [["GGML_BACKEND_DL", "on"], ["GGML_CPU_ALL_VARIANTS", "on"]]

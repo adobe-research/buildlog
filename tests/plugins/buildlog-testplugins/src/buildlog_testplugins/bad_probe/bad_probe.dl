@@ -1,0 +1,9 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+.decl domain_stolen(id:symbol)
+.decl res_stolen(req:symbol, ok:symbol)
+.decl req_derived(id:symbol, n:symbol)
+.decl domain_derived(id:symbol)
+.decl res_derived(req:symbol, ok:symbol)
+res_derived(id, "yes") :- req_derived(id, _).

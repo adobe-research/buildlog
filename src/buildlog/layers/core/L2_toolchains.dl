@@ -1,0 +1,268 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L2: toolchains. A toolchain is a discovered entity; its capabilities are
+// discovered facts; instances (tc, exec, target) are derived; selection is a
+// function of (lang, exec platform, target platform) and must be unique.
+//
+// Language-neutral: a toolchain plugin (buildlog-cpp's inventory probe:
+// clang, SDKs) states the toolchains, their tools and what they can target
+// in these open relations; a language layer states what it requires
+// (tc_required). Tool roles are the plugin's, except "link": the driver L3
+// links with (the family plugin says which tool that is).
+
+.decl toolchain(tc:symbol, family:symbol, version:symbol)           // open
+.decl toolchain_tool(tc:symbol, role:symbol, path:symbol)           // open
+.decl toolchain_runs_on(tc:symbol, p:symbol)                        // open
+.decl toolchain_can_target(tc:symbol, lang:symbol, p:symbol)        // open
+.decl toolchain_supports(tc:symbol, key:symbol, value:symbol)       // open
+// The invoker's pin: a (language, exec platform, target platform) triple,
+// exactly what an ambiguity is about. There is no per-language form: in a
+// cross build "cxx = gcc" could mean the product's toolchain or the tools',
+// and the two are different selections.
+.decl toolchain_pin(lang:symbol, exec:symbol, target:symbol, tc:symbol)   // user policy, not order
+
+// ---- built toolchains ----
+// A toolchain is a set of facts; who states them differs. An installed
+// toolchain's facts are discovered (buildlog-cpp's inventory probe runs the
+// compiler: a backwards-compatibility affordance for tools that do not
+// describe themselves). A toolchain the build makes states the same facts
+// from its author (a rule package beside its sources, like a package file
+// beside a library) and names, instead of a path, the target whose program
+// plays a role: toolchain_tool_target(tc, role, t). Such a role's program
+// is t's run artifact in the exec configuration of whatever uses it, so a
+// target built with it has t as a tool (L1 tool_dep: t is needed in the
+// exec configuration, the exec inference check applies) and each action
+// running it has the artifact as an implicit input (action_tc_tool,
+// below). Nothing runs it at configure time: its capabilities
+// (toolchain_can_target, toolchain_supports) are the author's facts, never
+// a probe's.
+// toolchain_tool_arg(tc, role, arg): words the role's program takes first
+// (TCC's archiver is `tcc -ar`). toolchain_runtime(tc, r): a library every
+// link with tc takes after the objects, built (or imported) in the linked
+// target's own configuration (TCC's libtcc1.a, clang's compiler-rt).
+.decl toolchain_tool_target(tc:symbol, role:symbol, t:symbol)       // open
+.decl toolchain_tool_arg(tc:symbol, role:symbol, arg:symbol)        // open
+.decl toolchain_runtime(tc:symbol, r:symbol)                        // open
+.decl toolchain_built(tc:symbol)
+toolchain_built(tc) :- toolchain_tool_target(tc, _, _).
+error("toolchain tool named twice", cat(tc, " ", r)) :- toolchain_tool_target(tc, r, _), toolchain_tool(tc, r, _).
+error("toolchain tool named twice", cat(tc, " ", r, ": ", a, " and ", b)) :-
+  toolchain_tool_target(tc, r, a), toolchain_tool_target(tc, r, b), a < b.
+error("built toolchain without a toolchain fact", tc) :- toolchain_built(tc), !toolchain(tc, _, _).
+error("unknown target", cat(t, " (toolchain_tool_target of ", tc, ")")) :- toolchain_tool_target(tc, _, t),
+  !target_id(t).
+
+.decl tc_instance(tc:symbol, exec:symbol, target:symbol)
+tc_instance(tc, e, p) :- toolchain_runs_on(tc, e), toolchain_can_target(tc, _, p).
+
+// A built toolchain is not a candidate of the selection: adding one to a
+// build never changes or ambiguates what the rest of it compiles with
+// (and the compiler's own sources are not compiled by itself). Targets
+// choose it by name (target_toolchain, below).
+.decl tc_candidate(lang:symbol, exec:symbol, target:symbol, tc:symbol)
+tc_candidate(l, e, p, tc) :- toolchain_runs_on(tc, e), toolchain_can_target(tc, l, p), !toolchain_built(tc).
+
+.decl pinned(lang:symbol, exec:symbol, target:symbol)
+pinned(l, e, p) :- toolchain_pin(l, e, p, _).
+
+.decl tc_select(lang:symbol, exec:symbol, target:symbol, tc:symbol)
+tc_select(l, e, p, tc) :- tc_candidate(l, e, p, tc), !pinned(l, e, p).
+tc_select(l, e, p, tc) :- tc_candidate(l, e, p, tc), toolchain_pin(l, e, p, tc).
+
+// The (language, exec, target) triples the build uses: a layer requires the
+// language in a needed configuration. Only those must be unambiguous, so
+// a spec pins what it builds and nothing else.
+.decl tc_used(lang:symbol, exec:symbol, target:symbol)
+tc_used(l, e, p) :- tc_required(l, c), config_platform(c, p), exec_config(c, x), config_platform(x, e).
+error("ambiguous toolchain (add a toolchain_pin)", cat(l, " running on ", e, " for ", p, ": ", a, " vs ", b)) :-
+  tc_used(l, e, p), tc_select(l, e, p, a), tc_select(l, e, p, b), a < b.
+// A pin is checked where it is used: a pin for a triple this configure
+// does not build (an inactive configuration's platform, an unused
+// language) is not probed, so the spec can pin every variant it has.
+error("toolchain pin matches no candidate", cat(l, " running on ", e, " for ", p, ": ", tc)) :-
+  toolchain_pin(l, e, p, tc), tc_used(l, e, p), !tc_candidate(l, e, p, tc).
+error("toolchain pinned twice", cat(l, " running on ", e, " for ", p, ": ", a, " and ", b)) :-
+  toolchain_pin(l, e, p, a), toolchain_pin(l, e, p, b), a < b,
+  !author_decision("toolchain_pin", cat(l, " running on ", e, " for ", p), _).
+error("toolchain pinned twice", cat(l, " running on ", e, " for ", p, ": ", a, " and ", b,
+  "; author_decides.toolchain_pin = \"", reason, "\"")) :-
+  toolchain_pin(l, e, p, a), toolchain_pin(l, e, p, b), a < b,
+  author_decision("toolchain_pin", cat(l, " running on ", e, " for ", p), reason).
+
+// Convenience for upper layers: the toolchain for `lang` when building in config c.
+.decl tc_for(lang:symbol, c:Cfg, tc:symbol)
+tc_for(l, c, tc) :- config_platform(c, p), exec_config(c, e0), config_platform(e0, e),
+  tc_select(l, e, p, tc).
+
+.decl tc_required(lang:symbol, c:Cfg)         // open: layers declare what they need
+.decl has_tc(lang:symbol, c:Cfg)
+has_tc(l, c) :- tc_for(l, c, _).
+// Every target a layer builds in that configuration is broken.
+error_at("no toolchain", cat(l, " for config ", n), t, c) :- tc_required(l, c), !has_tc(l, c), cfg_name(c, n),
+  target_action(t, c, _).
+
+// ---- a target's toolchain ----
+// target_toolchain(t, tc): t is built with the built toolchain tc, for
+// every language tc can target ([target.t] toolchain = "tc"). It is the
+// author's statement of what the target is (a bootstrap's stage 2 is the
+// compiler built by stage 1), so it names only a toolchain the build makes:
+// which installed compiler builds the rest is the user's selection
+// (toolchain_pin), and naming one here would hard-wire a host's inventory.
+// tc_of(t, lang, c, tc) is the toolchain t's actions use: its own, else
+// the configuration's (tc_for). Layers that lower a target's actions read
+// tc_of; tc_for stays the configuration's (its attributes, its checks).
+.decl target_toolchain(t:symbol, tc:symbol)   // open
+.decl target_has_toolchain(t:symbol)
+target_has_toolchain(t) :- target_toolchain(t, _).
+// Stated for every target and configuration, not only the needed ones: a
+// rule reading `needed` is in the closure's recursive component, and every
+// reader of tc_of would be re-run on each of its iterations (as many as the
+// longest dependency chain). Each reader joins it with a needed-gated atom.
+.decl tc_of(t:symbol, lang:symbol, c:Cfg, tc:symbol)
+tc_of(t, l, c, tc) :- target_id(t), tc_for(l, c, tc), !target_has_toolchain(t).
+tc_of(t, l, c, tc) :- target_toolchain(t, tc), config_platform(c, p), exec_config(c, x),
+  config_platform(x, e), toolchain_runs_on(tc, e), toolchain_can_target(tc, l, p).
+error("unknown target", cat(t, " (target_toolchain)")) :- target_toolchain(t, _), !target_id(t).
+error("target toolchain named twice", cat(t, ": ", a, " and ", b)) :- target_toolchain(t, a), target_toolchain(t, b),
+  a < b.
+error("target toolchain is not a built toolchain (an installed one is the user's toolchain_pin)", cat(t, ": ", tc)) :-
+  target_toolchain(t, tc), !toolchain_built(tc).
+.decl tc_runs_for(tc:symbol, c:Cfg)
+tc_runs_for(tc, c) :- target_toolchain(_, tc), config_platform(c, p), exec_config(c, x), config_platform(x, e),
+  toolchain_runs_on(tc, e), toolchain_can_target(tc, _, p).
+error_at("target toolchain cannot build for the configuration", cat(t, ": ", tc, " in ", n), t, c) :-
+  needed(t, c), target_toolchain(t, tc), toolchain_built(tc), !tc_runs_for(tc, c), cfg_name(c, n).
+// An action a toolchain's tool runs (action_toolchain) for a language its
+// target's toolchain does not target.
+error_at("target toolchain cannot build the language", cat(t, ": ", tc, " for ", l), t, c) :-
+  action_toolchain(a, l, c), target_action(t, c, a), target_toolchain(t, tc), toolchain_built(tc),
+  config_platform(c, p), !toolchain_can_target(tc, l, p).
+
+// ---- an action's program is a toolchain's tool ----
+// action_tc_tool(a, tc, role): a runs tc's role tool, either way the same
+// lowering rule spells: an installed tool is its path; a built one is its
+// target's run artifact in the exec configuration of a's (the path L1's
+// action_run spells for a tool reference), an implicit input of a. Either
+// takes the role's leading words (rank 1, with the toolchain's platform
+// arguments).
+.decl action_tc_tool(a:symbol, tc:symbol, role:symbol)   // open
+action_arg(a, 0, "", p) :- action_tc_tool(a, tc, r), toolchain_tool(tc, r, p).
+action_arg(a, 0, "", p), action_in(a, p, "implicit") :- action_tc_tool(a, tc, r), toolchain_tool_target(tc, r, g),
+  target_action(_, c, a), exec_config(c, e), run_artifact(g, e, p).
+action_arg(a, 1, "", w), action_arg_set(a, 1) :- action_tc_tool(a, tc, r), toolchain_tool_arg(tc, r, w).
+// The dependency itself is the target's, not each action's (as a
+// generator's tool is its owner's, L1 tool_dep): a target built with a
+// built toolchain runs every tool of it, built in its exec configuration.
+// It is stated from the target's choice alone, so the needed closure never
+// waits on the actions it decides.
+tool_dep(t, c, g) :- needed(t, c), target_toolchain(t, tc), toolchain_tool_target(tc, _, g).
+
+// ---- a toolchain's runtime library ----
+// Every linked target (an executable, a shared or module library) built
+// with its own toolchain tc depends privately on tc's runtime, in its own
+// configuration: the runtime is a library like any other, so the link
+// closure, the order and the inputs are L3's. (An installed toolchain's
+// driver links its own runtime.)
+.decl tc_runtime_edge(t:symbol, c:Cfg, r:symbol)
+tc_runtime_edge(t, c, r) :- needed(t, c), target_toolchain(t, tc), toolchain_runtime(tc, r), native_kind_in(t, c, k),
+  (k = "executable" ; k = "shared_library" ; k = "module_library").
+eff_dep(t, c, r, "private") :- tc_runtime_edge(t, c, r).
+error("unknown target", cat(r, " (toolchain_runtime of ", tc, ")")) :- toolchain_runtime(tc, r), !target_id(r).
+
+// ---- toolchain families (F) ----
+// Open relations a family plugin (buildlog-cpp's F_clang) fills: how a
+// toolchain instance is aimed at a platform, and how the settings of the
+// layers are spelled per phase (compile | link).
+.decl tc_platform_arg(tc:symbol, p:symbol, prefix:symbol, value:symbol)
+.decl family_setting_arg(family:symbol, phase:symbol, key:symbol, value:symbol, arg:symbol)
+.decl tc_setting_arg(tc:symbol, c:Cfg, phase:symbol, arg:symbol)
+tc_setting_arg(tc, c, ph, a) :- toolchain(tc, f, _), config_setting(c, k, v), family_setting_arg(f, ph, k, v, a).
+// The linker's spellings L3 uses: how a static link resolves a cycle among
+// archives (none | group) and the group delimiters, the prefix that loads
+// every member of one archive, and how the driver links a shared library
+// for a platform.
+.decl linker_cycle_policy(tc:symbol, p:symbol, policy:symbol)
+.decl linker_group_delims(tc:symbol, p:symbol, open:symbol, close:symbol)
+.decl whole_archive_prefix(tc:symbol, p:symbol, prefix:symbol)
+// ... and what closes it in the same word, if anything (GNU ld).
+.decl whole_archive_suffix(tc:symbol, p:symbol, suffix:symbol)
+.decl shared_link_spelling(tc:symbol, p:symbol, what:symbol, spelling:symbol)
+// ... a module library (what: module | suffix), and the prefix of an rpath
+// relative to the linked artifact's own directory (Mach-O @loader_path/).
+.decl module_link_spelling(tc:symbol, p:symbol, what:symbol, spelling:symbol)
+.decl rpath_origin_prefix(tc:symbol, p:symbol, prefix:symbol)
+
+// ---- who chooses an action's program ----
+// action_toolchain(a, lang, c): a's program is a tool of the toolchain
+// selected for lang in configuration c (tc_for); the layer that spells
+// argv[0] from tc_for states it. Such a program is the user's choice
+// (tc_select: every candidate unless the user pins one) unless the author
+// pinned that (lang, exec, target) triple under [author_decides]
+// toolchain_pin. A program named by target reference (action_run at
+// argv[0]) is the author's when the project builds it (or the author's
+// facts state it); an imported one, bound by the user's package selection
+// (L3_discovery.dl, import_origin), is the user's, unless the author ties
+// it to the library the build links (import_same_package) and the
+// selection agrees. A platform tool (lipo) comes from the user's platform
+// selection, so it is the user's too. A program written as a literal path
+// (argv[0] of an action whose program no toolchain, reference, platform or
+// core rule supplies) is the author's: fixed, and the basis cites the
+// action_arg row. A layer uses the distinction to tell policy (a user
+// decision on a tool the user picks) from integrity (a property of a tool
+// the author's facts fix), e.g. buildlog-cpp's -Werror check. Every program
+// is one or the other, so the check cannot miss an action.
+//
+// action_program_user_chosen(a, what, remedy): what names the program;
+// remedy is an extra way out for a diagnostic ("" or "; or ...").
+.decl action_toolchain(a:symbol, lang:symbol, c:Cfg)   // open
+.decl action_tool_triple(a:symbol, lang:symbol, exec:symbol, target:symbol)
+action_tool_triple(a, l, e, p) :- action_toolchain(a, l, c), config_platform(c, p), exec_config(c, x),
+  config_platform(x, e), !action_target_tc(a, _).
+// An action whose target names its toolchain runs a tool the project
+// builds (target_toolchain names only built toolchains): the author's.
+.decl action_target_tc(a:symbol, tc:symbol)
+action_target_tc(a, tc) :- action_toolchain(a, _, c), target_action(t, c, a), target_toolchain(t, tc).
+action_program_fixed(a, cat("toolchain ", tc, " built by the project, chosen by ", t, " (target_toolchain)")) :-
+  action_target_tc(a, tc), target_action(t, _, a).
+.decl action_program_user_chosen(a:symbol, what:symbol, remedy:symbol)
+action_program_user_chosen(a, cat(l, " compiler ", tc), "") :- action_tool_triple(a, l, e, p),
+  tc_select(l, e, p, tc), !author_decision("toolchain_pin", cat(l, " running on ", e, " for ", p), _).
+.decl action_program_fixed(a:symbol, how:symbol)
+action_program_fixed(a, cat("toolchain ", tc, " for ", l, " pinned by the author: ", reason)) :-
+  action_tool_triple(a, l, e, p), toolchain_pin(l, e, p, tc), tc_select(l, e, p, tc),
+  author_decision("toolchain_pin", cat(l, " running on ", e, " for ", p), reason).
+.decl action_tool_ref(a:symbol, c:Cfg, g:symbol)
+action_tool_ref(a, c, g) :- action_run(a, 0, _, r, _), target_action(t, c, a), tool_resolves(t, r, g).
+action_program_fixed(a, cat("runs ", g, ", named by reference")) :- action_tool_ref(a, _, g),
+  !import_relayed(g).
+action_program_fixed(a, cat("runs ", g, ", from the same package as ", u, " (import_same_package: ", f, " ",
+    k, " ", d, ")")) :-
+  action_tool_ref(a, c, g), import_relayed(g), import_same_holds(c, g, u, f, k, d).
+.decl action_tool_consistent(a:symbol)
+action_tool_consistent(a) :- action_tool_ref(a, c, g), import_same_held(c, g, _).
+action_program_user_chosen(a, cat("imported tool ", g, " (from ", f, " ", k, " ", d, ")"),
+    cat("; or the author states import_same_package(\"", g, "\", <the library it must match>)")) :-
+  action_tool_ref(a, c, g), import_relayed(g), !action_tool_consistent(a), exec_config(c, e),
+  config_platform(e, pe), import_origin(g, pe, f, k, d).
+
+// A platform tool: a layer states which action runs which tool of which
+// platform (L3_native.dl, the multi-platform merge); the user's platform
+// selection binds the tool (platform_tool).
+.decl action_platform_tool(a:symbol, u:symbol, role:symbol, path:symbol)
+action_program_user_chosen(a, cat("platform tool ", role, " ", path, " of ", u), "") :-
+  action_platform_tool(a, u, role, path).
+// A program core itself names (not an author's literal), e.g. the ln of a
+// shared library's symlinks.
+.decl action_program_core(a:symbol, how:symbol)
+action_program_fixed(a, how) :- action_program_core(a, how).
+// A literal program path, written by the author.
+.decl action_program_supplied(a:symbol)
+action_program_supplied(a) :- action_toolchain(a, _, _).
+action_program_supplied(a) :- action_tc_tool(a, _, _).
+action_program_supplied(a) :- action_tool_ref(a, _, _).
+action_program_supplied(a) :- action_platform_tool(a, _, _, _).
+action_program_supplied(a) :- action_program_core(a, _).
+action_program_supplied(a) :- action_builtin(a, _).
+action_program_fixed(a, cat("program ", v, " written by the author (a literal path)")) :-
+  action_arg(a, 0, _, v), !action_program_supplied(a).

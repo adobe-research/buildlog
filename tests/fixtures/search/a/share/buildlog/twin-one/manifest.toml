@@ -1,0 +1,8 @@
+# Search-path fixture: claims namespace "twin".
+name = "twin-one"
+version = "0.1.0"
+rank = 5
+namespace = "twin"
+layers = ["twin.dl"]
+accepts = ["twin_item"]
+extends = ["action", "action_arg", "default_output"]

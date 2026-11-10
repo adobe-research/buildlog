@@ -1,0 +1,85 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// tutorial/CMakeLists.txt. add_tutorial(<file> [WITH_IMAGE_IO] [GROUPS g...])
+// is an executable <stem> linked to Halide::Halide, Halide::Tools and
+// Halide::TerminateHandler (-Wno-unused-but-set-variable under GNU), and a
+// plain add_test tutorial_<stem>: no [SKIP] and no pass regular expression
+// (halide_build_test_plain), HL_TARGET and HL_JIT_TARGET in the environment,
+// the labels "tutorial" and the groups, serial for "multithreaded", and,
+// with WITH_IMAGE_IO, Halide::ImageIO and the source directory as working
+// directory (the lessons read images/).
+.decl halide_tutorial(n:symbol)
+.decl halide_tutorial_image_io(n:symbol)
+.decl halide_tutorial_group(n:symbol, g:symbol)
+
+target(n), native_kind(n, "executable"), request_all(n), cxx_source(n, cat("tutorial/", n, ".cpp")),
+prop(n, "cxx.std", "17", "private"),
+dep(n, "Halide", "private"), dep(n, "Halide_Tools", "private"), dep(n, "Halide_terminate_handler", "private"),
+prop_when(n, "cc.compile_flag", "-Wno-unused-but-set-variable", "private", "halide.gcc") :- halide_tutorial(n).
+dep(n, "Halide_ImageIO", "private") :- halide_tutorial_image_io(n).
+halide_build_test(cat("tutorial_", n), n), halide_build_test_plain(cat("tutorial_", n)),
+halide_build_test_group(cat("tutorial_", n), "tutorial") :- halide_tutorial(n).
+halide_build_test_group(cat("tutorial_", n), g) :- halide_tutorial_group(n, g).
+test_cwd(cat("tutorial_", n), "src:tutorial") :- halide_tutorial_image_io(n).
+error("tutorial setting for an unknown tutorial", n) :- halide_tutorial_image_io(n), !halide_tutorial(n).
+error("tutorial setting for an unknown tutorial", n) :- halide_tutorial_group(n, _), !halide_tutorial(n).
+
+// Lesson 10: the generate program runs where it is built and writes
+// lesson_10_halide.h and lesson_10_halide.a into its working directory (the
+// build directory in CMake); the run program links that archive.
+.decl halide_lesson_10_dir(c:Cfg, d:symbol)
+halide_lesson_10_dir(c, cat("out:gen/", n, "/lesson_10")) :- needed("lesson_10_aot_compilation_run", c), cfg_name(c, n).
+// A target whose one artifact is the archive, a link item after the program's
+// objects (as CMake lists it): a one-pass linker must see the object that
+// needs the archive first. It is not an object, which would sort with the
+// program's own objects.
+target("lesson_10_halide"), native_kind("lesson_10_halide", "object_library") :-
+  halide_tutorial("lesson_10_aot_compilation_generate").
+action(a, "GENERATOR"), target_action("lesson_10_halide", c, a), action_out(a, h), action_cwd(a, d),
+action_run(a, 0, "", "lesson_10_aot_compilation_generate", "run"),
+iface("lesson_10_halide", c, "cc.include_dir", d), iface("lesson_10_halide", c, "cc.generated_header", h),
+link_file("lesson_10_halide", c, a), artifact_covers(a, p) :-
+  halide_lesson_10_dir(c, d), config_platform(c, p), a = cat(d, "/lesson_10_halide.a"), h = cat(d, "/lesson_10_halide.h").
+target("lesson_10_aot_compilation_run"), native_kind("lesson_10_aot_compilation_run", "executable"),
+request_all("lesson_10_aot_compilation_run"),
+cxx_source("lesson_10_aot_compilation_run", "tutorial/lesson_10_aot_compilation_run.cpp"),
+prop("lesson_10_aot_compilation_run", "cxx.std", "17", "private"),
+dep("lesson_10_aot_compilation_run", "lesson_10_halide", "private"),
+dep("lesson_10_aot_compilation_run", "Halide_Runtime", "private"),
+halide_build_test("tutorial_lesson_10_aot_compilation_run", "lesson_10_aot_compilation_run"),
+halide_build_test_plain("tutorial_lesson_10_aot_compilation_run"),
+halide_build_test_group("tutorial_lesson_10_aot_compilation_run", "tutorial"),
+halide_build_test_group("tutorial_lesson_10_aot_compilation_run", "multithreaded") :-
+  halide_tutorial("lesson_10_aot_compilation_generate").
+
+// A tutorial generator executable (add_executable ... Halide::Generator).
+.decl halide_tutorial_generator(n:symbol, file:symbol)
+target(n), native_kind(n, "executable"), cxx_source(n, cat("tutorial/", f)),
+prop(n, "cxx.std", "17", "private"),
+dep(n, "Halide_Generator", "private"), dep(n, "halide_generator_options", "private") :- halide_tutorial_generator(n, f).
+
+// Lessons 15, 16 and 21: libraries of a generator (add_halide_library with
+// GENERATOR and PARAMS; TARGETS cmake; AUTOSCHEDULER), and the programs that
+// link them.
+.decl halide_tutorial_lib(l:symbol, from:symbol, generator:symbol)
+.decl halide_tutorial_lib_param(l:symbol, p:symbol)
+.decl halide_tutorial_lib_cmake_target(l:symbol)
+.decl halide_tutorial_lib_scheduler(l:symbol, a:symbol)
+.decl halide_tutorial_run(n:symbol, file:symbol)
+.decl halide_tutorial_run_dep(n:symbol, d:symbol)
+.decl halide_tutorial_run_group(n:symbol, g:symbol)
+halide_build_library(l, from, g, "", "") :- halide_tutorial_lib(l, from, g).
+halide_build_library_target(l, 0, "cmake") :- halide_tutorial_lib_cmake_target(l).
+halide_build_library_param_set(l, l) :- halide_tutorial_lib_param(l, _).
+halide_build_params(l, j, p) :- halide_tutorial_lib_param(l, p), j = count : { halide_tutorial_lib_param(l, q), q < p }.
+halide_build_library_autoscheduler(l, a, p) :- halide_tutorial_lib_scheduler(l, a), halide_scheduler_plugin(a, p).
+target(n), native_kind(n, "executable"), request_all(n), cxx_source(n, cat("tutorial/", f)),
+prop(n, "cxx.std", "17", "private"),
+halide_build_test(cat("tutorial_", n), n),
+halide_build_test_plain(cat("tutorial_", n)), halide_build_test_group(cat("tutorial_", n), "tutorial") :-
+  halide_tutorial_run(n, f).
+dep(n, d, "private") :- halide_tutorial_run_dep(n, d).
+halide_build_test_group(cat("tutorial_", n), g) :- halide_tutorial_run_group(n, g).
+request_all(l) :- halide_tutorial_lib(l, _, _).
+request_all(g) :- halide_tutorial_generator(g, _).

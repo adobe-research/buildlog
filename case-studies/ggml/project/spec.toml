@@ -1,0 +1,139 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# ggml (CMakeLists.txt, src/CMakeLists.txt, v0.25.3) in the Release
+# configuration its baseline builds: the core libraries here, the CPU
+# backend in cpu.toml (its instances are rules.dl's), the programs that run
+# it in tests.toml. BUILD_SHARED_LIBS is on (upstream's default, and
+# GGML_BACKEND_DL requires it); Metal and BLAS are out of scope (the
+# baseline's `cpu` configuration turns them off).
+config_decl = [["release", "arm64-macos"], ["x86_64", "x86_64-macos"]]
+config_decl_setting = [["release", "native.opt", "release"], ["x86_64", "native.opt", "release"]]
+request_all = [["ggml"]]
+
+# The options that decide how the CPU backend is built (ggml/CMakeLists.txt;
+# a user file states their values). GGML_NATIVE is on by default, as
+# upstream; rules.dl rejects the combinations upstream rejects or should.
+# src/CMakeLists.txt's directory-wide definitions (add_compile_definitions)
+# and warnings (ggml_get_flags + add_compile_options): every target the
+# directory defines has them (rules.dl, ggml_dir_member). The C-only ones
+# (and the C standard, target_compile_features(c_std_11) with
+# CMAKE_C_EXTENSIONS) have no property to go in: rules.dl adds them to the
+# C compile actions directly. The two -Werror=<w> are left out: buildlog
+# rejects an author's -Werror (a user decision), and Apple clang already
+# makes both diagnostics errors in C99 and later.
+ggml_dir_c_flag = [
+  "-std=gnu11",
+  "-Wshadow",
+  "-Wstrict-prototypes",
+  "-Wpointer-arith",
+  "-Wdouble-promotion",
+]
+# The per-OS ones (CMAKE_SYSTEM_NAME tests): Darwin's and Linux's.
+ggml_dir_prop_os = [
+  ["macos", "cc.define", "_DARWIN_C_SOURCE"],
+  ["linux", "cc.define", "_GNU_SOURCE"],
+]
+# ggml_get_flags(CMAKE_CXX_COMPILER_ID): the compiler family's own warnings.
+ggml_dir_prop_family = [
+  ["clang", "cc.compile_flag", "-Wunreachable-code-break"],
+  ["clang", "cc.compile_flag", "-Wunreachable-code-return"],
+  ["gcc", "cxx.compile_flag", "-Wno-array-bounds"],
+]
+ggml_dir_prop = [
+  ["cc.define", "GGML_SCHED_MAX_COPIES=4"],
+  ["cc.define", "_XOPEN_SOURCE=600"],
+  ["cc.compile_flag", "-Wall"],
+  ["cc.compile_flag", "-Wextra"],
+  ["cc.compile_flag", "-Wpedantic"],
+  ["cc.compile_flag", "-Wcast-qual"],
+  ["cc.compile_flag", "-Wno-unused-function"],
+  ["cc.compile_flag", "-Wmissing-prototypes"],
+  ["cxx.compile_flag", "-Wmissing-declarations"],
+  ["cxx.compile_flag", "-Wmissing-noreturn"],
+  ["cxx.compile_flag", "-Wextra-semi"],
+]
+
+[option.GGML_BACKEND_DL]
+
+[option.GGML_CPU_ALL_VARIANTS]
+requires = "GGML_BACKEND_DL"
+
+[option.GGML_NATIVE]
+default = "on"
+conflicts = "GGML_CPU_ALL_VARIANTS"
+
+# What src/ggml-cpu/CMakeLists.txt reads from `$CC -mcpu=native -E -v` (the
+# -march= list, else the -mcpu= value, unless it is `native` itself) and
+# compiles the CPU backend with: the build machine's CPU as the compiler
+# spells it. buildlog runs nothing at configure time, so the user states it
+# (a machine fact, like cc_check_known); the default is the compiler's own
+# -mcpu=native, which is what upstream falls back to.
+[option.GGML_NATIVE_CPU]
+type = "string"
+default = "-mcpu=native"
+
+# find_package(OpenMP) found: -fopenmp and GGML_USE_OPENMP on ggml-base and
+# the CPU backend (cpu.toml's template), and the runtime linked. The
+# probe is cpu.toml's GGML_HAVE_OPENMP.
+[option.GGML_OPENMP]
+default = "on"
+
+# add_library(ggml-base) under option(BUILD_SHARED_LIBS ... ON), with
+# GGML_BUILD and, for its users, GGML_SHARED if shared (GGML_SHARED_LIB).
+[target.ggml-base]
+kind = "library"
+default_linkage = "shared"
+linkage_prop = [
+  ["shared", "cc.define", "GGML_BUILD", "private"],
+  ["shared", "cc.define", "GGML_SHARED", "public"]
+]
+native_version = [["0.25.3", "0"]]
+sources = [
+  "src/ggml.c",
+  "src/ggml-alloc.c",
+  "src/ggml-quants.c",
+  "src/ggml.cpp",
+  "src/ggml-backend.cpp",
+  "src/ggml-backend-meta.cpp",
+  "src/ggml-opt.cpp",
+  "src/ggml-threading.cpp",
+  "src/gguf.cpp",
+]
+prop_when = [
+  ["cc.define", "GGML_USE_OPENMP", "private", "GGML_OPENMP & cc.check.GGML_HAVE_OPENMP"],
+  ["cc.compile_flag", "-fopenmp", "private", "GGML_OPENMP & cc.check.GGML_HAVE_OPENMP"],
+  ["native.link_option", "-fopenmp", "private", "GGML_OPENMP & cc.check.GGML_HAVE_OPENMP"],
+]
+private = { "cc.include_dir" = "src:src", "cxx.std" = "17", "native.link_option" = "-lm", "configure.define" = [
+  "GGML_VERSION=0.25.3",
+  "GGML_BUILD_COMMIT=${GGML_BUILD_COMMIT}",
+] }
+public = { "cc.include_dir" = "src:include" }
+# A loader of dynamically loaded backends and every backend agree on it.
+when.GGML_BACKEND_DL.public."cc.define" = "GGML_BACKEND_DL"
+# configure_file(ggml-version.h.in ggml-version.h @ONLY): the version and
+# commit ggml.c reports; its directory is ggml-base's private include dir
+# (rules.dl).
+configure_file = "ggml-version.h"
+configure_file_at_only = "ggml-version.h"
+configure_file_lines = { "ggml-version.h" = [[0, "src/ggml-version.h.in", 1, 0]] }
+
+# The backend registry: it links the backends (the default), or finds and
+# loads them at run time (GGML_BACKEND_DL; rules.dl's runtime_dep_optional_when).
+[target.ggml]
+kind = "library"
+default_linkage = "shared"
+linkage_prop = [
+  ["shared", "cc.define", "GGML_BUILD", "private"],
+  ["shared", "cc.define", "GGML_SHARED", "public"]
+]
+native_version = [["0.25.3", "0"]]
+sources = ["src/ggml-backend-dl.cpp", "src/ggml-backend-reg.cpp"]
+deps = { public = ["ggml-base"] }
+dep_when = [["ggml-cpu", "public", "!GGML_BACKEND_DL"]]
+private = { "cxx.std" = "17" }
+public = { "cc.include_dir" = "src:include" }
+# A linked backend is announced to ggml and its users (ggml_add_backend:
+# target_compile_definitions(ggml PUBLIC GGML_USE_CPU)).
+when."!GGML_BACKEND_DL".public."cc.define" = "GGML_USE_CPU"

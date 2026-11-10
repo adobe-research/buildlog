@@ -1,0 +1,19 @@
+objects: CMake 17, buildlog 17
+
+17 object(s) examples/contract.cpp, ...:
+  identical
+
+links
+  atomic: same inputs except CMake only ['-lcudadevrt', '-lcudart_static', 'librt.a'], buildlog only []; order differs
+  bitset: same inputs except CMake only ['-lcudadevrt', '-lcudart_static', 'librt.a'], buildlog only []; order differs
+  contract: same inputs except CMake only ['-lcudadevrt', '-lcudart_static', 'librt.a'], buildlog only []; order differs
+  createAndDestroyDeviceArray: same inputs except CMake only ['-lcudadevrt', '-lcudart_static', 'librt.a'], buildlog only []; order differs
+  createAndDestroyDeviceObject: same inputs except CMake only ['-lcudadevrt', '-lcudart_static', 'librt.a'], buildlog only []; order differs
+  deque: same inputs except CMake only ['-lcudadevrt', '-lcudart_static', 'librt.a'], buildlog only []; order differs
+  iterator: same inputs except CMake only ['-lcudadevrt', '-lcudart_static', 'librt.a'], buildlog only []; order differs
+  libstdgpu.a: identical inputs
+  mutex_array: same inputs except CMake only ['-lcudadevrt', '-lcudart_static', 'librt.a'], buildlog only []; order differs
+  ranges: same inputs except CMake only ['-lcudadevrt', '-lcudart_static', 'librt.a'], buildlog only []; order differs
+  unordered_map: same inputs except CMake only ['-lcudadevrt', '-lcudart_static', 'librt.a'], buildlog only []; order differs
+  unordered_set: same inputs except CMake only ['-lcudadevrt', '-lcudart_static', 'librt.a'], buildlog only []; order differs
+  vector: same inputs except CMake only ['-lcudadevrt', '-lcudart_static', 'librt.a'], buildlog only []; order differs

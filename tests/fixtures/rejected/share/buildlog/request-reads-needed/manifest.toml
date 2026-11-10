@@ -1,0 +1,6 @@
+# Rejected (W5): request reads the needed closure, which reads discovered facts.
+name = "request-reads-needed"
+version = "0.1.0"
+rank = 5
+layers = ["request_reads_needed.dl"]
+extends = ["request"]

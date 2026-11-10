@@ -1,0 +1,23 @@
+config_decl = [
+  ["native-release", "arm64-macos"],
+  ["x86_64-release", "x86_64-macos"],
+  ["universal2-release", "universal2-macos"],
+]
+
+config_decl_setting = [
+  ["native-release", "native.opt", "release"],
+  ["native-release", "native.sanitize", "none"],
+  ["x86_64-release", "native.opt", "release"],
+  ["x86_64-release", "native.sanitize", "none"],
+  ["universal2-release", "native.opt", "release"],
+  ["universal2-release", "native.sanitize", "none"],
+]
+
+# The author asks the importers to discover optional ImageIO deps when available.
+package_want = [["libpng"], ["libjpeg"]]
+
+[vars]
+# HALIDE_PREFIX (where Halide is installed) is the user's to give: -D HALIDE_PREFIX=DIR.
+HALIDE_SRC = "${REPO_ROOT}/case-studies/halide/upstream"
+HOMEBREW_PREFIX = "/opt/homebrew"
+HOMEBREW_SYSTEM_PKGCONFIG = "${HOMEBREW_PREFIX}/Library/Homebrew/os/mac/pkgconfig/26"

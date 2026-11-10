@@ -1,0 +1,5 @@
+# Search-path fixture: a package name present under two prefixes.
+name = "dup"
+version = "0.1.0"
+rank = 5
+layers = []

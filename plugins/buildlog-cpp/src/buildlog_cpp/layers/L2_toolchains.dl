@@ -1,0 +1,119 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L2 (buildlog-cpp): the macOS/clang toolchain inventory. Core L2 owns the
+// toolchain relations and selection; this layer discovers what there is
+// (platforms, SDKs, clang toolchains and their tools, the lipo merge tool)
+// and whether a toolchain compiles a language for a platform.
+
+// ---- platform and toolchain inventory (a discovery probe) ----
+// Typed request/result pairs: the driver reads req_* and domain_* outputs,
+// validates req ⊆ domain, executes missing probes, and feeds res_* back as
+// input facts. Result rows carry the request id so provenance can trace
+// final facts back to the probe request.
+.decl req_inventory(id:symbol)
+.decl domain_inventory(id:symbol)
+req_inventory("inventory:default") :- config_decl(_, _).
+domain_inventory("inventory:default") :- config_decl(_, _).
+
+.decl res_host_platform(req:symbol, p:symbol)
+.decl res_platform(req:symbol, p:symbol, triple:symbol)
+.decl res_platform_sdk(req:symbol, p:symbol, path:symbol)
+.decl res_platform_slice(req:symbol, u:symbol, p:symbol)
+.decl res_platform_constraint(req:symbol, p:symbol, key:symbol, value:symbol)
+.decl res_platform_distro(req:symbol, p:symbol, family:symbol)
+.decl res_platform_tool(req:symbol, u:symbol, role:symbol, path:symbol)
+.decl platform_sdk(p:symbol, path:symbol)
+host_platform(p) :- res_host_platform(req, p), req_inventory(req).
+platform(p, triple) :- res_platform(req, p, triple), req_inventory(req).
+platform_sdk(p, path) :- res_platform_sdk(req, p, path), req_inventory(req).
+platform_slice(u, p) :- res_platform_slice(req, u, p), req_inventory(req).
+platform_constraint(p, k, v) :- res_platform_constraint(req, p, k, v), req_inventory(req).
+platform_tool(u, r, p) :- res_platform_tool(req, u, r, p), req_inventory(req).
+// The platform attributes' domain is buildlog-cpp's vocabulary, not the
+// host's inventory: a condition naming another host's os or cpu (ggml's
+// per-platform variants on a Linux host, say) is false here, not a typo.
+.decl platform_vocabulary(key:symbol, value:symbol)   // open
+platform_vocabulary("os", "macos"). platform_vocabulary("os", "linux").
+platform_vocabulary("cpu", "arm64"). platform_vocabulary("cpu", "x86_64").
+attr_value(cat("platform.", k), v) :- platform_vocabulary(k, v).
+
+// What CMake's FindThreads (Threads::Threads) and ${CMAKE_DL_LIBS} give a
+// target that needs threads or dlopen, per OS: a platform fact (its libc),
+// stated once here for the OS and read by whatever models such a helper.
+// The empty string says "nothing extra" (the library lives in libc), so a
+// missing row is unknown, not empty: a reader reports it.
+// Linux: -pthread, and libdl (glibc before 2.34 keeps both outside libc).
+.decl platform_os_threads_arg(os:symbol, arg:symbol)   // open
+.decl platform_os_dl_lib(os:symbol, lib:symbol)         // open
+platform_os_threads_arg("linux", "-pthread"). platform_os_dl_lib("linux", "dl").
+platform_os_threads_arg("macos", ""). platform_os_dl_lib("macos", "").
+
+.decl res_toolchain(req:symbol, tc:symbol, family:symbol, version:symbol)
+.decl res_toolchain_tool(req:symbol, tc:symbol, role:symbol, path:symbol)
+.decl res_toolchain_runs_on(req:symbol, tc:symbol, p:symbol)
+.decl res_cc_capability(req:symbol, tc:symbol, lang:symbol, p:symbol, ok:symbol)
+
+toolchain(tc, f, v) :- res_toolchain(req, tc, f, v), req_inventory(req).
+toolchain_tool(tc, r, p) :- res_toolchain_tool(req, tc, r, p), req_inventory(req).
+toolchain_runs_on(tc, p) :- res_toolchain_runs_on(req, tc, p), req_inventory(req).
+toolchain_can_target(tc, l, p) :- res_cc_capability(req, tc, l, p, "yes"), req_cc_capability(req, tc, l, p).
+
+// ---- the toolchain family as a configuration attribute ----
+// CMake's $<C_COMPILER_ID:...> and $<CXX_COMPILER_ID:...>: cc.family and
+// cxx.family are the family (clang, gcc) of the C and the C++ toolchain
+// selected for the configuration. The selection (tc_for) is a function of the
+// configuration, the user's pins and the inventory, never of `needed` or of a
+// condition, so a condition may test the family wherever conditions are
+// read, except where it decides what is built (request_when, kind_when),
+// which may test only options. Like a check's answer it is discovered: the
+// inventory supplies the families, and a configuration without a toolchain
+// for the language has no value. Apple's clang is family clang.
+.decl cc_family_known(f:symbol)
+cc_family_known("clang"). cc_family_known("gcc").
+cc_family_known(f) :- toolchain(_, f, _).
+attr_discovered("cc.family"), attr_discovered("cxx.family") :- cc_family_known(_).
+attr_value("cc.family", f), attr_value("cxx.family", f) :- cc_family_known(f).
+config_attr(c, "cc.family", f) :- tc_for("c", c, tc), toolchain(tc, f, _).
+config_attr(c, "cxx.family", f) :- tc_for("cxx", c, tc), toolchain(tc, f, _).
+// cc.version and cxx.version: the selected toolchain's version, for the
+// version comparison of conditions (`cxx.version >= 13`); same selection, so
+// the same rules as the family.
+version_attr("cc.version"). version_attr("cxx.version").
+config_attr(c, "cc.version", v) :- tc_for("c", c, tc), toolchain(tc, _, v).
+config_attr(c, "cxx.version", v) :- tc_for("cxx", c, tc), toolchain(tc, _, v).
+
+// ---- capability probe: does tc compile lang for platform p ----
+// Only for the platforms this configure builds for (core build_platform):
+// an inactive configuration's platform is never probed. Nor is a toolchain
+// the build makes (core toolchain_built): it does not exist at configure
+// time, and its author states what it targets.
+.decl req_cc_capability(id:symbol, tc:symbol, lang:symbol, p:symbol)
+.decl domain_cc_capability(id:symbol, tc:symbol, lang:symbol, p:symbol)
+domain_cc_capability(cat("cc-cap:", to_string(strlen(tc)), ":", tc, ":", to_string(strlen(l)), ":", l, ":", p), tc, l, p) :-
+  toolchain(tc, _, _), platform(p, _), build_platform(p), tc_required(l, _), !cross_mismatch(tc, p),
+  !toolchain_built(tc).
+req_cc_capability(id, tc, l, p) :- domain_cc_capability(id, tc, l, p).
+
+// ---- ISA extensions ----
+// What each architecture (a platform's cpu) has: isa_ext(cpu, e), e an ISA
+// extension some cpu of the architecture has; isa_baseline(cpu, e), one
+// every cpu of it has (a TU needs no flag for it). The cpu itself is the
+// extension every TU of the architecture needs. A platform plugin adds its
+// architectures (both are open). NEON is architectural on AArch64 but not
+// baseline here: clang enables it by default, and a set that needs it is
+// spelled -march=armv8-a+simd, as zlib-ng's CMake does.
+.decl isa_ext(cpu:symbol, ext:symbol)
+.decl isa_baseline(cpu:symbol, ext:symbol)
+isa_ext("arm64", "arm64"). isa_ext("arm64", "crc"). isa_ext("arm64", "neon").
+isa_ext("arm64", "dotprod"). isa_ext("arm64", "fp16"). isa_ext("arm64", "sve").
+isa_ext("arm64", "i8mm"). isa_ext("arm64", "sve2"). isa_ext("arm64", "sme").
+isa_ext("x86_64", "x86_64"). isa_ext("x86_64", "sse2"). isa_ext("x86_64", "ssse3").
+isa_ext("x86_64", "sse4.1"). isa_ext("x86_64", "sse4.2"). isa_ext("x86_64", "pclmul").
+isa_ext("x86_64", "avx"). isa_ext("x86_64", "f16c"). isa_ext("x86_64", "fma").
+isa_ext("x86_64", "avx2"). isa_ext("x86_64", "bmi2"). isa_ext("x86_64", "avxvnni").
+isa_ext("x86_64", "avx512f"). isa_ext("x86_64", "avx512cd"). isa_ext("x86_64", "avx512dq").
+isa_ext("x86_64", "avx512bw"). isa_ext("x86_64", "avx512vl"). isa_ext("x86_64", "avx512vbmi").
+isa_ext("x86_64", "avx512vnni"). isa_ext("x86_64", "avx512bf16"). isa_ext("x86_64", "vpclmulqdq").
+isa_ext("x86_64", "xsave"). isa_ext("x86_64", "amx-tile"). isa_ext("x86_64", "amx-int8").
+isa_baseline("arm64", "arm64"). isa_baseline("x86_64", "x86_64"). isa_baseline("x86_64", "sse2").

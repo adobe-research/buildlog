@@ -1,0 +1,66 @@
+imported = [
+  ["Halide::Halide"],
+  ["Halide::Generator"],
+  ["Halide::Tools"],
+  ["Halide::ImageIO"],
+  ["Halide::GenGenArchive"],
+]
+
+# Dependencies by name only; a binding source (e.g. the buildlog-cpp
+# importers) defines them. zlib is required; libpng and libjpeg are
+# optional and stated as rules in L5_halide_real.dl.
+dep = [
+  ["Halide::Generator", "Halide::Halide", "public"],
+  ["Halide::Generator", "Halide::GenGenArchive", "private"],
+  ["Halide::ImageIO", "zlib", "public"],
+]
+
+prop = [
+  ["Halide::Halide", "cc.define", "HALIDE_ENABLE_RTTI", "interface"],
+  ["Halide::Halide", "cc.define", "HALIDE_VERSION_MAJOR=22", "interface"],
+  ["Halide::Halide", "cc.define", "HALIDE_VERSION_MINOR=0", "interface"],
+  ["Halide::Halide", "cc.define", "HALIDE_VERSION_PATCH=0", "interface"],
+  ["Halide::Halide", "cc.define", "HALIDE_WITH_EXCEPTIONS", "interface"],
+  ["Halide::Halide", "cc.include_dir", "${HALIDE_PREFIX}/include", "interface"],
+  [
+    "Halide::Halide",
+    "native.link_flag",
+    "${HALIDE_PREFIX}/lib/libHalide.22.0.0.dylib",
+    "interface"
+  ],
+  ["Halide::Halide", "native.link_flag", "-Wl,-rpath,${HALIDE_PREFIX}/lib", "interface"],
+  [
+    "Halide::Generator",
+    "native.link_flag",
+    "-Xlinker -force_load -Xlinker ${HALIDE_PREFIX}/lib/libHalide_GenGen.a",
+    "interface"
+  ],
+  ["Halide::Tools", "cc.include_dir", "${HALIDE_PREFIX}/share/tools", "interface"],
+  ["Halide::ImageIO", "cc.include_dir", "${HALIDE_PREFIX}/share/tools", "interface"],
+]
+
+import_file = [
+  ["Halide::Halide", "${HALIDE_PREFIX}/lib/libHalide.22.0.0.dylib"],
+  ["Halide::GenGenArchive", "${HALIDE_PREFIX}/lib/libHalide_GenGen.a"],
+]
+
+halide_include_dir = [["${HALIDE_PREFIX}/include"]]
+halide_target_arch = [["arm64", "arm"], ["x86_64", "x86"]]
+halide_target_os = [["macos", "macos"]]
+halide_feature_order = [["metal", 10], ["cuda", 20], ["debug", 30]]
+halide_incompatible_feature = [["metal", "cuda"], ["cuda", "metal"]]
+halide_runtime_strip_feature = [
+  ["user_context"],
+  ["no_asserts"],
+  ["no_bounds_query"],
+  ["no_runtime"],
+  ["profile"]
+]
+halide_feature_framework = [["metal", "Foundation"], ["metal", "Metal"]]
+halide_output_kind = [
+  ["registration", 2, ".registration.cpp"],
+  ["schedule", 3, ".schedule.h"],
+  ["stmt", 4, ".stmt"]
+]
+# The installed autoscheduler plugin is arm64-only.
+artifact_covers = [["${HALIDE_PREFIX}/lib/libautoschedule_mullapudi2016.so", "arm64-macos"]]

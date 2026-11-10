@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# ggml v0.25.3, as its CMakeLists.txt builds it on this Mac (the ggml case
+# study; case-studies/ggml/README.md): the core libraries and the CPU
+# backend, either linked (the default) or as dlopen'd modules, one per ISA
+# level (GGML_BACKEND_DL=ON, GGML_CPU_ALL_VARIANTS=ON). Configure with user
+# files:
+#   uv run --frozen buildlog configure -C BUILD \
+#     --user case-studies/ggml/project/presets/apple-clang.toml \
+#     [--user case-studies/ggml/project/presets/variants.toml] \
+#     case-studies/ggml/project
+uses = ["buildlog-cpp"]
+source_root = "${GGML_SRC}"
+spec = ["spec.toml", "cpu.toml", "tests.toml", "install.toml", "rules.dl"]
+
+[vars]
+# The pinned checkout the CMake baseline builds (tag v0.25.3, 353b63b4; see
+# baseline/run-cmake.sh).
+GGML_SRC = "${REPO_ROOT}/case-studies/ggml/upstream"
+# What ggml-version.h calls the build's commit (GGML_COMMIT). CMake asks git
+# at configure time (`git rev-parse --short HEAD`, "unknown" outside a
+# checkout); here the invoker states it, e.g. -D GGML_BUILD_COMMIT=353b63b4.
+GGML_BUILD_COMMIT = "unknown"

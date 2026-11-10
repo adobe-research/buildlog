@@ -1,0 +1,34 @@
+[
+  {
+    "name": "gen-tab",
+    "id": "1a55e88@@gen-tab@exe",
+    "type": "executable",
+    "defined_in": "/work/src/gen.tab/meson.build",
+    "filename": ["/work/build/gen.tab/gen-tab"],
+    "target_sources": [{"language": "c", "machine": "build", "sources": ["/work/src/gen.tab/gen-tab.c"]}]
+  },
+  {
+    "name": "gen-tab",
+    "id": "1a55e88@@gen-tab@cus",
+    "type": "custom",
+    "defined_in": "/work/src/gen.tab/meson.build",
+    "filename": ["/work/build/gen.tab/x.tab.i"],
+    "target_sources": [{"language": "unknown", "sources": ["/work/src/gen.tab/unidata/Data.txt"]}]
+  },
+  {
+    "name": "fribidi",
+    "id": "51a1f05@@fribidi@sha",
+    "type": "shared library",
+    "defined_in": "/work/src/lib/meson.build",
+    "filename": ["/work/build/lib/libfribidi.0.dylib"],
+    "target_sources": [{"language": "c", "machine": "host", "sources": ["/work/src/lib/fribidi.c"]}]
+  },
+  {
+    "name": "fribidi",
+    "id": "a5bfc3d@@fribidi@exe",
+    "type": "executable",
+    "defined_in": "/work/src/bin/meson.build",
+    "filename": ["/work/build/bin/fribidi"],
+    "target_sources": [{"language": "c", "machine": "host", "sources": ["/work/src/bin/fribidi-main.c"]}]
+  }
+]

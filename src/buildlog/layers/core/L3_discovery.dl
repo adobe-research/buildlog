@@ -1,0 +1,674 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Available package binding. Preparation decodes the finite metadata closure
+// within declared roots before inference, without probe answers or demand.
+// Providers supply neutral bundles and actual finder offers; Datalog selects
+// bindings per platform. Roots are unordered, canonical definitions beat
+// metadata aliases, source bindings take precedence, and ambiguity is never
+// silently resolved.
+//
+// Selection and declaration visibility are below Defined, conditions, and
+// needed. An ambiguous declaration still exists, but using its binding is an
+// error. Module declarations and structural metadata require binding; actions
+// and metadata diagnostics require use. Environmental probes alone advance
+// the fixpoint: no package discovery changes this executable program.
+//
+// Edges, properties, and locations are conditioned by the file's condition
+// and its binding platform. Tools use their exec platform; libraries use
+// their consumer's target platform. Versions and attributes carry the platform
+// explicitly. One bundle can serve any number of platform bindings.
+
+// ---- configuration (spec facts) ----
+// Unscoped: every build platform. `_on`: one platform. A scoped and an
+// unscoped row are two rows, never an override.
+.decl package_prefix(prefix:symbol)                                  // an install prefix
+.decl package_prefix_on(platform:symbol, prefix:symbol)
+.decl package_search_dir(provider:symbol, dir:symbol)                // a provider's own search directory
+.decl package_search_dir_on(platform:symbol, provider:symbol, dir:symbol)
+.decl package_file(provider:symbol, path:symbol)                     // import exactly this file
+.decl package_file_on(platform:symbol, provider:symbol, path:symbol)
+// Files that are one installation's (an LLVM's LLVMExports.cmake and
+// ClangTargets.cmake): package_file_install(file, prefix) gives the file the
+// origin of its prefix (import_req_origin), so import_same_package holds
+// between them. Without it a named file is its own origin.
+.decl package_file_install(file:symbol, prefix:symbol)
+.decl package_pin(name:symbol, file:symbol)                          // resolve an ambiguous name
+.decl package_pin_on(platform:symbol, name:symbol, file:symbol)
+.decl package_want(name:symbol)                                      // opt in to searching a name
+// The per-import namespace option: the file's un-namespaced targets are
+// defined as <ns>::<name> (LLVM's `LLVMSupport` as `LLVM::LLVMSupport`),
+// for providers that support it. Open, so a discovery package can state it
+// for the files it selects (with package_file).
+.decl package_namespace(path:symbol, ns:symbol)
+// A source project (user): bind the names the project at `path` defines by
+// building it in-tree, from its spec, instead of importing an install of
+// it. The driver loads that project's targets, edges, properties,
+// conditions and options (its own vars and source root; its build policy,
+// requests, tests and install/export are the level above's, so they are
+// dropped: nlohmann/json #2946's JSON_Install=OFF is the default). Which of
+// the two binds a name is the user's choice, and the consuming spec is the
+// same either way.
+.decl source_project(name:symbol, path:symbol)
+// The providers of the loaded plugins (written by the driver).
+.decl package_provider(provider:symbol)
+.decl av_pkg_spelling(spelling:symbol, path:symbol)
+.decl import_path_spelling(spelling:symbol, path:symbol)
+.decl import_policy_path(path:symbol)
+import_policy_path(f) :- package_prefix(f).
+import_policy_path(f) :- package_prefix_on(_, f).
+import_policy_path(f) :- package_search_dir(_, f).
+import_policy_path(f) :- package_search_dir_on(_, _, f).
+import_policy_path(f) :- package_file(_, f).
+import_policy_path(f) :- package_file_on(_, _, f).
+import_policy_path(f) :- package_namespace(f, _).
+import_policy_path(f) :- package_pin(_, f).
+import_policy_path(f) :- package_pin_on(_, _, f).
+import_path_spelling(raw, path) :- import_policy_path(raw), av_pkg_spelling(raw, path).
+import_path_spelling(raw, raw) :- import_policy_path(raw), !av_pkg_spelling(raw, _).
+.decl import_namespace(file:symbol, ns:symbol)
+import_namespace(file, ns) :- package_namespace(raw, ns), import_path_spelling(raw, file).
+.decl import_file_install(file:symbol, prefix:symbol)
+.decl import_install_path(path:symbol)
+.decl import_install_spelling(spelling:symbol, path:symbol)
+import_install_path(f) :- package_file_install(f, _).
+import_install_path(f) :- package_file_install(_, f).
+import_install_spelling(raw, path) :- import_install_path(raw), av_pkg_spelling(raw, path).
+import_install_spelling(raw, raw) :- import_install_path(raw), !av_pkg_spelling(raw, _).
+import_file_install(file, prefix) :- package_file_install(raw, root),
+  import_install_spelling(raw, file), import_install_spelling(root, prefix).
+.decl module_manifest(module:symbol, directory:symbol)
+.decl module_root(module:symbol)
+.decl module_requires(module:symbol, dependency:symbol)
+.decl module_import(module:symbol, provider:symbol, file:symbol, ns:symbol)
+.decl module_fact_key(module:symbol, origin:symbol, relation:symbol, key:symbol)
+.decl module_bound(module:symbol, p:symbol)
+.decl module_used(module:symbol, p:symbol)
+.decl module_declared(module:symbol, t:symbol)
+module_bound(m, p) :- module_root(m), build_platform(p).
+module_bound(m, p) :- module_manifest(m, dir), av_pkg_rule_package(r, dir), import_declaration_on(r, p).
+module_bound(d, p) :- module_bound(m, p), module_requires(m, d).
+module_used(m, p) :- module_root(m), build_platform(p).
+module_used(m, p) :- module_declared(m, t), needed(t, c), config_platform(c, p).
+module_used(m, p) :- module_manifest(m, dir), av_pkg_rule_package(r, dir), import_used_on(r, p).
+module_used(d, p) :- module_used(m, p), module_requires(m, d).
+fact_key(o, r, k) :- module_fact_key(m, o, r, k), module_bound(m, _).
+
+error("unknown package provider", f) :- package_search_dir(f, _), !package_provider(f).
+error("unknown package provider", f) :- package_search_dir_on(_, f, _), !package_provider(f).
+error("unknown package provider", f) :- package_file(f, _), !package_provider(f).
+error("unknown package provider", f) :- package_file_on(_, f, _), !package_provider(f).
+error("unknown package provider", f) :- av_pkg_file(r, f, _, _), import_used_on(r, _), !package_provider(f).
+error("two namespaces for one package file", cat(f, ": ", a, " and ", b)) :-
+  import_namespace(f, a), import_namespace(f, b), a < b.
+.decl known_platform(p:symbol)
+known_platform(p) :- platform(p, _).
+error("unknown platform in package discovery", cat(p, " (package_prefix_on)")) :- package_prefix_on(p, _), !known_platform(p).
+error("unknown platform in package discovery", cat(p, " (package_search_dir_on)")) :- package_search_dir_on(p, _, _), !known_platform(p).
+error("unknown platform in package discovery", cat(p, " (package_file_on)")) :- package_file_on(p, _, _), !known_platform(p).
+error("unknown platform in package discovery", cat(p, " (package_pin_on)")) :- package_pin_on(p, _, _), !known_platform(p).
+error("unknown platform in package discovery", cat(p, " (package_linkage_on)")) :- package_linkage_on(p, _, _), !known_platform(p).
+
+// Where each provider looks for platform p: every prefix of p (the provider
+// knows its layout under it) and its own search directories for p.
+.decl package_root(p:symbol, provider:symbol, kind:symbol, root:symbol)   // kind: prefix | dir
+package_root(p, f, "prefix", r) :- build_platform(p), package_provider(f), package_prefix(raw),
+  import_path_spelling(raw, r).
+package_root(p, f, "prefix", r) :- build_platform(p), package_provider(f), package_prefix_on(p, raw),
+  import_path_spelling(raw, r).
+package_root(p, f, "dir", d) :- build_platform(p), package_search_dir(f, raw), package_provider(f),
+  import_path_spelling(raw, d).
+.decl av_pkg_root(provider:symbol, kind:symbol, root:symbol)
+error("uncertified package root", cat(f, " ", k, ": ", d, "; declare the root before inference")) :-
+  package_root(_, f, k, d), !av_pkg_root(f, k, d).
+package_root(p, f, "dir", d) :- build_platform(p), package_search_dir_on(p, f, raw), package_provider(f),
+  import_path_spelling(raw, d).
+
+// The condition that holds exactly in the configurations on platform p:
+// what a per-platform binding is conditioned on.
+.decl platform_condition(p:symbol, cond:symbol)
+platform_condition(p, cat("on:", p)) :- build_platform(p).
+condition(n, EQ("platform", p)) :- platform_condition(p, n).
+
+// ---- which names to look for, and on which platform ----
+// A name is demanded on platform p when a needed target of a configuration
+// on p refers to it (an edge that holds there, as written), when a command
+// of a configuration runs or loads it (on the exec configuration's
+// platform: tool_dep's rule, L1), when a test or a request names it, and
+// through the aliases of a demanded name. Definition tests already see the
+// available universe, so an enabled optional edge demands its binding too.
+// package_want explicitly demands a name without changing its availability.
+.decl import_demand(name:symbol, p:symbol)
+import_demand(d, p) :- needed(t, c), dep(t, d, _), config_platform(c, p).
+import_demand(d, p) :- needed(t, c), dep_when(t, d, _, n), cond_holds(c, n),
+  config_platform(c, p).
+import_demand(r, p) :- tool_ref(_, c, _, r, _), exec_config(c, e), config_platform(e, p).
+import_demand(g, p) :- test_in(n, c), test_arg_ref(n, _, g), config_platform(c, p).
+import_demand(t, p) :- request(t, n), config_active(n), decl_cfg(n, c), config_platform(c, p).
+import_demand(t, p) :- request(t, n), config_active(n), decl_cfg(n, u), config_slice(u, c),
+  config_platform(c, p).
+import_demand(n, p) :- package_want(n), needed(_, c), config_platform(c, p).
+import_demand(m, p) :- import_demand(n, p), alias(n, m).
+
+// Only the separate source surface suppresses metadata selection. Reading
+// public target/alias here would make selection depend on its own relay.
+.decl import_relayed(t:symbol)
+import_relayed(t) :- import_target(t, _, _, _).
+.decl import_target_on(t:symbol, p:symbol)
+import_target_on(t, p) :- import_target(t, _, _, p).
+.decl import_bound(name:symbol)
+import_bound(n) :- source_target(n).
+import_bound(n) :- source_imported(n).
+.decl import_aliased(name:symbol)
+import_aliased(a) :- source_alias(a, _).
+
+.decl import_want(name:symbol, p:symbol)
+import_want(n, p) :- import_demand(n, p), build_platform(p), !import_bound(n), !import_aliased(n).
+import_want(n, p) :- package_want(n), import_demand(n, p), build_platform(p), !import_bound(n).
+
+// ---- root-keyed finder offers, shared by platforms using the root ----
+.decl av_pkg_offer(name:symbol, provider:symbol, kind:symbol, root:symbol, file:symbol, classification:symbol)
+// ... found only through a name the file states for another id (a bare
+// package name, or a CMake target's package-component name), not as an id
+// the file defines.
+// ... a file that declares itself the same package as `other` (a verified
+// statement of its provider, e.g. buildlog's CPS export naming its sibling
+// manifest). Identity, not precedence: the two are one candidate.
+.decl av_pkg_same(name:symbol, provider:symbol, kind:symbol, root:symbol, file:symbol, other:symbol)
+// ... a file whose provider found its statement about another file false (a
+// dangling or mismatched sibling): an error, never a silent fallback.
+.decl av_pkg_invalid(name:symbol, provider:symbol, kind:symbol, root:symbol, file:symbol, reason:symbol)
+
+// A file that defines the name as a target id beats one that only states an
+// alias for it: CPS's Greet:greet is its id, and CMake's Greet::greet also
+// answers Greet:greet by its package-component name, so a prefix with both
+// formats is not ambiguous for the ids its CPS file refers to. Among aliases only (a bare name found as
+// a pkg-config module, a CPS package and a CMake P::P), it stays ambiguous
+// until pinned.
+.decl import_found(name:symbol, p:symbol, provider:symbol, file:symbol)
+import_found(n, p, f, file) :- av_pkg_offer(n, f, k, d, file, _),
+  package_root(p, f, k, d).
+.decl import_found_by_alias(name:symbol, p:symbol, provider:symbol, file:symbol)
+import_found_by_alias(n, p, f, file) :- av_pkg_offer(n, f, k, d, file, "alias"),
+  package_root(p, f, k, d).
+.decl import_found_defined(name:symbol, p:symbol)
+import_found_defined(n, p) :- import_found(n, p, f, file), !import_found_by_alias(n, p, f, file).
+// A file found together with the file it declares itself the same package
+// as is that file's duplicate: the other one is the candidate.
+.decl import_same(name:symbol, p:symbol, file:symbol, other:symbol)
+import_same(n, p, file, other) :- av_pkg_same(n, f, k, d, file, other),
+  package_root(p, f, k, d), import_found(n, p, _, other).
+.decl import_duplicate(name:symbol, p:symbol, file:symbol)
+import_duplicate(n, p, file) :- import_same(n, p, file, _).
+.decl import_invalid(name:symbol, p:symbol, file:symbol, reason:symbol)
+import_invalid(n, p, file, why) :- av_pkg_invalid(n, f, k, d, file, why),
+  package_root(p, f, k, d).
+.decl import_candidate(name:symbol, p:symbol, provider:symbol, file:symbol)
+import_candidate(n, p, f, file) :- import_found(n, p, f, file), !import_found_by_alias(n, p, f, file), !import_duplicate(n, p, file),
+  !import_invalid(n, p, file, _), !import_bound(n), !import_aliased(n).
+import_candidate(n, p, f, file) :- import_found(n, p, f, file), !import_found_defined(n, p), !import_duplicate(n, p, file),
+  !import_invalid(n, p, file, _), !import_bound(n), !import_aliased(n).
+// A file the user pins is a candidate even where another file defines the name.
+import_candidate(n, p, f, file) :- import_found(n, p, f, file), import_stated_pin(n, p, file),
+  !import_bound(n), !import_aliased(n).
+.decl import_searched(name:symbol, p:symbol)
+import_searched(n, p) :- av_pkg_offer(n, f, k, d, _, _), package_root(p, f, k, d).
+import_searched(n, p) :- import_want(n, p).
+.decl import_stated_pin(name:symbol, p:symbol, file:symbol)
+import_stated_pin(n, p, file) :- package_pin(n, raw), build_platform(p), import_path_spelling(raw, file).
+import_stated_pin(n, p, file) :- package_pin_on(p, n, raw), build_platform(p), import_path_spelling(raw, file).
+.decl import_pin(name:symbol, p:symbol, file:symbol)
+import_pin(n, p, file) :- import_stated_pin(n, p, file).
+// A pin selects a file, and so every name the file defines on that
+// platform: one pinned for Greet::shout binds the Greet::greet it also
+// defines, including transitive metadata includes. This reads available
+// bundles, not the demand or the selected relay.
+.decl import_pinned_file(p:symbol, provider:symbol, file:symbol)
+import_pinned_file(p, f, file) :- import_stated_pin(_, p, file), package_provider(f).
+.decl import_pinned_bundle(p:symbol, file:symbol, bundle:symbol)
+import_pinned_bundle(p, file, r) :- import_pinned_file(p, f, file), av_pkg_bundle(r, f, file, _, _).
+import_pinned_bundle(p, file, child) :- import_pinned_bundle(p, file, parent),
+  av_pkg_file(parent, f, inc, ns), av_pkg_bundle(child, f, inc, ns, _).
+import_pin(m, p, file) :- import_pinned_bundle(p, file, r), av_pkg_target(r, m, _).
+import_pin(m, p, file) :- import_pinned_bundle(p, file, r), av_pkg_alias(r, m, _).
+.decl import_pinned(name:symbol, p:symbol)
+import_pinned(n, p) :- import_pin(n, p, _).
+.decl import_ambiguous(name:symbol, p:symbol)
+import_ambiguous(n, p) :- import_candidate(n, p, _, a), import_candidate(n, p, _, b), a != b.
+
+// Selection reads only available data and source/policy facts. Its errors
+// are reported separately, only where the corresponding binding is used.
+.decl import_select(name:symbol, p:symbol, provider:symbol, file:symbol)
+import_select(n, p, f, file) :- import_candidate(n, p, f, file), !import_ambiguous(n, p), !import_pinned(n, p).
+import_select(n, p, f, file) :- import_candidate(n, p, f, file), import_pin(n, p, file).
+error("ambiguous package", cat(n, " on ", p, ": ", a, " and ", b, " both provide it; add a package_pin")) :-
+  import_candidate(n, p, _, a), import_candidate(n, p, _, b), a < b, !import_pinned(n, p), import_want(n, p).
+error("invalid package file", cat(n, " on ", p, ": ", file, ": ", why)) :- import_invalid(n, p, file, why), import_want(n, p).
+error("package pin matches no candidate", cat(n, " on ", p, ": ", file)) :-
+  import_stated_pin(n, p, file), import_searched(n, p), !import_candidate(n, p, _, file), import_want(n, p).
+error("package pinned twice", cat(n, " on ", p, ": ", a, " and ", b)) :-
+  import_pin(n, p, a), import_pin(n, p, b), a < b, import_want(n, p).
+
+// ---- bind prepared bundles to platforms and modules ----
+.decl import_file_on(p:symbol, provider:symbol, file:symbol)
+import_file_on(p, f, file) :- package_file(f, raw), package_provider(f), build_platform(p),
+  import_path_spelling(raw, file).
+import_file_on(p, f, file) :- package_file_on(p, f, raw), package_provider(f), build_platform(p),
+  import_path_spelling(raw, file).
+.decl import_selected_file(provider:symbol, file:symbol)
+import_selected_file(f, file) :- import_select(_, _, f, file).
+import_selected_file(f, file) :- import_file_on(_, f, file).
+.decl import_has_namespace(file:symbol)
+import_has_namespace(file) :- import_namespace(file, _).
+.decl import_direct(provider:symbol, file:symbol, ns:symbol)
+import_direct(f, file, "") :- import_selected_file(f, file), !import_has_namespace(file).
+import_direct(f, file, ns) :- import_selected_file(f, file), import_namespace(file, ns).
+import_direct(f, file, ns) :- module_bound(m, _), module_import(m, f, file, ns).
+error("uncertified package file", cat(f, ": ", file, " (namespace ", ns, "); declare the file before inference")) :-
+  import_direct(f, file, ns), !av_pkg_bundle(_, f, file, ns, _).
+// The root a file's paths are relative to on its target: the longest
+// platform_sysroot (open: a plugin states where a target platform's files
+// live on this machine) that holds the file, or "" for a file outside all of
+// them. The importers map a path under it to its path on the target, as
+// PKG_CONFIG_SYSROOT_DIR does for pkg-config.
+.decl platform_sysroot(p:symbol, root:symbol)    // open
+.decl import_root_cand(file:symbol, root:symbol)
+.decl import_root(file:symbol, root:symbol)
+import_root_cand(file, root) :- av_pkg_bundle(_, _, file, _, _), platform_sysroot(_, root), strlen(root) > 0,
+  substr(file, 0, strlen(root) + 1) = cat(root, "/").
+import_root(file, root) :- import_root_cand(file, root), strlen(root) = max n : { import_root_cand(file, r), n = strlen(r) }.
+import_root(file, "") :- av_pkg_bundle(_, _, file, _, _), !import_root_cand(file, _).
+.decl av_pkg_bundle(id:symbol, provider:symbol, file:symbol, ns:symbol, root:symbol)
+.decl import_context(id:symbol, provider:symbol, file:symbol, ns:symbol, root:symbol)
+import_context(r, f, file, ns, root) :- import_direct(f, file, ns), import_root(file, root),
+  av_pkg_bundle(r, f, file, ns, _).
+// A loaded file may include another file for a provider to import, with a
+// namespace option (av_pkg_file; a package's configuration names its
+// generated target file, imported under the package's namespace).
+//
+.decl import_included(provider:symbol, file:symbol, ns:symbol)
+import_included(f, file, ns) :- av_pkg_file(r, f, file, ns), import_req(r, _), package_provider(f).
+// An included file is in its includer's target.
+.decl import_included_root(provider:symbol, file:symbol, root:symbol)
+import_included_root(f, file, root) :- av_pkg_file(r, f, file, _), import_context(r, _, _, _, root).
+import_context(r, f, file, ns, root) :- import_included(f, file, ns), import_included_root(f, file, root),
+  av_pkg_bundle(r, f, file, ns, _).
+
+// The neutral rows a provider answers with (buildlog.providers.Result).
+.decl av_pkg_import(req:symbol, status:symbol)                  // ok | error
+.decl av_pkg_alias(req:symbol, name:symbol, to:symbol)          // stated by the metadata
+.decl av_pkg_error(req:symbol, msg:symbol)                      // file-level
+.decl av_pkg_target(req:symbol, t:symbol, kind:symbol)          // library | interface | executable | module
+.decl av_pkg_target_error(req:symbol, t:symbol, msg:symbol)     // reported if t is needed
+.decl av_pkg_condition(req:symbol, name:symbol, e:Cond)
+.decl av_pkg_dep(req:symbol, t:symbol, d:symbol, vis:symbol, cond:symbol)
+.decl av_pkg_runtime_dep(req:symbol, t:symbol, m:symbol, place:symbol, cond:symbol)
+.decl av_pkg_prop(req:symbol, t:symbol, key:symbol, value:symbol, cond:symbol)
+.decl av_pkg_location(req:symbol, t:symbol, path:symbol, cond:symbol)
+.decl av_pkg_link(req:symbol, t:symbol, path:symbol, cond:symbol)
+.decl av_pkg_whole_archive(req:symbol, t:symbol, lib:symbol, cond:symbol)
+// A rule package already present in the checked executable union.
+.decl av_pkg_rule_package(req:symbol, path:symbol)
+.decl av_pkg_bare_dep(req:symbol, t:symbol, name:symbol, vis:symbol, cond:symbol)
+.decl av_pkg_export(req:symbol, name:symbol, t:symbol)          // namespaced imports
+// what a discovery provider states besides
+// targets (below).
+.decl av_pkg_file(req:symbol, provider:symbol, file:symbol, ns:symbol)
+.decl av_pkg_version(req:symbol, t:symbol, major:symbol, minor:symbol, patch:symbol)
+.decl av_pkg_package(req:symbol, t:symbol, pkg:symbol, comp:symbol)
+.decl av_pkg_attr(req:symbol, t:symbol, key:symbol, value:symbol)
+.decl av_pkg_build_prop(req:symbol, t:symbol, key:symbol, value:symbol)
+.decl av_pkg_linkage_dep(req:symbol, pkg:symbol, t:symbol, linkage:symbol, d:symbol)
+.decl av_pkg_platform(req:symbol, t:symbol, cond:symbol, message:symbol)
+.decl av_pkg_expression(req:symbol, token:symbol, kind:symbol, args:symbol, status:symbol, value:symbol)
+
+// Results count only for files that are (still) selected.
+.decl import_req(req:symbol, file:symbol)
+import_req(r, file) :- av_pkg_import(r, _), import_context(r, _, file, _, _).
+// The provider that read a request's file.
+.decl import_req_provider(req:symbol, provider:symbol)
+import_req_provider(r, f) :- import_req(r, _), import_context(r, f, _, _, _).
+
+// The platforms a request's file is bound for: those that selected it or
+// name it (package_file), and, for an included file, its includer's.
+.decl import_req_on(req:symbol, p:symbol)
+import_req_on(r, p) :- import_req(r, file), import_context(r, f, file, ns, _), import_direct(f, file, ns),
+  import_select(_, p, f, file).
+import_req_on(r, p) :- import_req(r, file), import_context(r, f, file, ns, _), import_direct(f, file, ns),
+  import_file_on(p, f, file).
+import_req_on(r, p) :- import_req(r, file), import_context(r, f, file, ns, _),
+  module_bound(m, p), module_import(m, f, file, ns).
+import_req_on(r2, p) :- import_req_on(r, p), av_pkg_file(r, f, file, ns), import_context(r2, f, file, ns, _),
+  import_req(r2, file).
+
+.decl import_declaration_on(req:symbol, p:symbol)
+import_declaration_on(r, p) :- import_req_on(r, p).
+import_declaration_on(r, p) :- import_candidate(_, p, f, file), av_pkg_bundle(r, f, file, "", _),
+  !import_has_namespace(file).
+import_declaration_on(r, p) :- import_candidate(_, p, f, file), import_namespace(file, ns),
+  av_pkg_bundle(r, f, file, ns, _).
+import_declaration_on(child, p) :- import_declaration_on(parent, p), av_pkg_file(parent, f, file, ns),
+  av_pkg_bundle(child, f, file, ns, _).
+.decl available_defined(name:symbol)
+available_defined(t) :- av_pkg_target(r, t, _), import_declaration_on(r, _), !import_aliased(t).
+available_defined(t) :- source_target(t).
+available_defined(t) :- source_imported(t).
+available_defined(a) :- source_alias(a, t), available_defined(t).
+available_defined(a) :- av_pkg_alias(r, a, t), import_declaration_on(r, _), available_defined(t),
+  !import_bound(a), !import_aliased(a).
+defined(t) :- available_defined(t).
+
+.decl import_choice_on(name:symbol, req:symbol, p:symbol)
+import_choice_on(n, r, p) :- import_select(n, p, f, file), import_req_on(r, p),
+  import_context(r, f, file, _, _).
+import_choice_on(n, child, p) :- import_choice_on(n, parent, p), av_pkg_file(parent, f, file, ns),
+  av_pkg_bundle(child, f, file, ns, _), import_req_on(child, p).
+.decl import_name_offered(name:symbol, p:symbol)
+import_name_offered(n, p) :- import_found(n, p, _, _).
+.decl import_alias_candidate(name:symbol, to:symbol)
+import_alias_candidate(a, t) :- av_pkg_alias(r, a, t), import_req_on(r, p),
+  !import_name_offered(a, p), !import_bound(a), !import_aliased(a).
+import_alias_candidate(a, t) :- av_pkg_alias(r, a, t), import_choice_on(a, r, _),
+  !import_bound(a), !import_aliased(a).
+.decl import_alias_ambiguous(name:symbol)
+import_alias_ambiguous(a) :- import_alias_candidate(a, t), import_alias_candidate(a, u), t != u.
+error("ambiguous alias", cat(a, " is ", t, " or ", u)) :-
+  import_alias_candidate(a, t), import_alias_candidate(a, u), t < u, import_demand(a, _).
+
+.decl import_used_on(req:symbol, p:symbol)
+import_used_on(r, p) :- import_req_on(r, p), import_context(r, f, file, _, _),
+  import_select(n, p, f, file), import_want(n, p).
+import_used_on(r, p) :- import_req_on(r, p), import_context(r, f, file, _, _), import_file_on(p, f, file).
+import_used_on(r, p) :- import_target(t, _, r, p), needed(t, c), config_platform(c, p).
+import_used_on(r, p) :- module_used(m, p), module_import(m, f, file, ns),
+  import_context(r, f, file, ns, _), import_req_on(r, p).
+import_used_on(child, p) :- import_used_on(parent, p), av_pkg_file(parent, f, file, ns),
+  av_pkg_bundle(child, f, file, ns, _), import_req_on(child, p).
+
+// The relay's condition: a row's own condition (n, "" for none) and the
+// platform, as one named condition.
+.decl relay_cond(req:symbol, cond:symbol, p:symbol, name:symbol)
+relay_cond(r, "", p, m) :- import_req_on(r, p), platform_condition(p, m).
+relay_cond(r, n, p, cat(n, " ", m)) :- av_pkg_condition(r, n, _), import_req_on(r, p), platform_condition(p, m).
+condition(cat(n, " ", m), AND(e, EQ("platform", p))) :- av_pkg_condition(r, n, e), import_req_on(r, p),
+  platform_condition(p, m).
+
+error("package metadata rejected", m) :- av_pkg_error(r, m), import_used_on(r, _).
+
+.decl import_target(t:symbol, kind:symbol, req:symbol, p:symbol)
+import_target(t, k, r, p) :- av_pkg_target(r, t, k), import_req_on(r, p),
+  !import_name_offered(t, p), !import_bound(t), !import_aliased(t).
+import_target(t, k, r, p) :- av_pkg_target(r, t, k), import_choice_on(t, r, p),
+  !import_bound(t), !import_aliased(t).
+// The namespace option an import was made with (a manifest's `imports`,
+// package_namespace): `import_ns_target(ns, t)` is a target t of a file
+// imported under ns. A package that imports files states facts about their
+// targets by it; the loader accepts a variable target there only if it is
+// bound by this relation to the package's own namespace.
+.decl import_ns_target(ns:symbol, t:symbol)
+import_ns_target(ns, t) :- import_target(t, _, r, _), import_context(r, _, _, ns, _), ns != "".
+imported(t) :- import_target(t, _, _, _).
+imported_kind(t, k) :- import_target(t, k, _, _).
+error("target defined by two package metadata files", cat(t, " on ", p, ": ", a, " and ", b)) :-
+  import_target(t, _, r1, p), import_target(t, _, r2, p),
+  import_req(r1, a), import_req(r2, b), a < b, needed(t, c), config_platform(c, p).
+error("imported target has two kinds", cat(t, ": ", a, " and ", b)) :-
+  imported_kind(t, a), imported_kind(t, b), a < b, needed(t, _).
+
+// Paths do not participate in availability or binding. Native expressions
+// have certified values; late SDK/sysroot paths are guarded observations.
+.decl import_path_root(req:symbol, p:symbol, root:symbol)
+import_path_root(r, p, root) :- import_req_on(r, p), import_context(r, f, file, ns, _),
+  import_direct(f, file, ns), import_root(file, root).
+import_path_root(child, p, root) :- import_path_root(parent, p, root), av_pkg_file(parent, f, file, ns),
+  av_pkg_bundle(child, f, file, ns, _), import_req_on(child, p).
+.decl import_expression_want(req:symbol, token:symbol, p:symbol)
+import_expression_want(r, e, p) :- av_pkg_prop(r, t, _, e, _), import_target(t, _, r, p),
+  needed(t, c), config_platform(c, p).
+import_expression_want(r, e, p) :- av_pkg_link(r, t, e, _), import_target(t, _, r, p),
+  needed(t, c), config_platform(c, p).
+import_expression_want(r, e, p) :- av_pkg_location(r, t, e, _), import_target(t, _, r, p),
+  needed(t, c), config_platform(c, p).
+.decl domain_metadata_path(id:symbol, kind:symbol, root:symbol, args:symbol)
+domain_metadata_path(cat(e, "@", root), k, root, args) :-
+  av_pkg_expression(r, e, k, args, _, _), import_path_root(r, _, root), root != "".
+.decl req_metadata_path(id:symbol, kind:symbol, root:symbol, args:symbol)
+req_metadata_path(q, k, root, args) :- domain_metadata_path(q, k, root, args),
+  av_pkg_expression(r, e, k, args, _, _), import_expression_want(r, e, p),
+  import_path_root(r, p, root), q = cat(e, "@", root).
+.decl res_metadata_path(id:symbol, status:symbol, value:symbol)
+.decl import_raw_value(req:symbol, value:symbol)
+import_raw_value(r, v) :- av_pkg_prop(r, _, _, v, _).
+import_raw_value(r, v) :- av_pkg_link(r, _, v, _).
+import_raw_value(r, v) :- av_pkg_location(r, _, v, _).
+.decl import_value(req:symbol, raw:symbol, p:symbol, status:symbol, value:symbol)
+import_value(r, v, p, "value", v) :- import_raw_value(r, v), import_req_on(r, p),
+  !av_pkg_expression(r, v, _, _, _, _).
+import_value(r, e, p, s, v) :- av_pkg_expression(r, e, _, _, s, v), import_path_root(r, p, "").
+import_value(r, e, p, s, v) :- av_pkg_expression(r, e, k, args, _, _), import_path_root(r, p, root),
+  root != "", req_metadata_path(q, k, root, args), q = cat(e, "@", root), res_metadata_path(q, s, v).
+.decl import_prop_value(req:symbol, raw:symbol, p:symbol, value:symbol)
+import_prop_value(r, raw, p, v) :- import_value(r, raw, p, "value", v).
+import_prop_value(r, raw, p, v) :- import_value(r, raw, p, "flag", v).
+.decl import_artifact_value(req:symbol, raw:symbol, p:symbol, value:symbol)
+import_artifact_value(r, raw, p, v) :- import_value(r, raw, p, "value", v).
+import_artifact_value(r, raw, p, v) :- import_value(r, raw, p, "link", v).
+
+error("unsupported package metadata", m) :-
+  av_pkg_target_error(r, t, m), import_target(t, _, r, p), needed(t, c), config_platform(c, p).
+error("unsupported package metadata", m) :- av_pkg_platform(r, t, n, m),
+  import_target(t, _, r, p), needed(t, c), config_platform(c, p),
+  relay_cond(r, n, p, combined), !cond_holds(c, combined).
+// A binding is per platform: a relayed target needed on a platform where
+// nothing binds it is an error, never another platform's binding.
+error_at("imported target not bound for this platform", cat(t, " in ", n, ": nothing binds it for ", p), t, c) :-
+  needed(t, c), import_relayed(t), config_platform(c, p), !import_target_on(t, p), cfg_name(c, n).
+
+alias(a, t) :- import_alias_candidate(a, t), !import_alias_ambiguous(a).
+dep_when(t, d, v, m) :- av_pkg_dep(r, t, d, v, n), import_target(t, _, r, p), relay_cond(r, n, p, m).
+runtime_dep_when(t, d, place, m) :- av_pkg_runtime_dep(r, t, d, place, n), import_target(t, _, r, p), relay_cond(r, n, p, m).
+// Usage requirements of an imported target are what consumers get. A
+// language layer may consume a key of some requests as another key
+// (import_prop_rename, open; e.g. buildlog-cpp's include dirs as system
+// include dirs).
+.decl import_prop_rename(req:symbol, key:symbol, to:symbol)
+.decl import_renamed(req:symbol, key:symbol)
+import_renamed(r, k) :- import_prop_rename(r, k, _).
+.decl import_key(req:symbol, key:symbol, to:symbol)
+import_key(r, k, k) :- av_pkg_prop(r, _, k, _, _), import_req(r, _), !import_renamed(r, k).
+import_key(r, k, k2) :- import_prop_rename(r, k, k2).
+prop_when(t, k2, v, "interface", m) :- av_pkg_prop(r, t, k, raw, n), import_target(t, _, r, p),
+  import_prop_value(r, raw, p, v), relay_cond(r, n, p, m), import_key(r, k, k2).
+discovered_rule_package(m, dir) :- module_manifest(m, dir), module_used(m, _).
+
+// Bare names in namespaced imports. A namespaced file's reference to a name
+// it does not define (Clang's `LLVMSupport`) denotes the target that some
+// namespaced import defines for that name (`LLVM::LLVMSupport`), if exactly
+// one does. This is the export-set scope of the files the level above
+// selected, not a global alias: other references never see bare names.
+.decl import_export(name:symbol, t:symbol)
+import_export(n, t) :- av_pkg_export(r, n, t), import_target(t, _, r, _).
+.decl import_bare_dep(t:symbol, name:symbol, vis:symbol, cond:symbol)
+import_bare_dep(t, n, v, m) :- av_pkg_bare_dep(r, t, n, v, c), import_target(t, _, r, p), relay_cond(r, c, p, m).
+.decl import_bare_resolves(name:symbol, t:symbol)
+import_bare_resolves(n, id) :- import_bare_dep(_, n, _, _), import_export(n, id),
+  1 = count : { import_export(n, _) }.
+.decl import_bare_resolved(name:symbol)
+import_bare_resolved(n) :- import_bare_resolves(n, _).
+dep_when(t, id, v, c) :- import_bare_dep(t, n, v, c), import_bare_resolves(n, id).
+error_at("unresolved name in a namespaced import", cat(n, " of ", t, ": no namespaced import defines it"), t, c) :-
+  import_bare_dep(t, n, _, _), !import_export(n, _), needed(t, c).
+error_at("ambiguous name in a namespaced import", cat(n, " of ", t, ": ", a, " or ", b), t, c) :-
+  import_bare_dep(t, n, _, _), import_export(n, a), import_export(n, b), a < b, needed(t, c).
+
+// Artifacts, kinds and whole-archive edges go to L3's imported-artifact
+// relations, which make them link files and locations.
+import_artifact(t, path, m, 1) :- av_pkg_location(r, t, raw, n), import_target(t, _, r, p),
+  import_artifact_value(r, raw, p, path), relay_cond(r, n, p, m).
+import_artifact(t, path, m, 0) :- av_pkg_link(r, t, raw, n), import_target(t, _, r, p),
+  import_artifact_value(r, raw, p, path), relay_cond(r, n, p, m).
+imported_whole_archive(t, l, m) :- av_pkg_whole_archive(r, t, l, n), import_target(t, _, r, p), relay_cond(r, n, p, m).
+
+// ---- versions, attributes, build settings, linkage ----
+// A package's version as structured fields, and attributes that are not
+// usage requirements (keys belong to the provider, e.g. the backends an
+// LLVM builds), per platform the package is bound for. Both keep the
+// origin of the line that states them.
+.decl package_version(t:symbol, p:symbol, major:symbol, minor:symbol, patch:symbol)
+.decl import_metadata_name(req:symbol, t:symbol)
+import_metadata_name(r, t) :- av_pkg_version(r, t, _, _, _).
+import_metadata_name(r, t) :- av_pkg_attr(r, t, _, _).
+.decl import_metadata_binding(req:symbol, t:symbol, p:symbol)
+import_metadata_binding(r, t, p) :- import_metadata_name(r, t), import_req_on(r, p),
+  !import_name_offered(t, p).
+import_metadata_binding(r, t, p) :- import_metadata_name(r, t), import_choice_on(t, r, p).
+package_version(t, p, a, b, c) :- av_pkg_version(r, t, a, b, c), import_metadata_binding(r, t, p).
+// The package an imported target belongs to, by the package's own name
+// (CPS `name`, the .pc module, CMake's <Pkg>Config.cmake), and its
+// component there ("" for the package as a whole); an export's
+// requirement on the target names it (L3_install.dl).
+.decl package_of(t:symbol, p:symbol, pkg:symbol, comp:symbol)
+package_of(t, p, k, m) :- av_pkg_package(r, t, k, m), import_target(t, _, r, p).
+// A package's version as a condition attribute, `package.<name>.version`
+// (core L1_targets.dl, version comparison): the version the provider
+// reported, rejoined, for the package's own name and for the first column of
+// package_version (a package-level fact states its package name there).
+// Available wherever the package is bound; conditions do not initiate lookup.
+config_attr(c, cat("package.", n, ".version"), cat(a, ".", b, ".", z)) :- config_platform(c, p),
+  package_version(n, p, a, b, z).
+config_attr(c, cat("package.", n, ".version"), cat(a, ".", b, ".", z)) :- config_platform(c, p),
+  package_version(t, p, a, b, z), package_of(t, p, n, _).
+.decl package_attr(t:symbol, p:symbol, key:symbol, value:symbol)
+package_attr(t, p, k, v) :- av_pkg_attr(r, t, k, v), import_metadata_binding(r, t, p).
+// How an imported target was built (C++'s RTTI, say): a private prop, which
+// consumers are checked against and never given.
+prop_when(t, k, v, "private", m) :- av_pkg_build_prop(r, t, k, v), import_target(t, _, r, p), relay_cond(r, "", p, m).
+
+// Linkage. A package may offer its libraries static and shared (LLVM's
+// component libraries or its single libLLVM): a target of it depends on
+// one set or the other. Whoever invokes the build chooses
+// (package_linkage, or package_linkage_on for one platform); a package
+// that offers one linkage needs no choice, and a package whose both
+// linkages exist is an error until pinned. Offered means some library of
+// that linkage is bound; all of it is per platform.
+.decl package_linkage(pkg:symbol, linkage:symbol)
+.decl package_linkage_on(platform:symbol, pkg:symbol, linkage:symbol)
+.decl import_linkage_dep(pkg:symbol, p:symbol, t:symbol, linkage:symbol, d:symbol)
+import_linkage_dep(k, p, t, l, d) :- av_pkg_linkage_dep(r, k, t, l, d), import_target(t, _, r, p).
+.decl import_linkage_pkg(pkg:symbol, p:symbol)
+import_linkage_pkg(k, p) :- import_linkage_dep(k, p, _, _, _).
+.decl import_linkage_used(pkg:symbol, p:symbol)
+import_linkage_used(k, p) :- import_linkage_dep(k, p, t, _, _), needed(t, c), config_platform(c, p).
+.decl package_linkage_kind(linkage:symbol)
+package_linkage_kind("static"). package_linkage_kind("shared").
+.decl linkage_pin(pkg:symbol, p:symbol, linkage:symbol)
+// A dependent's pin on its edge to a target of k (dep_linkage, L3_native.dl)
+// selects when the user does not choose; a user's package_linkage it
+// contradicts is an error, as for a library built here.
+.decl import_dep_pin(pkg:symbol, p:symbol, linkage:symbol, by:symbol)
+import_dep_pin(k, p, l, a) :- dep_linkage(a, r, l, _), name_candidate(r, t), import_linkage_dep(k, p, t, _, _),
+  build_platform(p).
+.decl import_dep_pinned(pkg:symbol, p:symbol)
+import_dep_pinned(k, p) :- import_dep_pin(k, p, _, _).
+.decl user_linkage_pin(pkg:symbol, p:symbol, linkage:symbol)
+user_linkage_pin(k, p, l) :- package_linkage(k, l), build_platform(p).
+user_linkage_pin(k, p, l) :- package_linkage_on(p, k, l), build_platform(p).
+linkage_pin(k, p, l) :- import_dep_pin(k, p, l, _).
+linkage_pin(k, p, l) :- user_linkage_pin(k, p, l), !import_dep_pinned(k, p).
+.decl package_linkage_offered(pkg:symbol, p:symbol, linkage:symbol)
+package_linkage_offered(k, p, l) :- import_linkage_dep(k, p, _, l, d), import_target_on(d, p), package_linkage_kind(l).
+.decl package_linkage_pinned(pkg:symbol, p:symbol)
+package_linkage_pinned(k, p) :- linkage_pin(k, p, _).
+.decl package_linkage_selected(pkg:symbol, p:symbol, linkage:symbol)
+package_linkage_selected(k, p, l) :- linkage_pin(k, p, l), package_linkage_offered(k, p, l),
+  1 = count : { linkage_pin(k, p, _) }.
+package_linkage_selected(k, p, l) :- package_linkage_offered(k, p, l), !package_linkage_pinned(k, p),
+  1 = count : { package_linkage_offered(k, p, _) }.
+dep_when(t, d, "public", m) :- import_linkage_dep(k, p, t, l, d), package_linkage_selected(k, p, l),
+  platform_condition(p, m).
+error("unknown package linkage", cat(k, ": ", l, " (static or shared)")) :-
+  package_linkage(k, l), !package_linkage_kind(l).
+error("unknown package linkage", cat(k, " on ", p, ": ", l, " (static or shared)")) :-
+  package_linkage_on(p, k, l), !package_linkage_kind(l).
+error("package linkage pinned twice", cat(k, " on ", p, ": ", a, " and ", b)) :-
+  user_linkage_pin(k, p, a), user_linkage_pin(k, p, b), a < b.
+error("conflicting linkage pins", cat(k, " on ", p, ": ", a, " (", ta, ") and ", b, " (", tb, ")")) :-
+  import_dep_pin(k, p, a, ta), import_dep_pin(k, p, b, tb), a < b.
+error("linkage pin contradicts the user's choice", cat(a, " pins ", k, " ", l, " on ", p, " (", w, "), but the user's package_linkage asks for ", u, "; fix: drop package_linkage(", k, ", ", u, ") or the pin")) :-
+  import_dep_pin(k, p, l, a), user_linkage_pin(k, p, u), u != l,
+  dep_linkage(a, r, l, w), name_candidate(r, t), import_linkage_dep(k, p, t, _, _).
+error("pinned package linkage not offered", cat(k, " on ", p, " has no ", l, " libraries; the user's package_linkage asks for ", l)) :-
+  user_linkage_pin(k, p, l), !import_dep_pinned(k, p), package_linkage_kind(l), import_linkage_pkg(k, p),
+  !package_linkage_offered(k, p, l), import_linkage_used(k, p).
+error("pinned package linkage not offered", cat(k, " on ", p, " has no ", l, " libraries; ", a, " pins ", l, " (", w, ")")) :-
+  import_dep_pin(k, p, l, a), package_linkage_kind(l), import_linkage_pkg(k, p),
+  !package_linkage_offered(k, p, l),
+  dep_linkage(a, r, l, w), name_candidate(r, t), import_linkage_dep(k, p, t, _, _), import_linkage_used(k, p).
+error("package linkage not chosen", cat(k, " on ", p, " offers static and shared libraries; pin package_linkage")) :-
+  !package_linkage_pinned(k, p), package_linkage_offered(k, p, "static"), package_linkage_offered(k, p, "shared"),
+  import_linkage_used(k, p).
+
+// ---- which package instance an import comes from; consistency ----
+// import_req_origin(r, p, provider, kind, root): request r's file is bound on
+// p by the user's selection: found by `provider` under a package_root (kind
+// prefix or dir: package_prefix, package_search_dir), whether chosen alone
+// or by package_pin, or named by package_file (kind "file", the root is the
+// file itself). An included file has its includer's origin. The origin is
+// the identity of a package instance here: two imports are from the same
+// package when one search of one root (or one named file) selected them.
+.decl import_req_origin(req:symbol, p:symbol, provider:symbol, kind:symbol, root:symbol)
+import_req_origin(r, p, f, k, d) :- import_req(r, file), import_context(r, f, file, ns, _),
+  import_direct(f, file, ns), import_select(n, p, f, file), av_pkg_offer(n, f, k, d, file, _),
+  package_root(p, f, k, d).
+import_req_origin(r, p, f, "file", file) :- import_req(r, file), import_context(r, f, file, ns, _),
+  import_direct(f, file, ns), import_file_on(p, f, file), !import_file_install(file, _).
+import_req_origin(r, p, f, "install", d) :- import_req(r, file), import_context(r, f, file, ns, _),
+  import_direct(f, file, ns), import_file_on(p, f, file), import_file_install(file, d).
+import_req_origin(r2, p, f, k, d) :- import_req_origin(r, p, f, k, d), av_pkg_file(r, f2, file, ns),
+  import_context(r2, f2, file, ns, _), import_req(r2, file).
+import_req_origin(child, p, f, k, d) :- import_req_origin(parent, p, f, k, d),
+  av_pkg_rule_package(parent, dir), module_manifest(m, dir), module_bound(m, p),
+  module_import(m, f2, file, ns), import_context(child, f2, file, ns, _).
+.decl import_origin(t:symbol, p:symbol, provider:symbol, kind:symbol, root:symbol)
+import_origin(t, p, f, k, d) :- import_target(t, _, r, p), import_req_origin(r, p, f, k, d).
+
+// import_same_package(t1, t2) (accepted, open): the author states that two
+// imported targets must come from one package instance, e.g. Halide's
+// runtime compiler Clang::clang and the LLVM libHalide links. Symmetric. It
+// is checked where it matters, where a configuration c runs one of them as
+// a tool (tool_dep, bound on c's exec platform) against the other bound on
+// c's own platform: they must share an origin, or it is an error naming both.
+// Where it holds, the tool is fixed relative to the library (core's
+// action_program_fixed, L2). When the exec platform is not the library's
+// (a cross build), the two cannot be one install: they hold when their
+// packages state the same version (package_version), the tool being the
+// build machine's release of the package the product links.
+.decl import_same_package(t1:symbol, t2:symbol)
+.decl import_same_pair(g:symbol, u:symbol)
+import_same_pair(a, b) :- import_same_package(a, b).
+import_same_pair(b, a) :- import_same_package(a, b).
+.decl import_same_use(t:symbol, c:Cfg, g:symbol, pe:symbol, u:symbol, p:symbol)
+import_same_use(t, c, g, pe, u, p) :- tool_dep(t, c, g), import_relayed(g), import_same_pair(g, u),
+  exec_config(c, e), config_platform(e, pe), config_platform(c, p).
+.decl import_same_holds(c:Cfg, g:symbol, u:symbol, provider:symbol, kind:symbol, root:symbol)
+import_same_holds(c, g, u, f, k, d) :- import_same_use(_, c, g, pe, u, p), import_origin(g, pe, f, k, d),
+  import_origin(u, p, f, k, d).
+// A target's package: its own (package_of), else the namespace its file was
+// imported under (a manifest's or package_namespace's).
+.decl import_pkg_name(t:symbol, p:symbol, pkg:symbol)
+import_pkg_name(t, p, k) :- package_of(t, p, k, _).
+import_pkg_name(t, p, ns) :- import_ns_target(ns, t), import_target_on(t, p), !package_of(t, p, _, _).
+import_same_holds(c, g, u, f, k, d) :- import_same_use(_, c, g, pe, u, p), pe != p, import_origin(g, pe, f, k, d),
+  import_pkg_name(g, pe, kg), import_pkg_name(u, p, ku), package_version(kg, pe, a, b, z), package_version(ku, p, a, b, z).
+.decl import_same_held(c:Cfg, g:symbol, u:symbol)
+import_same_held(c, g, u) :- import_same_holds(c, g, u, _, _, _).
+.decl import_origin_on(t:symbol, p:symbol)
+import_origin_on(t, p) :- import_origin(t, p, _, _, _).
+error_at("imported targets come from different packages",
+  cat(g, " on ", pe, " is from ", f, " ", k, " ", d, ", ", u, " on ", p, " from ", f2, " ", k2, " ", d2,
+    " (import_same_package)"), t, c) :-
+  import_same_use(t, c, g, pe, u, p), !import_same_held(c, g, u), import_origin(g, pe, f, k, d),
+  import_origin(u, p, f2, k2, d2).
+error_at("import_same_package names a target not bound",
+  cat(u, " on ", p, " (import_same_package with ", g, ", a tool of ", t, ")"), t, c) :-
+  import_same_use(t, c, g, _, u, p), !import_origin_on(u, p).

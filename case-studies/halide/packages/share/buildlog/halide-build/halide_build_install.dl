@@ -1,0 +1,29 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// An installed Halide (its prefix, as add_halide_library's find_package(Halide)
+// finds it): the targets Halide's own CMake export files describe that
+// buildlog's CMake importer does not take. Halide::Halide and
+// Halide::Generator come from HalideCompiler-shared-targets.cmake through
+// the importer (package_file); the rest are stated here from the prefix:
+// Halide::Runtime (the headers every generated library includes),
+// Halide::Tools and Halide::ImageIO (header-only, optional libpng/libjpeg),
+// and Halide::GenRT, the installed gengen that writes a standalone runtime.
+// Halide::RunGenMain carries INTERFACE_SOURCES, which the importer rejects:
+// a program that wants RunGenMain compiles share/tools/RunGenMain.cpp
+// itself.
+.decl halide_build_install(prefix:symbol)
+imported("Halide::Runtime"), imported_kind("Halide::Runtime", "interface"),
+prop("Halide::Runtime", "cc.system_include_dir", cat(p, "/include"), "interface") :- halide_build_install(p).
+imported("Halide::Tools"), imported_kind("Halide::Tools", "interface"),
+prop("Halide::Tools", "cc.system_include_dir", cat(p, "/share/tools"), "interface") :- halide_build_install(p).
+imported("Halide::ImageIO"), imported_kind("Halide::ImageIO", "interface"),
+dep("Halide::ImageIO", "Halide::Runtime", "public"), dep("Halide::ImageIO", "Halide::Tools", "public"),
+prop("Halide::ImageIO", "cc.system_include_dir", cat(p, "/share/tools"), "interface") :- halide_build_install(p).
+// CMake's $<TARGET_NAME_IF_EXISTS:PNG::PNG> and its HALIDE_NO_PNG define.
+dep("Halide::ImageIO", "libpng", "public") :- halide_build_install(_), defined("libpng").
+dep("Halide::ImageIO", "libjpeg", "public") :- halide_build_install(_), defined("libjpeg").
+prop("Halide::ImageIO", "cc.define", "HALIDE_NO_PNG", "interface") :- halide_build_install(_), !defined("libpng").
+prop("Halide::ImageIO", "cc.define", "HALIDE_NO_JPEG", "interface") :- halide_build_install(_), !defined("libjpeg").
+imported("Halide::GenRT"), imported_kind("Halide::GenRT", "executable"),
+import_artifact("Halide::GenRT", cat(p, "/bin/gengen"), "", 1) :- halide_build_install(p).

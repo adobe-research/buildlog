@@ -1,0 +1,280 @@
+{
+  "format": "buildlog-proof",
+  "nodes": {
+    "n0": {
+      "children": [
+        "n1"
+      ],
+      "id": "n0",
+      "kind": "derived",
+      "relation": "action",
+      "rule": "buildlog:L3_native.dl:856",
+      "text": "action(\"out:bin/universal2-macos.release.none/app\", \"LIPO\")",
+      "tuple": [
+        "out:bin/universal2-macos.release.none/app",
+        "LIPO"
+      ]
+    },
+    "n1": {
+      "children": [
+        "n2",
+        "n73"
+      ],
+      "id": "n1",
+      "kind": "derived",
+      "relation": "buildlog__fat_artifact",
+      "rule": "buildlog:L3_native.dl:850",
+      "text": "fat_artifact(\"app\", [\"universal2-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], \"out:bin/universal2-macos.release.none/app\")",
+      "tuple": [
+        "app",
+        {
+          "record": [
+            "universal2-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "out:bin/universal2-macos.release.none/app"
+      ]
+    },
+    "n2": {
+      "children": [],
+      "hidden_children": 3,
+      "id": "n2",
+      "kind": "derived",
+      "relation": "buildlog__fat_kind",
+      "rule": "buildlog:L3_native.dl:849",
+      "text": "fat_kind(\"app\", [\"universal2-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], \"executable\")",
+      "truncated": true,
+      "tuple": [
+        "app",
+        {
+          "record": [
+            "universal2-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "executable"
+      ]
+    },
+    "n73": {
+      "children": [],
+      "hidden_children": 3,
+      "id": "n73",
+      "kind": "derived",
+      "relation": "buildlog__native_name",
+      "rule": "buildlog:L3_native.dl:31",
+      "text": "native_name(\"app\", \"app\")",
+      "truncated": true,
+      "tuple": [
+        "app",
+        "app"
+      ]
+    }
+  },
+  "queries": [
+    "action(\"out:bin/universal2-macos.release.none/app\", \"LIPO\")"
+  ],
+  "relations": {
+    "action": {
+      "attributes": [
+        {
+          "name": "a",
+          "type": "symbol"
+        },
+        {
+          "name": "label",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L0_actions.dl",
+        "line": 9
+      },
+      "input": false,
+      "name": "action",
+      "package": "buildlog"
+    },
+    "buildlog__fat_artifact": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "u",
+          "type": "Cfg"
+        },
+        {
+          "name": "path",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L3_native.dl",
+        "line": 845
+      },
+      "input": false,
+      "name": "fat_artifact",
+      "package": "buildlog"
+    },
+    "buildlog__fat_kind": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "u",
+          "type": "Cfg"
+        },
+        {
+          "name": "kind",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L3_native.dl",
+        "line": 848
+      },
+      "input": false,
+      "name": "fat_kind",
+      "package": "buildlog"
+    },
+    "buildlog__native_name": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "name",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L3_native.dl",
+        "line": 27
+      },
+      "input": false,
+      "name": "native_name",
+      "package": "buildlog"
+    }
+  },
+  "roots": [
+    "n0"
+  ],
+  "rules": {
+    "buildlog:L3_native.dl:31": {
+      "engine_text": "buildlog__native_name(t,t) :- native_kind(t,+underscore_8093), !buildlog__has_native_output_name(t), !buildlog__is_linkage_twin(t).",
+      "file": "<ROOT>/src/buildlog/layers/core/L3_native.dl",
+      "line": 31,
+      "number": 2,
+      "package": "buildlog",
+      "relation": "buildlog__native_name",
+      "source": "buildlog__native_name(t, t) :- native_kind(t, _), !buildlog__has_native_output_name(t), !buildlog__is_linkage_twin(t)."
+    },
+    "buildlog:L3_native.dl:849": {
+      "engine_text": "buildlog__fat_kind(t,u,k) :- split_request(t,u), config_slice(u,s), native_kind_in(t,s,k).",
+      "file": "<ROOT>/src/buildlog/layers/core/L3_native.dl",
+      "line": 849,
+      "number": 1,
+      "package": "buildlog",
+      "relation": "buildlog__fat_kind",
+      "source": "buildlog__fat_kind(t, u, k) :- split_request(t, u), config_slice(u, s), native_kind_in(t, s, k)."
+    },
+    "buildlog:L3_native.dl:850": {
+      "engine_text": "buildlog__fat_artifact(t,u,cat(\"out:bin/\",n,\"/\",o)) :- buildlog__fat_kind(t,u,\"executable\"), buildlog__native_name(t,o), cfg_name(u,n).",
+      "file": "<ROOT>/src/buildlog/layers/core/L3_native.dl",
+      "line": 850,
+      "number": 1,
+      "package": "buildlog",
+      "relation": "buildlog__fat_artifact",
+      "source": "buildlog__fat_artifact(t, u, cat(\"out:bin/\", n, \"/\", o)) :- buildlog__fat_kind(t, u, \"executable\"), buildlog__native_name(t, o), cfg_name(u, n)."
+    },
+    "buildlog:L3_native.dl:856": {
+      "engine_text": "action(f,\"LIPO\") :- buildlog__fat_artifact(+underscore_6825,+underscore_6826,f).",
+      "file": "<ROOT>/src/buildlog/layers/core/L3_native.dl",
+      "line": 856,
+      "number": 8,
+      "package": "buildlog",
+      "relation": "action",
+      "source": "action(f, \"LIPO\") :- buildlog__fat_artifact(_, _, f)."
+    }
+  },
+  "shape": {
+    "collapse": true,
+    "depth": 2,
+    "fold": true,
+    "hide_structural": true,
+    "leaves": false,
+    "path_to": null,
+    "prune_demand": true,
+    "raw": false,
+    "with_target_demand": false
+  },
+  "version": 1
+}

@@ -1,0 +1,123 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L4: install layout and export formats of C-family packages (core
+// L3_install.dl). Conventions, not
+// decisions: the user overrides any layout directory with install_dir.
+
+// GNUInstallDirs' defaults, relative to the prefix (CMake's
+// CMAKE_INSTALL_<dir>).
+install_dir_default("bindir", "bin").
+install_dir_default("includedir", "include").
+install_dir_default("datadir", "share").
+
+// libdir depends on the target platform: GNUInstallDirs' _LIBDIR_DEFAULT
+// rule, with its inputs as facts (so `why` shows them) instead of a probe
+// of the host's /etc:
+// - Linux of the Debian family, installing to /usr (or /): lib/<the cpu's
+//   multiarch triplet> (lib/x86_64-linux-gnu);
+// - Linux of the Debian family, another prefix: lib;
+// - Linux of the Arch or Alpine family: lib;
+// - other Linux with a 64-bit cpu: lib64 (Fedora, RHEL, SUSE);
+// - anything else (macOS, a 32-bit cpu, no os fact): lib.
+// The os and cpu are the platform's constraints; the distribution family
+// is platform_distro(p, family): this plugin's inventory states the Linux
+// host's (os-release ID and ID_LIKE), a user or platform plugin a cross
+// platform's. It is not a platform_constraint:
+// those are attributes every configuration must define.
+// GNUInstallDirs also skips the rule when cross-compiling; that is not
+// modelled. The platforms are the configurations' target platforms (not
+// the host's, which runs tools only). Every one must agree (one prefix, one layout); the
+// user's install_dir("libdir", ...) overrides it (core L3_install.dl).
+.decl platform_distro(p:symbol, family:symbol)
+platform_distro(p, f) :- res_platform_distro(req, p, f), req_inventory(req).
+.decl libdir_family(family:symbol, convention:symbol)   // multiarch | lib
+libdir_family("debian", "multiarch"). libdir_family("ubuntu", "multiarch").
+libdir_family("arch", "lib"). libdir_family("alpine", "lib").
+.decl cpu_multiarch(cpu:symbol, triplet:symbol)
+cpu_multiarch("x86_64", "x86_64-linux-gnu"). cpu_multiarch("arm64", "aarch64-linux-gnu").
+.decl cpu_64bit(cpu:symbol)
+cpu_64bit("x86_64"). cpu_64bit("arm64").
+.decl libdir_usr_prefix(prefix:symbol)
+libdir_usr_prefix("/usr"). libdir_usr_prefix("/").
+
+.decl install_platform(p:symbol)
+install_platform(p) :- config_active(n), decl_cfg(n, c), config_platform(c, p).
+install_platform(p) :- config_active(n), decl_cfg(n, u), config_slice(u, c), config_platform(c, p).
+.decl platform_linux(p:symbol)
+platform_linux(p) :- install_platform(p), platform_constraint(p, "os", "linux").
+.decl platform_libdir_convention(p:symbol, convention:symbol)
+platform_libdir_convention(p, x) :- platform_linux(p), platform_distro(p, f), libdir_family(f, x).
+.decl platform_has_libdir_convention(p:symbol)
+platform_has_libdir_convention(p) :- platform_libdir_convention(p, _).
+.decl libdir_prefix_is_usr()
+libdir_prefix_is_usr() :- install_prefix(x), libdir_usr_prefix(x).
+.decl platform_libdir(p:symbol, rel:symbol)
+platform_libdir(p, "lib") :- install_platform(p), !platform_linux(p).
+platform_libdir(p, cat("lib/", t)) :- platform_libdir_convention(p, "multiarch"), libdir_prefix_is_usr(),
+  platform_constraint(p, "cpu", c), cpu_multiarch(c, t).
+platform_libdir(p, "lib") :- platform_libdir_convention(p, "multiarch"), !libdir_prefix_is_usr().
+platform_libdir(p, "lib") :- platform_libdir_convention(p, "lib").
+platform_libdir(p, "lib64") :- platform_linux(p), !platform_has_libdir_convention(p),
+  platform_constraint(p, "cpu", c), cpu_64bit(c).
+platform_libdir(p, "lib") :- platform_linux(p), !platform_has_libdir_convention(p),
+  platform_constraint(p, "cpu", c), !cpu_64bit(c).
+install_dir_default("libdir", r) :- platform_libdir(_, r).
+// A native component's archive and shared library (with its links) install
+// under libdir, as GNUInstallDirs' ARCHIVE and LIBRARY destinations.
+native_artifact_dir("archive", "libdir"). native_artifact_dir("dylib", "libdir").
+
+// Package metadata (CPS, pkg-config, CMake package files) goes under
+// libdir when the package has native artifacts, and under datadir when it
+// has none: an architecture-independent package (a header-only library)
+// installed once serves every architecture (nlohmann/json #1697, whose
+// CMake install puts its files under share/ for this reason).
+.decl export_meta_base(pkg:symbol, dir:symbol)
+export_meta_base(p, "datadir") :- export_package(p), !export_arch_dependent(p).
+export_meta_base(p, "libdir") :- export_arch_dependent(p).
+.decl export_meta_dir(dir:symbol, sub:symbol)
+export_meta_dir("cpsdir", "cps"). export_meta_dir("pkgconfigdir", "pkgconfig"). export_meta_dir("cmakedir", "cmake").
+install_pkg_dir_default(p, d, cat(r, "/", s)) :- export_meta_base(p, b), install_layout_dir(b, r), export_meta_dir(d, s).
+
+// The files each format writes, under which layout directory: where each
+// format's consumer searches a prefix (CPS: <prefix>/share/cps and
+// <prefix>/lib/cps; pkg-config: .../pkgconfig; CMake's config mode:
+// <prefix>/(lib|share)/cmake/<name>*/).
+export_format_file(p, "cps", "cpsdir", cat(p, ".cps")) :- export_package(p).
+export_format_file(p, "pc", "pkgconfigdir", cat(p, ".pc")) :- export_package(p).
+export_format_file(p, "cmake-config", "cmakedir", cat(p, "/", p, "Config.cmake")) :- export_package(p).
+export_format_file(p, "cmake-version", "cmakedir", cat(p, "/", p, "ConfigVersion.cmake")) :-
+  export_package(p), export_version(p, _).
+export_format_file(p, "cmake-targets", "cmakedir", cat(p, "/", p, "Targets.cmake")) :- export_package(p).
+export_format_components("cps"). export_format_components("pc"). export_format_components("cmake-targets").
+// An install that also writes the buildlog package has the CPS file name it
+// (x_buildlog_manifest, a prefix-relative path): the two files are one
+// package, and a prefix search finds one candidate (L3_discovery.dl).
+action_arg(o, 11, "--buildlog-manifest ", m) :- export_file(p, c, "cps", o, _), export_file(p, c, "buildlog-manifest", _, m).
+// An architecture-dependent package's CMake version file checks the
+// consumer's pointer size (CMake's CMAKE_SIZEOF_VOID_P check), from the
+// configuration's cpu.
+action_arg(o, 9, "--pointer-size ", "8") :- export_file(p, c, "cmake-version", o, _), export_arch_dependent(p),
+  config_platform(c, x), platform_constraint(x, "cpu", u), cpu_64bit(u).
+// The format names an author omits or a user skips (export_format_omit,
+// export_format_skip): "cps", "pc" and "cmake" (all three CMake files).
+export_format_of("cmake-config", "cmake"). export_format_of("cmake-version", "cmake").
+export_format_of("cmake-targets", "cmake").
+
+// How each format states a usage requirement.
+export_path_key("cc.include_dir").
+export_internal_key("cc.generated_header").   // build order in-tree; an installed header exists
+export_spelling("cps", "cc.include_dir", "includes").
+export_spelling("cps", "cc.define", "definitions").
+export_spelling("cps", "cc.compile_flag", "compile_flags").
+export_spelling("cps", "cxx.std", "compile_features").
+export_value_spelling("cps", "cxx.std", v, cat("c++", v)) :- lattice_rank("cxx.std", v, _).
+export_spelling("pc", "cc.include_dir", "include").
+export_spelling("pc", "cc.define", "define").
+export_spelling("pc", "cc.compile_flag", "cflag").
+export_unspelled("pc", "cxx.std", "pkg-config has no field for a language standard").
+export_spelling("cmake-targets", "cc.include_dir", "INTERFACE_INCLUDE_DIRECTORIES").
+export_spelling("cmake-targets", "cc.define", "INTERFACE_COMPILE_DEFINITIONS").
+export_spelling("cmake-targets", "cc.compile_flag", "INTERFACE_COMPILE_OPTIONS").
+export_spelling("cmake-targets", "cxx.std", "INTERFACE_COMPILE_FEATURES").
+export_value_spelling("cmake-targets", "cxx.std", v, cat("cxx_std_", v)) :- lattice_rank("cxx.std", v, _).

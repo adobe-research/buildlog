@@ -1,0 +1,6 @@
+# Rejected: requires a buildlog-cpp version that is not loaded.
+name = "requires-skew"
+version = "0.1.0"
+rank = 5
+layers = []
+requires = { buildlog-cpp = ">=2.0" }

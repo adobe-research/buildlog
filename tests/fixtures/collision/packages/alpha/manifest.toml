@@ -1,0 +1,8 @@
+# Independently authored generator package. Its private helper relation
+# gen_item has the same name as the other collision package's helper.
+name = "alpha"
+version = "0.1.0"
+rank = 5
+layers = ["alpha.dl"]
+accepts = ["alpha_resource"]
+extends = ["action", "action_arg", "default_output"]

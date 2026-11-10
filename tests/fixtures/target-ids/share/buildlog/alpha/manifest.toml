@@ -1,0 +1,8 @@
+# Defines alpha::util and alpha::api; api's bare dep "util" means alpha::util.
+name = "alpha"
+version = "0.1.0"
+rank = 5
+namespace = "alpha"
+layers = []
+facts = ["alpha.facts.toml"]
+requires = { buildlog-cpp = ">=0.1" }

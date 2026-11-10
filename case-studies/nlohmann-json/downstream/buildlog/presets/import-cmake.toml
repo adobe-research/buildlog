@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Bind nlohmann_json to an install's CMake export file: -D NLOHMANN_PREFIX=<prefix>.
+# The CMake provider finds the package name nlohmann_json as the target
+# nlohmann_json::nlohmann_json (P as P::P), so no alias is needed.
+package_search_dir = [["cmake", "${NLOHMANN_PREFIX}/share/cmake"]]

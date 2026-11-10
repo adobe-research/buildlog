@@ -1,0 +1,16 @@
+# minidsl's generator rules, shipped in its install (export_rules).
+name = "minidsl"
+version = "1.0.0"
+rank = 5
+namespace = "minidsl"
+layers = ["L5_minidsl.dl"]
+requires = { buildlog-cpp = ">=0.1" }
+extends = [
+  "source_claimed",
+  "path_want",
+  "cxx_generated_source",
+  "action",
+  "action_arg",
+  "action_in",
+  "target_action",
+]

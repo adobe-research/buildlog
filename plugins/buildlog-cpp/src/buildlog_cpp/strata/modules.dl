@@ -1,0 +1,95 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// The C++ modules collator: buildlog-cpp's build-time stratum. One run per
+// target and configuration (`buildlog -E collate buildlog-cpp:modules`, a
+// Ninja action). Its inputs are the scan results (P1689: which module each
+// source provides and requires) and the static table configure derived (the
+// units this run collates, the interface units of the target's dependency
+// closure with their visibility and BMI paths, and which targets see which).
+// It resolves every import, reports the errors of C++ modules (never a
+// tie-break), and derives what each compile needs: the BMIs it imports,
+// transitively. The driver (collate.py) writes the dyndep file, the module
+// maps and the provenance from these relations.
+//
+// This program is not part of the configure program and is never composed
+// with it: configure never reads a relation named here (the loader checks).
+
+// ---- inputs: the scan results ----
+.decl scan_provides(src:symbol, name:symbol, iface:symbol)   // iface: true | false
+.decl scan_requires(src:symbol, name:symbol)
+.input scan_provides
+.input scan_requires
+
+// ---- inputs: the static table (collate's argv) ----
+// collate_tu(kind, owner, src, out, modmap): a compile this run collates:
+// kind obj (an object of the target `owner`) or bmi (the BMI of a
+// provider's interface unit); out is its primary output.
+.decl collate_tu(kind:symbol, owner:symbol, src:symbol, out:symbol, modmap:symbol)
+// collate_iface(provider, src, vis, bmi): a declared interface unit of the
+// target's dependency closure (or its own), vis public | private, with the
+// BMI path of this run's compatibility class.
+.decl collate_iface(provider:symbol, src:symbol, vis:symbol, bmi:symbol)
+// collate_sees(u, p): the public interfaces of target p are visible to u.
+.decl collate_sees(u:symbol, p:symbol)
+.input collate_tu
+.input collate_iface
+.input collate_sees
+
+// ---- the unit and its view: a source is collated for one target ----
+.decl collate_unit(src:symbol, view:symbol)
+collate_unit(s, o) :- collate_tu(_, o, s, _, _).
+collate_unit(s, p) :- collate_iface(p, s, _, _).
+
+.decl collate_error(kind:symbol, detail:symbol)
+.output collate_error
+collate_error("source collated for two targets", cat(s, ": ", a, " and ", b)) :-
+  collate_unit(s, a), collate_unit(s, b), a < b.
+
+// ---- providers ----
+.decl collate_cand(name:symbol, provider:symbol, src:symbol, vis:symbol)
+collate_cand(n, p, s, vis) :- scan_provides(s, n, _), collate_iface(p, s, vis, _).
+
+collate_error("module interface unit not declared (cxx_module_interface)", cat(s, " provides ", n)) :-
+  scan_provides(s, n, "true"), collate_tu(_, _, s, _, _), !collate_iface(_, s, _, _).
+collate_error("declared module interface unit provides no module", s) :-
+  collate_iface(_, s, _, _), !scan_provides(s, _, _).
+collate_error("module name collision", cat(n, " is provided by ", s1, " and by ", s2)) :-
+  scan_provides(s1, n, _), scan_provides(s2, n, _), s1 < s2, collate_unit(s1, _), collate_unit(s2, _).
+
+// ---- resolution: what each import means in its unit's view ----
+.decl collate_req(src:symbol, view:symbol, name:symbol)
+collate_req(a, u, n) :- scan_requires(a, n), collate_unit(a, u).
+.decl collate_resolve(src:symbol, name:symbol, provider_src:symbol)
+collate_resolve(a, n, s) :- collate_req(a, u, n), collate_cand(n, u, s, _).
+collate_resolve(a, n, s) :- collate_req(a, u, n), collate_cand(n, p, s, "public"), collate_sees(u, p).
+.decl collate_resolved(src:symbol, name:symbol)
+collate_resolved(a, n) :- collate_resolve(a, n, _).
+
+collate_error("import of a module no declared interface unit provides", cat(a, " imports ", n)) :-
+  collate_req(a, _, n), !collate_cand(n, _, _, _).
+collate_error("import of a private module interface", cat(a, " imports ", n, " from ", s, " of target ", p, ", whose interface is private")) :-
+  collate_req(a, u, n), collate_cand(n, p, s, "private"), p != u, collate_sees(u, p), !collate_resolved(a, n).
+collate_error("import from a target that is not a dependency", cat(a, " imports ", n, " from ", s, " of target ", p, ", which ", u, " does not depend on (an import never adds a link edge)")) :-
+  collate_req(a, u, n), collate_cand(n, p, s, _), p != u, !collate_sees(u, p), !collate_resolved(a, n).
+
+// ---- the import graph: cycles and what each unit needs ----
+.decl collate_edge(a:symbol, b:symbol)
+collate_edge(a, b) :- collate_resolve(a, _, b).
+.decl collate_reach(a:symbol, b:symbol)
+collate_reach(a, b) :- collate_edge(a, b).
+collate_reach(a, c) :- collate_reach(a, b), collate_edge(b, c).
+collate_error("import cycle", cat(a, " imports ", n, " from ", b, ", which imports ", a, " back")) :-
+  collate_resolve(a, n, b), collate_reach(b, a).
+
+// ---- outputs ----
+.decl collate_need(out:symbol, bmi:symbol)
+collate_need(out, bmi) :- collate_tu(_, _, a, out, _), collate_reach(a, b), collate_iface(_, b, _, bmi).
+.decl collate_map(modmap:symbol, name:symbol, bmi:symbol)
+collate_map(m, n, bmi) :- collate_tu(_, _, a, _, m), collate_reach(a, b), scan_provides(b, n, _), collate_iface(_, b, _, bmi).
+.decl collate_via(a:symbol, name:symbol, provider_src:symbol, provider:symbol, vis:symbol)
+collate_via(a, n, s, p, vis) :- collate_resolve(a, n, s), collate_iface(p, s, vis, _).
+.output collate_need
+.output collate_map
+.output collate_via
+.output collate_resolve

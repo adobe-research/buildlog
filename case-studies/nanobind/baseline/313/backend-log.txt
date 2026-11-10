@@ -1,0 +1,26 @@
+* Getting build dependencies for wheel...
+* Building wheel...
+*** scikit-build-core 1.1.0 using CMake 4.4.3 (wheel)
+*** Configuring CMake...
+loading initial cache file $BUILD/CMakeInit.txt
+-- The CXX compiler identification is AppleClang 21.0.0.21000101
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/clang++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found Python: $VENV/bin/python (found suitable version "3.13.15", minimum required is "3.8") found components: Interpreter Development.Module Development.SABIModule
+-- Configuring done (1.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: $BUILD
+*** Building project with Ninja...
+Change Dir: '$BUILD'
+
+Run Build Command(s): $VENV/bin/ninja -v
+
+*** Installing project into wheel...
+-- Install configuration: "Release"
+-- Installing: $WHEELTMP/wheel/platlib/nanobind_example/nanobind_example_ext.abi3.so
+*** Making wheel...
+*** Created nanobind_example-0.0.1-cp312-abi3-macosx_26_0_arm64.whl
+Successfully built nanobind_example-0.0.1-cp312-abi3-macosx_26_0_arm64.whl

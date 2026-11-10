@@ -1,0 +1,321 @@
+{
+ "note": "Trimmed from raw/option1-native-arm64/probe/dump.json and raw/probe-all/dump.json (PROBE_ALL=ON); $LLVM=/opt/homebrew/Cellar/llvm@22/22.1.8, $LLD=/opt/homebrew/Cellar/lld@22/22.1.8",
+ "cmake_version": "4.4.3",
+ "find_package_us": 158128,
+ "all_imported": {
+  "count": 450,
+  "by_type": {
+   "SHARED_LIBRARY": 14,
+   "UNKNOWN_LIBRARY": 3,
+   "EXECUTABLE": 116,
+   "INTERFACE_LIBRARY": 10,
+   "STATIC_LIBRARY": 306,
+   "MODULE_LIBRARY": 1
+  },
+  "with_genex": 44,
+  "genex_targets": [
+   "LLVMInterpreter",
+   "LLVMJITLink",
+   "LLVMOrcJIT",
+   "clangApplyReplacements",
+   "clangChangeNamespace",
+   "clangDaemon",
+   "clangDoc",
+   "clangIncludeCleaner",
+   "clangIncludeFixer",
+   "clangMove",
+   "clangQuery",
+   "clangReorderFields",
+   "clangTidy",
+   "clangTidyAbseilModule",
+   "clangTidyAlteraModule",
+   "clangTidyAndroidModule",
+   "clangTidyBoostModule",
+   "clangTidyBugproneModule",
+   "clangTidyCERTModule",
+   "clangTidyConcurrencyModule",
+   "clangTidyCppCoreGuidelinesModule",
+   "clangTidyCustomModule",
+   "clangTidyDarwinModule",
+   "clangTidyFuchsiaModule",
+   "clangTidyGoogleModule",
+   "clangTidyHICPPModule",
+   "clangTidyLLVMLibcModule",
+   "clangTidyLLVMModule",
+   "clangTidyLinuxKernelModule",
+   "clangTidyMPIModule",
+   "clangTidyMain",
+   "clangTidyMiscModule",
+   "clangTidyModernizeModule",
+   "clangTidyObjCModule",
+   "clangTidyOpenMPModule",
+   "clangTidyPerformanceModule",
+   "clangTidyPlugin",
+   "clangTidyPortabilityModule",
+   "clangTidyReadabilityModule",
+   "clangTidyUtils",
+   "clangTidyZirconModule",
+   "clangdMain",
+   "clangdSupport",
+   "findAllSymbols"
+  ]
+ },
+ "reached": {
+  "Halide_LLVM::AArch64": {
+   "type": "INTERFACE_LIBRARY",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "INTERFACE_LINK_LIBRARIES": "Halide_LLVM::Core"
+   }
+  },
+  "Halide_LLVM::ARM": {
+   "type": "INTERFACE_LIBRARY",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "INTERFACE_LINK_LIBRARIES": "Halide_LLVM::Core"
+   }
+  },
+  "Halide_LLVM::Core": {
+   "type": "INTERFACE_LIBRARY",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "INTERFACE_COMPILE_DEFINITIONS": "__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;LLVM_VERSION=221",
+    "INTERFACE_CXX_RTTI": "ON",
+    "INTERFACE_INCLUDE_DIRECTORIES": "$LLVM/include",
+    "INTERFACE_LINK_LIBRARIES": "LLVM",
+    "COMPATIBLE_INTERFACE_BOOL": "CXX_RTTI"
+   }
+  },
+  "Halide_LLVM::Hexagon": {
+   "type": "INTERFACE_LIBRARY",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "INTERFACE_LINK_LIBRARIES": "Halide_LLVM::Core"
+   }
+  },
+  "Halide_LLVM::NVPTX": {
+   "type": "INTERFACE_LIBRARY",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "INTERFACE_LINK_LIBRARIES": "Halide_LLVM::Core"
+   }
+  },
+  "Halide_LLVM::PowerPC": {
+   "type": "INTERFACE_LIBRARY",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "INTERFACE_LINK_LIBRARIES": "Halide_LLVM::Core"
+   }
+  },
+  "Halide_LLVM::RISCV": {
+   "type": "INTERFACE_LIBRARY",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "INTERFACE_LINK_LIBRARIES": "Halide_LLVM::Core"
+   }
+  },
+  "Halide_LLVM::WebAssembly": {
+   "type": "INTERFACE_LIBRARY",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "INTERFACE_INCLUDE_DIRECTORIES": "$LLD/include",
+    "INTERFACE_LINK_LIBRARIES": "Halide_LLVM::Core;lldWasm;lldCommon"
+   }
+  },
+  "Halide_LLVM::X86": {
+   "type": "INTERFACE_LIBRARY",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "INTERFACE_LINK_LIBRARIES": "Halide_LLVM::Core"
+   }
+  },
+  "LLVM": {
+   "type": "SHARED_LIBRARY",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "IMPORTED_CONFIGURATIONS": "RELEASE",
+    "IMPORTED_LOCATION_RELEASE": "$LLVM/lib/libLLVM.dylib",
+    "IMPORTED_SONAME_RELEASE": "@rpath/libLLVM.dylib"
+   }
+  },
+  "clang": {
+   "type": "EXECUTABLE",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "IMPORTED_CONFIGURATIONS": "RELEASE",
+    "IMPORTED_LOCATION_RELEASE": "$LLVM/bin/clang-22"
+   }
+  },
+  "lldCommon": {
+   "type": "SHARED_LIBRARY",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "IMPORTED_CONFIGURATIONS": "RELEASE",
+    "IMPORTED_LINK_DEPENDENT_LIBRARIES_RELEASE": "LLVM",
+    "IMPORTED_LOCATION_RELEASE": "$LLD/lib/liblldCommon.dylib",
+    "IMPORTED_SONAME_RELEASE": "@rpath/liblldCommon.dylib"
+   }
+  },
+  "lldWasm": {
+   "type": "SHARED_LIBRARY",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "IMPORTED_CONFIGURATIONS": "RELEASE",
+    "IMPORTED_LINK_DEPENDENT_LIBRARIES_RELEASE": "lldCommon;LLVM",
+    "IMPORTED_LOCATION_RELEASE": "$LLD/lib/liblldWasm.dylib",
+    "IMPORTED_SONAME_RELEASE": "@rpath/liblldWasm.dylib"
+   }
+  },
+  "llvm-as": {
+   "type": "EXECUTABLE",
+   "imported": true,
+   "has_genex": false,
+   "props": {
+    "IMPORTED_CONFIGURATIONS": "RELEASE",
+    "IMPORTED_LOCATION_RELEASE": "$LLVM/bin/llvm-as"
+   }
+  }
+ },
+ "edges": [
+  {
+   "from": "Halide_LLVM::Core",
+   "to": "LLVM",
+   "via": "INTERFACE_LINK_LIBRARIES",
+   "item": "LLVM"
+  },
+  {
+   "from": "Halide_LLVM::WebAssembly",
+   "to": "Halide_LLVM::Core",
+   "via": "INTERFACE_LINK_LIBRARIES",
+   "item": "Halide_LLVM::Core"
+  },
+  {
+   "from": "Halide_LLVM::WebAssembly",
+   "to": "lldWasm",
+   "via": "INTERFACE_LINK_LIBRARIES",
+   "item": "lldWasm"
+  },
+  {
+   "from": "Halide_LLVM::WebAssembly",
+   "to": "lldCommon",
+   "via": "INTERFACE_LINK_LIBRARIES",
+   "item": "lldCommon"
+  },
+  {
+   "from": "Halide_LLVM::X86",
+   "to": "Halide_LLVM::Core",
+   "via": "INTERFACE_LINK_LIBRARIES",
+   "item": "Halide_LLVM::Core"
+  },
+  {
+   "from": "Halide_LLVM::AArch64",
+   "to": "Halide_LLVM::Core",
+   "via": "INTERFACE_LINK_LIBRARIES",
+   "item": "Halide_LLVM::Core"
+  },
+  {
+   "from": "Halide_LLVM::ARM",
+   "to": "Halide_LLVM::Core",
+   "via": "INTERFACE_LINK_LIBRARIES",
+   "item": "Halide_LLVM::Core"
+  },
+  {
+   "from": "Halide_LLVM::Hexagon",
+   "to": "Halide_LLVM::Core",
+   "via": "INTERFACE_LINK_LIBRARIES",
+   "item": "Halide_LLVM::Core"
+  },
+  {
+   "from": "Halide_LLVM::NVPTX",
+   "to": "Halide_LLVM::Core",
+   "via": "INTERFACE_LINK_LIBRARIES",
+   "item": "Halide_LLVM::Core"
+  },
+  {
+   "from": "Halide_LLVM::PowerPC",
+   "to": "Halide_LLVM::Core",
+   "via": "INTERFACE_LINK_LIBRARIES",
+   "item": "Halide_LLVM::Core"
+  },
+  {
+   "from": "Halide_LLVM::RISCV",
+   "to": "Halide_LLVM::Core",
+   "via": "INTERFACE_LINK_LIBRARIES",
+   "item": "Halide_LLVM::Core"
+  },
+  {
+   "from": "lldWasm",
+   "to": "lldCommon",
+   "via": "IMPORTED_LINK_DEPENDENT_LIBRARIES_RELEASE",
+   "item": "lldCommon"
+  },
+  {
+   "from": "lldWasm",
+   "to": "LLVM",
+   "via": "IMPORTED_LINK_DEPENDENT_LIBRARIES_RELEASE",
+   "item": "LLVM"
+  },
+  {
+   "from": "lldCommon",
+   "to": "LLVM",
+   "via": "IMPORTED_LINK_DEPENDENT_LIBRARIES_RELEASE",
+   "item": "LLVM"
+  }
+ ],
+ "variables": {
+  "Clang_DIR": "/opt/homebrew/opt/llvm@22/lib/cmake/clang",
+  "Halide_LLVM_AArch64_FOUND": "1",
+  "Halide_LLVM_AMDGPU_FOUND": "1",
+  "Halide_LLVM_ARM_FOUND": "1",
+  "Halide_LLVM_AVR_FOUND": "1",
+  "Halide_LLVM_BPF_FOUND": "1",
+  "Halide_LLVM_COMPONENTS": "WebAssembly;X86;AArch64;ARM;Hexagon;NVPTX;PowerPC;RISCV",
+  "Halide_LLVM_FOUND": "TRUE",
+  "Halide_LLVM_Hexagon_FOUND": "1",
+  "Halide_LLVM_Lanai_FOUND": "1",
+  "Halide_LLVM_LoongArch_FOUND": "1",
+  "Halide_LLVM_MSP430_FOUND": "1",
+  "Halide_LLVM_Mips_FOUND": "1",
+  "Halide_LLVM_NVPTX_FOUND": "1",
+  "Halide_LLVM_PowerPC_FOUND": "1",
+  "Halide_LLVM_RISCV_FOUND": "1",
+  "Halide_LLVM_ROOT": "/opt/homebrew/opt/llvm@22",
+  "Halide_LLVM_SHARED_LIBRARY": "LLVM",
+  "Halide_LLVM_SHARED_LIBS": "YES",
+  "Halide_LLVM_SPIRV_FOUND": "1",
+  "Halide_LLVM_Sparc_FOUND": "1",
+  "Halide_LLVM_SystemZ_FOUND": "1",
+  "Halide_LLVM_VERSION": "22.1.8",
+  "Halide_LLVM_VE_FOUND": "1",
+  "Halide_LLVM_WebAssembly_FOUND": "1",
+  "Halide_LLVM_X86_FOUND": "1",
+  "Halide_LLVM_XCore_FOUND": "1",
+  "LLD_DIR": "/opt/homebrew/opt/lld@22/lib/cmake/lld",
+  "LLD_INCLUDE_DIRS": "$LLD/include",
+  "LLVM_DEFINITIONS": "-D__STDC_CONSTANT_MACROS;-D__STDC_FORMAT_MACROS;-D__STDC_LIMIT_MACROS;LLVM_VERSION=221",
+  "LLVM_DIR": "/opt/homebrew/opt/llvm@22/lib/cmake/llvm",
+  "LLVM_ENABLE_RTTI": "ON",
+  "LLVM_INCLUDE_DIRS": "$LLVM/include",
+  "LLVM_LINK_LLVM_DYLIB": "ON",
+  "LLVM_TARGETS_TO_BUILD": "AArch64;AMDGPU;ARM;AVR;BPF;Hexagon;Lanai;LoongArch;Mips;MSP430;NVPTX;PowerPC;RISCV;Sparc;SPIRV;SystemZ;VE;WebAssembly;X86;XCore",
+  "LLVM_VERSION": "22.1.8",
+  "LLVM_VERSION_COUNT": "3",
+  "LLVM_VERSION_MAJOR": "22",
+  "LLVM_VERSION_MINOR": "1",
+  "LLVM_VERSION_PATCH": "8",
+  "LLVM_VERSION_TWEAK": "0"
+ }
+}

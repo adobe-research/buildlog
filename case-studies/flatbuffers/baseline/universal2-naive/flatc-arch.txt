@@ -1,0 +1,4 @@
+===== file flatc
+$BUILD/flatc: Mach-O universal binary with 2 architectures: [x86_64:Mach-O 64-bit executable x86_64] [arm64]
+$BUILD/flatc (for architecture x86_64):	Mach-O 64-bit executable x86_64
+$BUILD/flatc (for architecture arm64):	Mach-O 64-bit executable arm64

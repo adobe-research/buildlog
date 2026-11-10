@@ -1,0 +1,23 @@
+===== links
+libz.so.1 -> libz.so.1.3.2
+libz.so -> libz.so.1
+===== readelf -d libz.so.1.3.2
+(NEEDED) Shared library: [libc.so.6]
+(NEEDED) Shared library: [ld-linux-aarch64.so.1]
+(SONAME) Library soname: [libz.so.1]
+===== readelf -d test/zlib_example
+(NEEDED) Shared library: [libz.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(NEEDED) Shared library: [ld-linux-aarch64.so.1]
+(RUNPATH) Library runpath: [$BUILD]
+===== readelf -d test/minigzip
+(NEEDED) Shared library: [libz.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(NEEDED) Shared library: [ld-linux-aarch64.so.1]
+(RUNPATH) Library runpath: [$BUILD]
+===== readelf -d test/zlib_static_example
+(NEEDED) Shared library: [libc.so.6]
+(NEEDED) Shared library: [ld-linux-aarch64.so.1]
+===== readelf -d test/static_minigzip
+(NEEDED) Shared library: [libc.so.6]
+(NEEDED) Shared library: [ld-linux-aarch64.so.1]

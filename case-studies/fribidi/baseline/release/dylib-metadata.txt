@@ -1,0 +1,39 @@
+===== files
+bin/fribidi
+bin/fribidi-benchmark
+bin/fribidi-bidi-types
+bin/fribidi-caprtl2utf8
+gen.tab/gen-arabic-shaping-tab
+gen.tab/gen-bidi-type-tab
+gen.tab/gen-brackets-tab
+gen.tab/gen-brackets-type-tab
+gen.tab/gen-joining-type-tab
+gen.tab/gen-mirroring-tab
+gen.tab/gen-unicode-version
+lib/libfribidi.0.dylib
+lib/libfribidi.dylib
+test/test-reorder-nsm
+test/unicode-conformance/BidiCharacterTest
+test/unicode-conformance/BidiTest
+===== links
+lib/libfribidi.dylib -> libfribidi.0.dylib
+===== otool -L lib/libfribidi.0.dylib
+	@rpath/libfribidi.0.dylib (compatibility version 0.0.0, current version 0.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== LC_ID_DYLIB
+         name @rpath/libfribidi.0.dylib (offset 24)
+      current version 0.0.0
+compatibility version 0.0.0
+===== otool -L bin/fribidi
+	@rpath/libfribidi.0.dylib (compatibility version 0.0.0, current version 0.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== rpaths bin/fribidi
+         path @loader_path/../lib (offset 12)
+===== otool -L test/unicode-conformance/BidiTest
+	@rpath/libfribidi.0.dylib (compatibility version 0.0.0, current version 0.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== rpaths test/unicode-conformance/BidiTest
+         path @loader_path/../../lib (offset 12)
+===== otool -L gen.tab/gen-bidi-type-tab
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== rpaths gen.tab/gen-bidi-type-tab

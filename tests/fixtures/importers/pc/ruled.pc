@@ -1,0 +1,8 @@
+# A package that ships buildlog rules: buildlog_rules names a rule package
+# relative to this file.
+buildlog_rules=${pcfiledir}/../rules/pc-rules
+
+Name: ruled
+Description: A package with buildlog rules
+Version: 0.1
+Cflags: -DRULED_PC=1

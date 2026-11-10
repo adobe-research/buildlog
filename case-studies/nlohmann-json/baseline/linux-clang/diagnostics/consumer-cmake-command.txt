@@ -1,0 +1,1 @@
+/usr/bin/clang++ -DJSON_DIAGNOSTICS=1 -isystem $PREFIX/include -O3 -DNDEBUG -o CMakeFiles/app.dir$DOWNSTREAM/main.cpp.o -c $DOWNSTREAM/main.cpp

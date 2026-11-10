@@ -1,0 +1,3 @@
+// `target` is open (allowed); `needed` is derived by core and closed.
+target("sneaky").
+needed("sneaky", c) :- needed(_, c).

@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The user's side: where the installed Halide's CMake exports are. The NDK
+# toolchain targets only the Android platforms and the host compiler only
+# the host's, so nothing needs a toolchain pin.
+package_file = [
+  ["cmake", "${HALIDE_PREFIX}/lib/cmake/HalideCompiler/HalideCompiler-shared-targets.cmake"]
+]
+package_system_includes = [["cmake"]]

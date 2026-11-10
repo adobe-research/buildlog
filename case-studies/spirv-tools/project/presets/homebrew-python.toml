@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The Python interpreter the generators run: Homebrew's python3, described by
+# a CPS file this preset ships (buildlog has no find_program; the README's
+# design input). The spec names the tool `python3`; this binds it.
+package_file = [["cps", "${REPO_ROOT}/case-studies/spirv-tools/project/presets/Python3.cps"]]
+alias = [["python3", "Python3:Interpreter"]]

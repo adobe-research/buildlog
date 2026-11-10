@@ -1,0 +1,97 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Scenario 7c: build on macOS arm64, for aarch64-linux-gnu. One build tree.
+#
+# The product (libHalide, the runtime, the generated libraries, the tests) targets
+# arm64-linux: Homebrew's llvm@22 clang with lld@22 compiles and links against a sysroot
+# exported from the Linux image (docker/sysroot.sh), whose LLVM 22 is the one libHalide
+# links. Every program the build runs (binary2cpp, the generators, the autoscheduler
+# plugins, flatc, the runtime's clang) is built for or taken from the build machine, as
+# core infers from the commands; nothing here names one. The tests run in the container.
+#
+#   BUILDLOG_LLVM_BIN=/opt/homebrew/opt/llvm@22/bin buildlog configure PROJECT -C BUILD \
+#     --package-path case-studies/halide/packages --user THIS_FILE \
+#     -D HALIDE_SRC=<case-sensitive Halide export> -D SYSROOT=<sysroot>
+#
+# The build directory and the source must be on a case-sensitive volume (docker/README.md).
+config_decl = [["cross-linux-aarch64", "arm64-linux"]]
+config_decl_setting = [["cross-linux-aarch64", "native.opt", "release"]]
+config_default = [["cross-linux-aarch64"]]
+exec_setting = [["native.opt", "inherit"], ["native.sanitize", "inherit"]]
+
+# The product's toolchain: clang for Linux, against the sysroot.
+cross_sysroot = [["llvm", "arm64-linux", "${SYSROOT}"]]
+cross_linker = [["llvm", "arm64-linux", "/opt/homebrew/opt/lld@22/bin/ld.lld"]]
+# The host tools are built as the macOS case study builds them.
+toolchain_pin = [
+  ["c", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["cxx", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "arm64-macos", "apple-clang"],
+]
+# The tests run in the container, through a launcher that mounts the build volume.
+platform_runs_on = [
+  [
+    "arm64-linux",
+    "arm64-macos",
+    "${REPO_ROOT}/case-studies/halide/docker/cross/run-in-container.sh"
+  ]
+]
+
+package_linkage = [["LLVM", "shared"]]
+package_config_map = [["debug", "release"]]
+package_system_includes = [["cmake"], ["pc"]]
+alias = [["OpenSSL::Crypto", "pc:libcrypto"]]
+package_namespace = [
+  ["/opt/homebrew/opt/llvm@22/lib/cmake/llvm/LLVMExports.cmake", "LLVM"],
+  ["/opt/homebrew/opt/llvm@22/lib/cmake/clang/ClangTargets.cmake", "Clang"],
+  ["/opt/homebrew/opt/lld@22/lib/cmake/lld/LLDTargets.cmake", "LLD"],
+  ["${SYSROOT}/usr/lib/llvm-22/lib/cmake/llvm/LLVMExports.cmake", "LLVM"],
+  ["${SYSROOT}/usr/lib/llvm-22/lib/cmake/clang/ClangTargets.cmake", "Clang"],
+  ["${SYSROOT}/usr/lib/llvm-22/lib/cmake/lld/LLDTargets.cmake", "LLD"],
+]
+package_file_install = [
+  ["/opt/homebrew/opt/llvm@22/lib/cmake/llvm/LLVMExports.cmake", "/opt/homebrew/opt/llvm@22"],
+  ["/opt/homebrew/opt/llvm@22/lib/cmake/clang/ClangTargets.cmake", "/opt/homebrew/opt/llvm@22"],
+  ["/opt/homebrew/opt/lld@22/lib/cmake/lld/LLDTargets.cmake", "/opt/homebrew/opt/lld@22"],
+  ["${SYSROOT}/usr/lib/llvm-22/lib/cmake/llvm/LLVMExports.cmake", "${SYSROOT}/usr/lib/llvm-22"],
+  ["${SYSROOT}/usr/lib/llvm-22/lib/cmake/clang/ClangTargets.cmake", "${SYSROOT}/usr/lib/llvm-22"],
+  ["${SYSROOT}/usr/lib/llvm-22/lib/cmake/lld/LLDTargets.cmake", "${SYSROOT}/usr/lib/llvm-22"],
+]
+package_file = [
+  [
+    "cmake",
+    "${HALIDE_SRC}/dependencies/spirv/share/cmake/SPIRV-Headers/SPIRV-HeadersTargets.cmake"
+  ],
+]
+
+# Packages, per platform. On the build machine: what the macOS case study uses.
+package_file_on = [
+  ["arm64-macos", "cmake", "${HOMEBREW}/lib/cmake/flatbuffers/FlatBuffersTargets.cmake"],
+  ["arm64-macos", "cmake", "${HOMEBREW}/lib/cmake/flatbuffers/FlatcTargets.cmake"],
+  ["arm64-macos", "cmake", "${HOMEBREW}/lib/cmake/wabt/wabt-targets.cmake"],
+  ["arm64-macos", "cmake", "/opt/homebrew/opt/llvm@22/lib/cmake/llvm/LLVMExports.cmake"],
+  ["arm64-macos", "cmake", "/opt/homebrew/opt/llvm@22/lib/cmake/clang/ClangTargets.cmake"],
+  ["arm64-macos", "cmake", "/opt/homebrew/opt/lld@22/lib/cmake/lld/LLDTargets.cmake"],
+  ["arm64-linux", "cmake", "${SYSROOT}/usr/lib/llvm-22/lib/cmake/llvm/LLVMExports.cmake"],
+  ["arm64-linux", "cmake", "${SYSROOT}/usr/lib/llvm-22/lib/cmake/clang/ClangTargets.cmake"],
+  ["arm64-linux", "cmake", "${SYSROOT}/usr/lib/llvm-22/lib/cmake/lld/LLDTargets.cmake"],
+  # The image's flatbuffers and wabt, built into /usr/local (sysroot.sh). Its flatc is a
+  # Linux program, and nothing asks for it here: the one that runs is the macOS one.
+  [
+    "arm64-linux",
+    "cmake",
+    "${SYSROOT}/usr/local/lib/cmake/flatbuffers/FlatBuffersTargets.cmake"
+  ],
+  ["arm64-linux", "cmake", "${SYSROOT}/usr/local/lib/cmake/wabt/wabt-targets.cmake"],
+]
+package_search_dir_on = [
+  ["arm64-macos", "pc", "${HOMEBREW}/lib/pkgconfig"],
+  ["arm64-macos", "pc", "${HOMEBREW}/Library/Homebrew/os/mac/pkgconfig/26"],
+  ["arm64-linux", "pc", "${SYSROOT}/usr/lib/aarch64-linux-gnu/pkgconfig"],
+]
+# LLVM, Clang and LLD: one package each, with the facts of both installations (llvm-install/cross-22),
+# importing each platform's own CMake exports.
+package_search_dir = [
+  ["buildlog", "${REPO_ROOT}/case-studies/halide/llvm-install/cross-22/share/buildlog"]
+]

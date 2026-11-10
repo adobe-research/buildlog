@@ -1,0 +1,14 @@
+config_decl = [["release", "arm64-macos"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = [["y"]]
+
+export_package = ["pkgy"]
+export_version = [["pkgy", "0.1.0"]]
+export_compat = [["pkgy", "same_major"]]
+export_component = [["pkgy", "y", "y"]]
+
+[target.y]
+dep = { "pkgx:b" = "public" }
+prop = [["cc.include_dir", "src:include", "interface"], ["cc.define", "Y_API=5", "interface"]]
+install_map = [["src:include", "includedir", ""]]
+install_file = ["src:include/y/y.h"]

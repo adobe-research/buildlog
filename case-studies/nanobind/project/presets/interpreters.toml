@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# User decisions: which interpreters to build the extension for (a
+# cibuildwheel-like choice; everything else about them is discovered),
+# and one Release configuration per interpreter. Paths are the case
+# study's venvs (baseline/run-baseline.sh); each has nanobind installed, as
+# a PEP 517 build environment would. cp313 builds the stable ABI (abi3),
+# cp311 the full ABI (3.11 predates the stable ABI of 3.12). A
+# configuration for an interpreter builds the project's extension modules
+# (buildlog-python requests them).
+python_interpreter = [
+  ["cp313", "${NANOBIND_VENVS}/venv313/bin/python"],
+  ["cp311", "${NANOBIND_VENVS}/venv311/bin/python"],
+]
+config_decl = [["release-cp313", "arm64-macos"], ["release-cp311", "arm64-macos"]]
+config_decl_setting = [
+  ["release-cp313", "native.opt", "release"],
+  ["release-cp313", "python.interpreter", "cp313"],
+  ["release-cp311", "native.opt", "release"],
+  ["release-cp311", "python.interpreter", "cp311"],
+]

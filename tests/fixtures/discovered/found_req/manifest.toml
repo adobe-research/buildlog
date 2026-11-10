@@ -1,0 +1,7 @@
+# A rule package the test-discover plugin finds; it re-requests "tool".
+name = "found_req"
+version = "0.1.0"
+rank = 5
+namespace = "found_req"
+layers = ["found_req.dl"]
+extends = ["request_all"]

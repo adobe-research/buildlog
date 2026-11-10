@@ -1,0 +1,17 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+.decl offsetgen_user(t:symbol, c:Cfg)
+offsetgen_user(t, c) :- eff_dep(t, c, "offsetgen:rt", _).
+.decl offsetgen_input(t:symbol, f:symbol)
+path_want(f) :- target_sources(_, f).
+offsetgen_input(t, f) :- target_sources(t, f), path_ext(f, ".offset").
+source_claimed(t, f) :- offsetgen_input(t, f).
+.decl offsetgen_generated(t:symbol, c:Cfg, f:symbol, out:symbol)
+offsetgen_generated(t, c, f, cat(g, "/", s, ".offset.cpp")) :-
+  offsetgen_user(t, c), offsetgen_input(t, f), gen_dir(t, c, g), path_stem(f, s).
+cxx_generated_source(t, c, o), target_action(t, c, o),
+action_in(o, cat("src:", f), "explicit"), action(o, "OFFSETGEN"),
+action_arg(o, 0, "", "sh"), action_arg(o, 1, "", "-c"),
+action_arg(o, 2, "", "{ echo '#include <offsetgen/rt.h>'; sed -E 's/^offset ([A-Za-z_]+) ([0-9]+)$/OFFSETGEN_CONST(\\1, \\2)/' \"$0\"; } > \"$1\""),
+action_arg(o, 3, "", cat("src:", f)), action_arg(o, 4, "", o) :-
+  offsetgen_generated(t, c, f, o).

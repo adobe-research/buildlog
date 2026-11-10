@@ -1,0 +1,7 @@
+# A second binding source that also aliases Only::Only (to another target).
+name = "ids-alias-b"
+version = "0.1.0"
+rank = 2
+layers = ["aliases.dl"]
+extends = ["alias"]
+requires = { buildlog = ">=0.1" }

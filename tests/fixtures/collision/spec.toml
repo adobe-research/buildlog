@@ -1,0 +1,3 @@
+# Two independently authored packages, each declaring a private `gen_item`.
+alpha_resource = [["logo"]]
+beta_resource = [["api"]]

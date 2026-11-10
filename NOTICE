@@ -1,0 +1,18 @@
+buildlog
+Copyright 2026 Adobe. All rights reserved.
+
+Adobe-authored code is provided under the Apache License, Version 2.0.
+
+Third-party source checkouts listed in .gitmodules retain their upstream
+copyright notices and licenses. They are separate dependencies, not relicensed
+by this repository.
+
+Reference zlib and zlib-ng headers under case-studies/*/baseline retain the
+copyright notices of Jean-loup Gailly and Mark Adler and their zlib license.
+The reference stdgpu configuration header retains Patrick Stotko's copyright
+notice and Apache-2.0 license.
+The reference fribidi-config.h headers retain their public-domain dedication.
+
+Generated test fixtures and comparison records are not installed as buildlog's
+runtime dependencies. REUSE.toml records notices for data, binary fixtures and
+line-sensitive examples whose contents must remain unchanged.

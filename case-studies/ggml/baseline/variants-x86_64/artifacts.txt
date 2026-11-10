@@ -1,0 +1,139 @@
+===== bin/
+libggml-cpu-alderlake.so
+libggml-cpu-cannonlake.so
+libggml-cpu-cascadelake.so
+libggml-cpu-cooperlake.so
+libggml-cpu-haswell.so
+libggml-cpu-icelake.so
+libggml-cpu-ivybridge.so
+libggml-cpu-piledriver.so
+libggml-cpu-sandybridge.so
+libggml-cpu-sapphirerapids.so
+libggml-cpu-skylakex.so
+libggml-cpu-sse42.so
+libggml-cpu-x64.so
+libggml-cpu-zen4.so
+test-backend-ops
+===== src/*.dylib
+libggml-base.0.25.3.dylib
+libggml-base.0.dylib
+libggml-base.dylib
+libggml.0.25.3.dylib
+libggml.0.dylib
+libggml.dylib
+===== libggml-base.0.25.3.dylib
+Mach-O 64-bit dynamically linked shared library x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+         name @rpath/libggml-base.0.dylib (offset 24)
+===== libggml-base.0.dylib -> libggml-base.0.25.3.dylib
+===== libggml-base.dylib -> libggml-base.0.dylib
+===== libggml.0.25.3.dylib
+Mach-O 64-bit dynamically linked shared library x86_64
+	@rpath/libggml.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         name @rpath/libggml.0.dylib (offset 24)
+         path $BUILD/src (offset 12)
+===== libggml.0.dylib -> libggml.0.25.3.dylib
+===== libggml.dylib -> libggml.0.dylib
+===== libggml-cpu-alderlake.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-cannonlake.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-cascadelake.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-cooperlake.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-haswell.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-icelake.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-ivybridge.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-piledriver.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-sandybridge.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-sapphirerapids.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-skylakex.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-sse42.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-x64.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-zen4.so
+Mach-O 64-bit bundle x86_64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)

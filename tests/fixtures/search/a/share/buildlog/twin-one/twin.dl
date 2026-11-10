@@ -1,0 +1,6 @@
+.decl twin_item(n:symbol)
+.decl twin_out(n:symbol, o:symbol)
+twin_out(n, cat("out:twin-one/", n)) :- twin_item(n).
+action(o, "TWIN") :- twin_out(_, o).
+action_arg(o, 0, "", "twin-one-gen") :- twin_out(_, o).
+default_output(o) :- twin_out(_, o).

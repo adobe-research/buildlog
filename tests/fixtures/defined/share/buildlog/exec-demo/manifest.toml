@@ -1,0 +1,28 @@
+# Exec configuration inferred from use, with no plugin or probe.
+# Two toy toolchains: tcx (spelled cp) cross-compiles toy -> toy-a, tcy
+# (/bin/cp) compiles for toy itself; nothing pins either. A "tool" is compiled by the toolchain of its
+# configuration; a generated target's action runs a tool (and may load a
+# plugin), named by reference, with typed stdin/stdout. Nothing here says
+# where a tool runs.
+name = "exec-demo"
+version = "0.1.0"
+rank = 1
+namespace = "execdemo"
+layers = ["exec_demo.dl"]
+extends = [
+  "toolchain",
+  "toolchain_tool",
+  "toolchain_runs_on",
+  "toolchain_can_target",
+  "tc_required",
+  "action",
+  "action_in",
+  "action_arg",
+  "action_run",
+  "action_stdin",
+  "action_stdout",
+  "run_artifact",
+  "default_output",
+  "target_action",
+]
+accepts = ["execdemo_tool", "execdemo_gen", "execdemo_plugin"]

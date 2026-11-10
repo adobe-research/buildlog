@@ -1,0 +1,23 @@
+config_decl = [["release", "arm64-macos"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = [["a"]]
+
+export_package = ["pkgx"]
+export_version = [["pkgx", "1.2.3"]]
+export_compat = [["pkgx", "same_minor"]]
+export_component = [["pkgx", "a", "a"], ["pkgx", "b", "b"]]
+
+[target.a]
+dep = { b = "public" }
+prop = [["cc.include_dir", "src:a/include", "interface"], ["cc.define", "A_API=1", "interface"]]
+install_map = [["src:a/include", "includedir", ""]]
+install_file = ["src:a/include/a/a.h"]
+
+[target.b]
+prop = [
+  ["cc.include_dir", "src:b/include", "interface"],
+  ["cc.define", "B_API=2", "interface"],
+  ["cxx.std", "17", "interface"],
+]
+install_map = [["src:b/include", "includedir", "pkgx"]]
+install_file = ["src:b/include/b/b.h"]

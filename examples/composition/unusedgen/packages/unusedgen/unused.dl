@@ -1,0 +1,5 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+// A discovered package's constant effects are still gated by module use.
+request_all("unusedgen:rt").
+warning("unusedgen", "package activated").

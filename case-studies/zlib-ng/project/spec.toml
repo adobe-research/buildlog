@@ -1,0 +1,180 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# zlib-ng (CMakeLists.txt, 2.3.3) in the Release configuration its
+# baselines build (CMAKE_BUILD_TYPE=Release): native arm64, x86_64 (cross,
+# CMAKE_OSX_ARCHITECTURES=x86_64) and universal2 (both, merged). The library
+# and source-set abstractions are rules.dl's; the ISA model is isa.dl's
+# (its facts isa.toml's); the configure checks are checks.toml's.
+config_decl = [
+  ["release", "arm64-macos"],
+  ["x86_64", "x86_64-macos"],
+  ["universal2", "universal2-macos"],
+]
+config_decl_setting = [
+  ["release", "native.opt", "release"],
+  ["x86_64", "native.opt", "release"],
+  ["universal2", "native.opt", "release"],
+]
+# The library everywhere, static and shared (its default_linkage, below);
+# universal2 merges each linkage's slices with lipo (the shared library's
+# merged file gets its links too).
+request_all = [["zlib-ng"]]
+
+# x86_64 lets its SSE2 functions act as fallbacks, so it compiles only four
+# generic ones (five without __builtin_ctz); everything else compiles all
+# seven and defines WITH_ALL_FALLBACKS.
+condition = { x86_fallbacks = "platform.cpu == x86_64 & isa.sse2 == on & !WITH_ALL_FALLBACKS" }
+
+# CMakeLists.txt's directory-wide flags and definitions (CMAKE_C_FLAGS,
+# add_compile_options, add_definitions): every C target of the project,
+# test programs included. -O2: upstream rewrites Release's -O3 to -O2
+# (README ledger).
+dir_prop = [
+  ["cc.compile_flag", "-std=c11"],
+  ["cc.compile_flag", "-Wall"],
+  ["cc.compile_flag", "-O2"],
+  ["cc.define", "WITH_GZFILEOP"],
+]
+dir_prop_when = [
+  ["cc.define", "WITH_OPTIM", "WITH_OPTIM"],
+  ["cc.define", "WITH_ALL_FALLBACKS", "!x86_fallbacks"],
+  ["cc.define", "ARM_FEATURES", "platform.cpu == arm64 & WITH_OPTIM"],
+  ["cc.define", "X86_FEATURES", "platform.cpu == x86_64 & WITH_OPTIM"],
+  ["cc.define", "HAVE_ARM_ACLE_H", "cc.check.HAVE_ARM_ACLE_H"],
+  ["cc.define", "HAVE_SYS_AUXV_H", "cc.check.HAVE_SYS_AUXV_H"],
+  ["cc.define", "HAVE_SYS_SDT_H", "cc.check.HAVE_SYS_SDT_H"],
+  ["cc.define", "HAVE_LINUX_AUXVEC_H", "cc.check.HAVE_LINUX_AUXVEC_H"],
+  ["cc.define", "_LARGEFILE64_SOURCE=1", "cc.check.HAVE_OFF64_T | cc.check.HAVE__OFF64_T"],
+  ["cc.define", "__USE_LARGEFILE64", "cc.check.HAVE_OFF64_T | cc.check.HAVE__OFF64_T"],
+  ["cc.define", "NO_FSEEKO", "!cc.check.HAVE_FSEEKO"],
+  ["cc.define", "NO_STRERROR", "!cc.check.HAVE_STRERROR"],
+  ["cc.define", "HAVE_SYMVER", "platform.os == linux"],
+  [
+    "cc.define",
+    "ARM_AUXV_HAS_CRC32",
+    "platform.os == linux & platform.cpu == arm64 & WITH_OPTIM & cc.check.ARM_AUXV_HAS_CRC32"
+  ],
+  ["cc.define", "HAVE_CPUID_GNU", "cc.check.HAVE_CPUID_GNU"],
+  ["cc.define", "HAVE_CPUID_MS", "cc.check.HAVE_CPUID_MS"],
+  ["cc.define", "HAVE_VISIBILITY_HIDDEN", "cc.check.HAVE_ATTRIBUTE_VISIBILITY_HIDDEN"],
+  ["cc.define", "HAVE_VISIBILITY_INTERNAL", "cc.check.HAVE_ATTRIBUTE_VISIBILITY_INTERNAL"],
+  ["cc.define", "HAVE_ATTRIBUTE_ALIGNED", "cc.check.HAVE_ATTRIBUTE_ALIGNED"],
+  ["cc.define", "HAVE_BUILTIN_ASSUME_ALIGNED", "cc.check.HAVE_BUILTIN_ASSUME_ALIGNED"],
+  ["cc.define", "HAVE_BUILTIN_CTZ", "cc.check.HAVE_BUILTIN_CTZ"],
+  ["cc.define", "HAVE_BUILTIN_CTZLL", "cc.check.HAVE_BUILTIN_CTZLL"],
+]
+# set_target_properties(zlib-ng PROPERTIES COMPILE_FLAGS
+# -fno-semantic-interposition) where the toolchain has it: the shared
+# library's own compiles (and its source sets').
+shared_prop_when = [
+  [
+    "zlib-ng",
+    "cc.compile_flag",
+    "-fno-semantic-interposition",
+    "cc.check.HAVE_NO_INTERPOSITION"
+  ]
+]
+
+# ZLIB_SRCS, then crc32_chorba_c.c (WITH_CRC32_CHORBA), cpu_features.c
+# (WITH_RUNTIME_CPU_DETECTION) and the gzFile sources (WITH_GZFILEOP), in
+# CMakeLists.txt's order; the headers are found by the compiler. The
+# generic fallbacks and the architecture sources are source sets (below and
+# isa.toml).
+[library.zlib-ng]
+library_source = [
+  "adler32.c",
+  "compress.c",
+  "crc32.c",
+  "crc32_braid_comb.c",
+  "deflate.c",
+  "deflate_fast.c",
+  "deflate_huff.c",
+  "deflate_medium.c",
+  "deflate_quick.c",
+  "deflate_rle.c",
+  "deflate_slow.c",
+  "deflate_stored.c",
+  "functable.c",
+  "infback.c",
+  "inflate.c",
+  "inftrees.c",
+  "insert_string.c",
+  "insert_string_roll.c",
+  "trees.c",
+  "uncompr.c",
+  "zutil.c",
+  "arch/generic/crc32_chorba_c.c",
+  "cpu_features.c",
+  "gzlib.c",
+  "gzread.c",
+  "gzwrite.c",
+]
+# add_library(zlib-ng SHARED ...) and add_library(zlib-ng-static STATIC ...),
+# both OUTPUT_NAME z-ng: one library that builds both linkages unless the
+# user chooses one (BUILD_SHARED_LIBS/ZLIB_COMPAT do not choose: upstream
+# always builds both).
+default_linkage = "both"
+library_output_name = "z-ng"
+# VERSION ${ZLIB_FULL_VERSION}, SOVERSION 2; DEFINE_SYMBOL ZLIB_DLL.
+library_version = [["2.3.3", "2"]]
+library_define_symbol = "ZLIB_DLL"
+# target_compile_definitions(PUBLIC ZLIBNG_NATIVE_API) and
+# target_include_directories(PUBLIC ${CMAKE_CURRENT_BINARY_DIR}
+# ${CMAKE_CURRENT_SOURCE_DIR}): the source tree after the configured
+# headers' dir (configured.toml; the order is rules.dl's).
+library_prop = [
+  ["cc.define", "ZLIBNG_NATIVE_API", "public"],
+  ["cc.include_dir", "src:", "public"],
+]
+
+[defaults.source_set]
+lib = "zlib-ng"
+
+# The generic fallbacks (ZLIB_GENERIC_SRCS): which ones a configuration
+# compiles depends on its platform and on whether SSE2 is built.
+[source_set.fallback_x86]
+source_set_source = [
+  "arch/generic/adler32_c.c",
+  "arch/generic/adler32_fold_c.c",
+  "arch/generic/crc32_braid_c.c",
+  "arch/generic/crc32_fold_c.c",
+]
+source_set_when = "x86_fallbacks"
+
+[source_set.fallback_x86_compare256]
+source_set_source = "arch/generic/compare256_c.c"
+source_set_when = "x86_fallbacks & !cc.check.HAVE_BUILTIN_CTZ"
+
+[source_set.fallback_all]
+source_set_source = [
+  "arch/generic/adler32_c.c",
+  "arch/generic/adler32_fold_c.c",
+  "arch/generic/chunkset_c.c",
+  "arch/generic/compare256_c.c",
+  "arch/generic/crc32_braid_c.c",
+  "arch/generic/crc32_fold_c.c",
+  "arch/generic/slide_hash_c.c",
+]
+source_set_when = "!x86_fallbacks"
+
+# The options whose defaults decide what the default build compiles
+# (CMakeLists.txt's option() and cmake_dependent_option() rows, at their
+# defaults for these platforms). A user file states other values
+# (option_value). WITH_GZFILEOP and WITH_CRC32_CHORBA (on) and the options
+# of other architectures are not stated (README ledger).
+[option]
+WITH_OPTIM = { default = "on" }
+WITH_RUNTIME_CPU_DETECTION = { default = "on" }
+WITH_ALL_FALLBACKS = {}
+WITH_ARMV8 = { default = "on" }
+WITH_NEON = { default = "on" }
+WITH_SSE2 = { default = "on" }
+WITH_SSSE3 = { default = "on" }
+WITH_SSE41 = { default = "on" }
+WITH_SSE42 = { default = "on" }
+WITH_PCLMULQDQ = { default = "on" }
+WITH_AVX2 = { default = "on" }
+WITH_AVX512 = { default = "on" }
+WITH_AVX512VNNI = { default = "on" }
+WITH_VPCLMULQDQ = { default = "on" }

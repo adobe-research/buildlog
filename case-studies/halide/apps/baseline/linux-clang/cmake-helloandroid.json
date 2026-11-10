@@ -1,0 +1,422 @@
+{
+ "archive": [
+  {
+   "members": [
+    "deinterleave.o"
+   ],
+   "output": "deinterleave"
+  },
+  {
+   "members": [
+    "deinterleave.o"
+   ],
+   "output": "deinterleave"
+  },
+  {
+   "members": [
+    "deinterleave.runtime.o"
+   ],
+   "output": "deinterleave.runtime"
+  },
+  {
+   "members": [
+    "deinterleave.runtime.o"
+   ],
+   "output": "deinterleave.runtime"
+  },
+  {
+   "members": [
+    "edge_detect.o"
+   ],
+   "output": "edge_detect"
+  },
+  {
+   "members": [
+    "edge_detect.o"
+   ],
+   "output": "edge_detect"
+  },
+  {
+   "members": [
+    "edge_detect.runtime.o"
+   ],
+   "output": "edge_detect.runtime"
+  },
+  {
+   "members": [
+    "edge_detect.runtime.o"
+   ],
+   "output": "edge_detect.runtime"
+  }
+ ],
+ "compile": [
+  {
+   "compiler": "c++",
+   "flags": [
+    "--sysroot=NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+    "--target=aarch64-none-linux-android23",
+    "-DANDROID",
+    "-DHelloAndroid_EXPORTS",
+    "-DNDEBUG",
+    "-D_FORTIFY_SOURCE=2",
+    "-I$BUILD/",
+    "-O3",
+    "-Werror=format-security",
+    "-Wformat",
+    "-fPIC",
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fstack-protector-strong",
+    "-funwind-tables",
+    "-g",
+    "-isystem PREFIX/include",
+    "-no-canonical-prefixes",
+    "-pthread",
+    "-std=c++17"
+   ],
+   "source": "SRC/app/src/main/cpp/AndroidBufferUtilities.cpp",
+   "target": "HelloAndroid"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "--sysroot=NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+    "--target=x86_64-none-linux-android23",
+    "-DANDROID",
+    "-DHelloAndroid_EXPORTS",
+    "-DNDEBUG",
+    "-D_FORTIFY_SOURCE=2",
+    "-I$BUILD/",
+    "-O3",
+    "-Werror=format-security",
+    "-Wformat",
+    "-fPIC",
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fstack-protector-strong",
+    "-funwind-tables",
+    "-g",
+    "-isystem PREFIX/include",
+    "-no-canonical-prefixes",
+    "-pthread",
+    "-std=c++17"
+   ],
+   "source": "SRC/app/src/main/cpp/AndroidBufferUtilities.cpp",
+   "target": "HelloAndroid"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "--sysroot=NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+    "--target=aarch64-none-linux-android23",
+    "-DANDROID",
+    "-DHelloAndroid_EXPORTS",
+    "-DNDEBUG",
+    "-D_FORTIFY_SOURCE=2",
+    "-I$BUILD/",
+    "-O3",
+    "-Werror=format-security",
+    "-Wformat",
+    "-fPIC",
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fstack-protector-strong",
+    "-funwind-tables",
+    "-g",
+    "-isystem PREFIX/include",
+    "-no-canonical-prefixes",
+    "-pthread",
+    "-std=c++17"
+   ],
+   "source": "SRC/app/src/main/cpp/HalideFilters.cpp",
+   "target": "HelloAndroid"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "--sysroot=NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+    "--target=x86_64-none-linux-android23",
+    "-DANDROID",
+    "-DHelloAndroid_EXPORTS",
+    "-DNDEBUG",
+    "-D_FORTIFY_SOURCE=2",
+    "-I$BUILD/",
+    "-O3",
+    "-Werror=format-security",
+    "-Wformat",
+    "-fPIC",
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fstack-protector-strong",
+    "-funwind-tables",
+    "-g",
+    "-isystem PREFIX/include",
+    "-no-canonical-prefixes",
+    "-pthread",
+    "-std=c++17"
+   ],
+   "source": "SRC/app/src/main/cpp/HalideFilters.cpp",
+   "target": "HelloAndroid"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "--sysroot=NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+    "--target=aarch64-none-linux-android23",
+    "-DANDROID",
+    "-DHelloAndroid_EXPORTS",
+    "-DNDEBUG",
+    "-D_FORTIFY_SOURCE=2",
+    "-I$BUILD/",
+    "-O3",
+    "-Werror=format-security",
+    "-Wformat",
+    "-fPIC",
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fstack-protector-strong",
+    "-funwind-tables",
+    "-g",
+    "-isystem PREFIX/include",
+    "-no-canonical-prefixes",
+    "-pthread",
+    "-std=c++17"
+   ],
+   "source": "SRC/app/src/main/cpp/LockedSurface.cpp",
+   "target": "HelloAndroid"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "--sysroot=NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+    "--target=x86_64-none-linux-android23",
+    "-DANDROID",
+    "-DHelloAndroid_EXPORTS",
+    "-DNDEBUG",
+    "-D_FORTIFY_SOURCE=2",
+    "-I$BUILD/",
+    "-O3",
+    "-Werror=format-security",
+    "-Wformat",
+    "-fPIC",
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fstack-protector-strong",
+    "-funwind-tables",
+    "-g",
+    "-isystem PREFIX/include",
+    "-no-canonical-prefixes",
+    "-pthread",
+    "-std=c++17"
+   ],
+   "source": "SRC/app/src/main/cpp/LockedSurface.cpp",
+   "target": "HelloAndroid"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "--sysroot=NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+    "--target=aarch64-none-linux-android23",
+    "-DANDROID",
+    "-DHelloAndroid_EXPORTS",
+    "-DNDEBUG",
+    "-D_FORTIFY_SOURCE=2",
+    "-I$BUILD/",
+    "-O3",
+    "-Werror=format-security",
+    "-Wformat",
+    "-fPIC",
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fstack-protector-strong",
+    "-funwind-tables",
+    "-g",
+    "-isystem PREFIX/include",
+    "-no-canonical-prefixes",
+    "-pthread",
+    "-std=c++17"
+   ],
+   "source": "SRC/app/src/main/cpp/YuvBufferT.cpp",
+   "target": "HelloAndroid"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "--sysroot=NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+    "--target=x86_64-none-linux-android23",
+    "-DANDROID",
+    "-DHelloAndroid_EXPORTS",
+    "-DNDEBUG",
+    "-D_FORTIFY_SOURCE=2",
+    "-I$BUILD/",
+    "-O3",
+    "-Werror=format-security",
+    "-Wformat",
+    "-fPIC",
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fstack-protector-strong",
+    "-funwind-tables",
+    "-g",
+    "-isystem PREFIX/include",
+    "-no-canonical-prefixes",
+    "-pthread",
+    "-std=c++17"
+   ],
+   "source": "SRC/app/src/main/cpp/YuvBufferT.cpp",
+   "target": "HelloAndroid"
+  }
+ ],
+ "generate": [
+  {
+   "emit": "c_header,object",
+   "function": "deinterleave",
+   "generator": "deinterleave",
+   "name": "deinterleave",
+   "params": [],
+   "target": "arm-64-android-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "deinterleave",
+   "generator": "deinterleave",
+   "name": "deinterleave",
+   "params": [],
+   "target": "x86-64-android-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "edge_detect",
+   "generator": "edge_detect",
+   "name": "edge_detect",
+   "params": [],
+   "target": "arm-64-android-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "edge_detect",
+   "generator": "edge_detect",
+   "name": "edge_detect",
+   "params": [],
+   "target": "x86-64-android-no_runtime"
+  }
+ ],
+ "link": [
+  {
+   "compiler": "c++",
+   "flags": [
+    "--sysroot=NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+    "--target=aarch64-none-linux-android23",
+    "-DANDROID",
+    "-DNDEBUG",
+    "-D_FORTIFY_SOURCE=2",
+    "-O3",
+    "-Qunused-arguments",
+    "-Werror=format-security",
+    "-Wformat",
+    "-Wl,--build-id=sha1",
+    "-Wl,--fatal-warnings",
+    "-Wl,--gc-sections",
+    "-Wl,--no-rosegment",
+    "-Wl,--no-undefined",
+    "-Wl,--no-undefined-version",
+    "-Xlinker --dependency-file=CMakeFiles/HelloAndroid.dir/link.d",
+    "-fPIC",
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fstack-protector-strong",
+    "-funwind-tables",
+    "-g",
+    "-landroid",
+    "-latomic",
+    "-latomic",
+    "-ldl",
+    "-llog",
+    "-lm",
+    "-no-canonical-prefixes",
+    "-pthread",
+    "-shared",
+    "-static-libstdc++"
+   ],
+   "inputs": [
+    "-Wl,-soname,libHelloAndroid.so",
+    "AndroidBufferUtilities.cpp.o",
+    "HalideFilters.cpp.o",
+    "LockedSurface.cpp.o",
+    "YuvBufferT.cpp.o",
+    "libdeinterleave.a",
+    "libdeinterleave.runtime.a",
+    "libedge_detect.a",
+    "libedge_detect.runtime.a"
+   ],
+   "output": "HelloAndroid"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "--sysroot=NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+    "--target=x86_64-none-linux-android23",
+    "-DANDROID",
+    "-DNDEBUG",
+    "-D_FORTIFY_SOURCE=2",
+    "-O3",
+    "-Qunused-arguments",
+    "-Werror=format-security",
+    "-Wformat",
+    "-Wl,--build-id=sha1",
+    "-Wl,--fatal-warnings",
+    "-Wl,--gc-sections",
+    "-Wl,--no-rosegment",
+    "-Wl,--no-undefined",
+    "-Wl,--no-undefined-version",
+    "-Xlinker --dependency-file=CMakeFiles/HelloAndroid.dir/link.d",
+    "-fPIC",
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fstack-protector-strong",
+    "-funwind-tables",
+    "-g",
+    "-landroid",
+    "-latomic",
+    "-latomic",
+    "-ldl",
+    "-llog",
+    "-lm",
+    "-no-canonical-prefixes",
+    "-pthread",
+    "-shared",
+    "-static-libstdc++"
+   ],
+   "inputs": [
+    "-Wl,-soname,libHelloAndroid.so",
+    "AndroidBufferUtilities.cpp.o",
+    "HalideFilters.cpp.o",
+    "LockedSurface.cpp.o",
+    "YuvBufferT.cpp.o",
+    "libdeinterleave.a",
+    "libdeinterleave.runtime.a",
+    "libedge_detect.a",
+    "libedge_detect.runtime.a"
+   ],
+   "output": "HelloAndroid"
+  }
+ ],
+ "runtime": [
+  {
+   "name": "deinterleave.runtime",
+   "target": "arm-64-android"
+  },
+  {
+   "name": "edge_detect.runtime",
+   "target": "arm-64-android"
+  },
+  {
+   "name": "deinterleave.runtime",
+   "target": "x86-64-android"
+  },
+  {
+   "name": "edge_detect.runtime",
+   "target": "x86-64-android"
+  }
+ ]
+}

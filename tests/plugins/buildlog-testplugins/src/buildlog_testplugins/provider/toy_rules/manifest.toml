@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The toy provider's rules (loaded by the driver when a find reaches it).
+name = "toy-rules"
+version = "0.1.0"
+rank = 5
+namespace = "toy_rules"
+layers = ["toy_rules.dl"]
+extends = ["action", "action_arg", "default_output"]

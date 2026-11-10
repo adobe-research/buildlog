@@ -1,0 +1,44 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Shared value types. Must be #included first: the constructor macros below
+// are textual (mcpp), so they have to be defined before any layer uses them.
+//
+// Configurations and settings are *records* (structural, hash-consed by
+// Soufflé: equal contents means equal value). Conditions are an *ADT* by
+// default. Build with `-M NO_ADT=1` to get an equivalent tagged-record
+// encoding: Soufflé 2.5's provenance (`-t explain`) aborts on any program
+// that declares an ADT (souffle-lang/souffle#2187, #2521).
+
+.type Setting = [key:symbol, value:symbol]
+.type Settings = [head:Setting, tail:Settings]   // nil-terminated, sorted by setting_key position
+.type Cfg = [platform:symbol, settings:Settings] // platform may be a multi-platform
+
+#ifdef NO_ADT
+.type Cond = [tag:symbol, key:symbol, value:symbol, a:Cond, b:Cond]
+#define EQ(k, v) ["eq", k, v, nil, nil]
+#define NOT(x) ["not", "", "", x, nil]
+#define AND(x, y) ["and", "", "", x, y]
+#define OR(x, y) ["or", "", "", x, y]
+#define DEFINED(t) ["defined", t, "", nil, nil]
+#define NAMED(n) ["named", n, "", nil, nil]
+#define GE(k, v) ["ge", k, v, nil, nil]
+#define GT(k, v) ["gt", k, v, nil, nil]
+#else
+.type Cond = Eq {key:symbol, value:symbol}
+           | Not {x:Cond}
+           | And {x:Cond, y:Cond}
+           | Or {x:Cond, y:Cond}
+           | Defined {t:symbol}
+           | Named {n:symbol}
+           | Ge {key:symbol, value:symbol}
+           | Gt {key:symbol, value:symbol}
+#define EQ(k, v) $Eq(k, v)
+#define NOT(x) $Not(x)
+#define AND(x, y) $And(x, y)
+#define OR(x, y) $Or(x, y)
+#define DEFINED(t) $Defined(t)
+#define NAMED(n) $Named(n)
+#define GE(k, v) $Ge(k, v)
+#define GT(k, v) $Gt(k, v)
+#endif

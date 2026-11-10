@@ -1,0 +1,71 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L2 (buildlog-ndk): the Android NDK as a toolchain and its platforms, what
+// android.toolchain.cmake is to a CMake project. ndk.py finds the NDK from
+// ANDROID_NDK_ROOT; here its rows become platforms (one per ABI), the clang
+// toolchain, and the NDK's own default arguments. Provisional: just enough
+// for the case studies (arm64-v8a, x86_64).
+
+.decl req_ndk_inventory(id:symbol)
+.decl domain_ndk_inventory(id:symbol)
+req_ndk_inventory("ndk-inventory:default") :- config_decl(_, _).
+domain_ndk_inventory("ndk-inventory:default") :- config_decl(_, _).
+
+.decl res_cross_ndk_status(req:symbol, found:symbol)
+.decl res_cross_ndk_platform(req:symbol, p:symbol, triple:symbol)
+.decl res_cross_ndk_platform_constraint(req:symbol, p:symbol, key:symbol, value:symbol)
+.decl res_cross_ndk_toolchain(req:symbol, tc:symbol, family:symbol, version:symbol)
+.decl res_cross_ndk_toolchain_tool(req:symbol, tc:symbol, role:symbol, path:symbol)
+.decl res_cross_ndk_toolchain_runs_on(req:symbol, tc:symbol, p:symbol)
+.decl res_cross_ndk_toolchain_target(req:symbol, tc:symbol, p:symbol)
+.decl res_cross_ndk_toolchain_arg(req:symbol, tc:symbol, p:symbol, prefix:symbol, value:symbol)
+.decl res_cross_ndk_toolchain_probe_triple(req:symbol, tc:symbol, p:symbol, triple:symbol)   // probes only
+
+platform(p, triple) :- res_cross_ndk_platform(req, p, triple), req_ndk_inventory(req).
+platform_constraint(p, k, v) :- res_cross_ndk_platform_constraint(req, p, k, v), req_ndk_inventory(req).
+toolchain(tc, f, v) :- res_cross_ndk_toolchain(req, tc, f, v), req_ndk_inventory(req).
+toolchain_tool(tc, r, p) :- res_cross_ndk_toolchain_tool(req, tc, r, p), req_ndk_inventory(req).
+toolchain_runs_on(tc, p) :- res_cross_ndk_toolchain_runs_on(req, tc, p), req_ndk_inventory(req).
+tc_platform_arg(tc, p, pre, v) :- res_cross_ndk_toolchain_arg(req, tc, p, pre, v), req_ndk_inventory(req).
+cross_target(tc, p) :- res_cross_ndk_toolchain_target(req, tc, p), req_ndk_inventory(req).
+
+platform_vocabulary("os", "android").
+// bionic holds libc, libm, libdl and the thread functions in one library.
+platform_os_threads_arg("android", ""). platform_os_dl_lib("android", "").
+
+// Android is ELF (bionic); the API level is the project's (platform_os_level).
+elf_driver(tc, p) :- toolchain(tc, "clang", _), platform_constraint(p, "os", "android").
+error("an Android platform needs platform_os_level(\"android\", <API level>)", p) :-
+  build_platform(p), platform_constraint(p, "os", "android"), !platform_leveled(p).
+
+// What android.toolchain.cmake gives every compile and link of a CMake
+// project for the NDK: the Android macros, per-function and per-data
+// sections, unwind tables, the stack protector and the format-string
+// hardening.
+.decl ndk_default_arg(rank:number, arg:symbol)
+ndk_default_arg(0, "-g"). ndk_default_arg(1, "-DANDROID"). ndk_default_arg(2, "-fdata-sections").
+ndk_default_arg(3, "-ffunction-sections"). ndk_default_arg(4, "-funwind-tables").
+ndk_default_arg(5, "-fstack-protector-strong"). ndk_default_arg(6, "-no-canonical-prefixes").
+ndk_default_arg(7, "-D_FORTIFY_SOURCE=2"). ndk_default_arg(8, "-Wformat").
+ndk_default_arg(9, "-Werror=format-security").
+tc_platform_arg(tc, p, "", a) :- cross_target(tc, p), platform_constraint(p, "os", "android"), ndk_default_arg(_, a).
+
+// The NDK's linker defaults (the toolchain file's *_LINKER_FLAGS): the C++
+// runtime is static, and the link must resolve every symbol.
+.decl ndk_link_arg(arg:symbol)
+ndk_link_arg("-static-libstdc++"). ndk_link_arg("-Wl,--build-id=sha1"). ndk_link_arg("-Wl,--no-rosegment").
+ndk_link_arg("-Wl,--no-undefined-version"). ndk_link_arg("-Wl,--fatal-warnings"). ndk_link_arg("-Wl,--no-undefined").
+ndk_link_arg("-Qunused-arguments"). ndk_link_arg("-Wl,--gc-sections").
+tc_link_arg(tc, p, a) :- cross_target(tc, p), platform_constraint(p, "os", "android"), ndk_link_arg(a).
+
+// The NDK's system libraries (its sysroot's liblog, libandroid, and the
+// toolchain's libatomic): a project depends on ndk::<name>, whose link flag
+// reaches the link of whatever uses it, as `target_link_libraries(t log)`
+// names a platform library.
+.decl ndk_system_library(name:symbol)
+ndk_system_library("log"). ndk_system_library("android"). ndk_system_library("atomic").
+.decl ndk_system_library_target(name:symbol, t:symbol)
+ndk_system_library_target(n, cat("ndk::", n)) :- ndk_system_library(n).
+imported(t), imported_kind(t, "interface"),
+prop(t, "native.link_flag", cat("-l", n), "interface") :- ndk_system_library_target(n, t).

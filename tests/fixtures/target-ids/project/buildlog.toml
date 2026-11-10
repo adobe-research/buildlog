@@ -1,0 +1,4 @@
+# alpha and beta each define a target named util (alpha::util, beta::util);
+# the project has its own util. Found with --package-path tests/fixtures/target-ids.
+uses = ["buildlog-cpp", "alpha", "beta"]
+spec = ["spec.toml"]

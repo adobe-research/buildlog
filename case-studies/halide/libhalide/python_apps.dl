@@ -1,0 +1,21 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// The Python apps: a script generator per app, an AOT library with the three
+// autoscheduler plugins and an extension module per generator, and the app
+// script run on the images of apps/images. TEST_TMPDIR is the test's own
+// directory (CMake's binary directory), where the output image is written.
+.decl halide_py_app_lib(generator:symbol, app:symbol)
+.decl halide_py_app_arg(app:symbol, i:number, v:symbol)
+halide_py_launched(cat("app_aot_", g), cat("python_bindings/halide/apps/", a, "_generator.py")) :- halide_py_app_lib(g, a).
+halide_build_library(cat("app_aot_", g), cat("py_gen_app_", a), g, g, ""), dep_when("halide_py_requests", cat("app_aot_", g), "private", "halide.python"),
+halide_build_library_emit(cat("app_aot_", g), "python_extension"),
+halide_build_library_plugin(cat("app_aot_", g), 0, "autoschedule_adams2019"),
+halide_build_library_plugin(cat("app_aot_", g), 1, "autoschedule_li2018"),
+halide_build_library_plugin(cat("app_aot_", g), 2, "autoschedule_mullapudi2016") :- halide_py_app_lib(g, a).
+halide_build_pyext(cat("app_ext_", g), g), halide_build_pyext_library(cat("app_ext_", g), 0, cat("app_aot_", g)) :-
+  halide_py_app_lib(g, _).
+test_arg(cat("python_apps_", a, "_app"), i, v) :- halide_py_app_arg(a, i, v).
+test_config_env_path(n, c, "TEST_IMAGES_DIR", 0, "src:apps/images"),
+test_config_env_path(n, c, "TEST_TMPDIR", 0, cat("out:test/", cn, "/", n)) :-
+  halide_py_test_name(n, _, "python_apps"), python_tree(c, _), cfg_name(c, cn).

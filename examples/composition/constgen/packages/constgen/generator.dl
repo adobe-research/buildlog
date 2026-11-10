@@ -1,0 +1,17 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+.decl constgen_user(t:symbol, c:Cfg)
+constgen_user(t, c) :- eff_dep(t, c, "constgen:rt", _).
+.decl constgen_input(t:symbol, f:symbol)
+path_want(f) :- target_sources(_, f).
+constgen_input(t, f) :- target_sources(t, f), path_ext(f, ".const").
+source_claimed(t, f) :- constgen_input(t, f).
+.decl constgen_generated(t:symbol, c:Cfg, f:symbol, out:symbol)
+constgen_generated(t, c, f, cat(g, "/", s, ".const.cpp")) :-
+  constgen_user(t, c), constgen_input(t, f), gen_dir(t, c, g), path_stem(f, s).
+cxx_generated_source(t, c, o), target_action(t, c, o),
+action_in(o, cat("src:", f), "explicit"), action(o, "CONSTGEN"),
+action_arg(o, 0, "", "sh"), action_arg(o, 1, "", "-c"),
+action_arg(o, 2, "", "{ echo '#include <constgen/rt.h>'; sed -E 's/^const ([A-Za-z_]+) ([0-9]+)$/CONSTGEN_CONST(\\1, \\2)/' \"$0\"; } > \"$1\""),
+action_arg(o, 3, "", cat("src:", f)), action_arg(o, 4, "", o) :-
+  constgen_generated(t, c, f, o).

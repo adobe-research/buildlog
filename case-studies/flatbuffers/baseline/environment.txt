@@ -1,0 +1,8 @@
+# Environment
+Darwin arm64
+26.5.2
+cmake version 4.4.3
+ninja 1.13.2
+Apple clang version 21.0.0 (clang-2100.1.1.101)
+flatbuffers v25.12.19 7e163021e59cca4f8e1e35a7c828b5c6b7915953
+Rosetta 2: installed

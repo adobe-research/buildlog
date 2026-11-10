@@ -1,0 +1,91 @@
+action_arg("out:obj/arm64-macos.release.none.cp313/nanobind_example_ext/src/nanobind_example_ext.cpp.o", 21, "-D", "Py_LIMITED_API=0x030C0000")  [buildlog-cpp:layers/L4_cxx.dl:32]
+  cxx_object("nanobind_example_ext", ‹arm64-macos.release.none.cp313›, "src/nanobind_example_ext.cpp", "out:obj/arm64-macos.release.none.cp313/nanobind_example_ext/src/nanobind_example_ext.cpp.o")  [buildlog-cpp:layers/L4_cxx.dl:21]
+    #n2 needed("nanobind_example_ext", ‹arm64-macos.release.none.cp313›)  [exists here because it is built in this configuration; --demand explains why]
+    cxx_source("nanobind_example_ext", "src/nanobind_example_ext.cpp")  ← case-studies/nanobind/project/spec.toml:9
+    cfg_name(‹arm64-macos.release.none.cp313›, "arm64-macos.release.none.cp313")  [buildlog:L1_targets.dl:145]
+      #n35 config(‹arm64-macos.release.none.cp313›)  [buildlog:L1_targets.dl:89]
+        decl_cfg("release-cp313", ‹arm64-macos.release.none.cp313›)  [buildlog:L1_targets.dl:84]
+          #n8 config_decl("release-cp313", "arm64-macos")  ← case-studies/nanobind/project/presets/interpreters.toml:13
+          decl_suffix("release-cp313", 0, [["native.opt", "release"], [["native.sanitize", "none"], [["python.interpreter", "cp313"], nil]]])  [buildlog:L1_targets.dl:82]
+            decl_suffix("release-cp313", 1, [["native.sanitize", "none"], [["python.interpreter", "cp313"], nil]])  [buildlog:L1_targets.dl:82]
+              decl_suffix("release-cp313", 2, [["python.interpreter", "cp313"], nil])  [buildlog:L1_targets.dl:82]
+                ↑ config_decl("release-cp313", "arm64-macos")  (#n8)  (via decl_suffix)
+                setting_key("python.interpreter", 2)  ← case-studies/nanobind/plugins/buildlog-python/src/buildlog_python/layers/L4_python.dl:38
+                decl_value("release-cp313", "python.interpreter", "cp313")  [buildlog:L1_targets.dl:69]
+                  config_decl_setting("release-cp313", "python.interpreter", "cp313")  ← case-studies/nanobind/project/presets/interpreters.toml:16
+                  #n20 python_interpreter("cp313", "$NANOBIND_VENVS/venv313/bin/python")  ← case-studies/nanobind/project/presets/interpreters.toml:10  (via setting_value)
+                3 > 0
+                2 = 2
+              decl_value("release-cp313", "native.sanitize", "none")  [buildlog:L1_targets.dl:70]
+                ↑ config_decl("release-cp313", "arm64-macos")  (#n8)
+                !decl_has("release-cp313", "native.sanitize")
+              2 > 0
+              #n28 1 = 1
+            config_decl_setting("release-cp313", "native.opt", "release")  ← case-studies/nanobind/project/presets/interpreters.toml:15  (via decl_value)
+            1 > 0
+            #n34 0 = 0
+        platform("arm64-macos", "arm64-apple-macos13")  [buildlog-cpp:layers/L2_toolchains.dl:24]
+          res_platform("inventory:default", "arm64-macos", "arm64-apple-macos13")  ← probe inventory request "inventory:default"
+          req_inventory("inventory:default")  [asked: probe inventory request; --demand explains why]
+      settings_name([["native.opt", "release"], [["native.sanitize", "none"], [["python.interpreter", "cp313"], nil]]], ".release.none.cp313")  [buildlog:L1_targets.dl:143]
+        ↑ config(‹arm64-macos.release.none.cp313›)  (#n35)  (via settings_suffix)
+        settings_name([["native.sanitize", "none"], [["python.interpreter", "cp313"], nil]], ".none.cp313")  [buildlog:L1_targets.dl:143]
+          ↑ config(‹arm64-macos.release.none.cp313›)  (#n35)  (via settings_suffix ← settings_suffix)
+  use("nanobind_example_ext", ‹arm64-macos.release.none.cp313›, "cc.define", "Py_LIMITED_API=0x030C0000", 1)  [buildlog:L1_targets.dl:418]
+    use_cand("nanobind_example_ext", ‹arm64-macos.release.none.cp313›, "cc.define", "Py_LIMITED_API=0x030C0000", 1)  [buildlog:L1_targets.dl:403]
+      eff_dep("nanobind_example_ext", ‹arm64-macos.release.none.cp313›, "nanobind::nanobind-static", "private")  [buildlog:L1_targets.dl:289]
+        eff_ref("nanobind_example_ext", ‹arm64-macos.release.none.cp313›, "nanobind::nanobind-static", "private")  [buildlog:L1_targets.dl:287]
+          ↑ needed("nanobind_example_ext", ‹arm64-macos.release.none.cp313›)  (#n2)
+          #n55 nanobind_module("nanobind_example_ext")  ← case-studies/nanobind/project/spec.toml:10  (via dep)
+        dep_resolves("nanobind_example_ext", "nanobind::nanobind-static", "nanobind::nanobind-static")  [buildlog:L1_targets.dl:372]
+          ↑ nanobind_module("nanobind_example_ext")  (#n55)  (via dep_ref ← dep)
+          !has_own("nanobind_example_ext", "nanobind::nanobind-static")
+          target("nanobind::nanobind-static")  ← case-studies/nanobind/share/buildlog/nanobind/L5_nanobind.dl:35  (via name_candidate ← target_id)
+          ↑ 1 = 1  (#n28)
+      iface("nanobind::nanobind-static", ‹arm64-macos.release.none.cp313›, "cc.define", "Py_LIMITED_API=0x030C0000")  [buildlog:L1_targets.dl:397]
+        eff_dep("nanobind::nanobind-static", ‹arm64-macos.release.none.cp313›, "Python::Headers", "public")  [buildlog:L1_targets.dl:289]
+          eff_ref("nanobind::nanobind-static", ‹arm64-macos.release.none.cp313›, "Python::Headers", "public")  [buildlog:L1_targets.dl:287]
+            needed("nanobind::nanobind-static", ‹arm64-macos.release.none.cp313›)  [exists here because it is built in this configuration; --demand explains why]
+            #n67 dep("nanobind::nanobind-static", "Python::Headers", "public")  ← case-studies/nanobind/share/buildlog/nanobind/L5_nanobind.dl:38
+          dep_resolves("nanobind::nanobind-static", "Python::Headers", "Python::Headers")  [buildlog:L1_targets.dl:372]
+            ↑ dep("nanobind::nanobind-static", "Python::Headers", "public")  (#n67)  (via dep_ref)
+            !has_own("nanobind::nanobind-static", "Python::Headers")
+            target("Python::Headers")  ← case-studies/nanobind/plugins/buildlog-python/src/buildlog_python/layers/L4_python.dl:149  (via name_candidate ← target_id)
+            ↑ 1 = 1  (#n28)
+        eff_prop("Python::Headers", ‹arm64-macos.release.none.cp313›, "cc.define", "Py_LIMITED_API=0x030C0000", "interface")  [buildlog:L1_targets.dl:385]  (via iface)
+          #n77 needed("Python::Headers", ‹arm64-macos.release.none.cp313›)  [exists here because it is built in this configuration; --demand explains why]
+          prop_in("Python::Headers", ‹arm64-macos.release.none.cp313›, "cc.define", "Py_LIMITED_API=0x030C0000", "interface")  [buildlog-python:layers/L4_python.dl:153]
+            python_limited_api(‹arm64-macos.release.none.cp313›, "3.12", "0x030C0000")  [buildlog-python:layers/L4_python.dl:124]
+              python_py_api_minor(12)  [buildlog-python:layers/L4_python.dl:111]
+                python_py_api("cp312")  ← case-studies/nanobind/project/spec.toml:16
+                match("cp3[0-9]+", "cp312")  ← aggregate case-studies/nanobind/plugins/buildlog-python/src/buildlog_python/layers/L4_python.dl:111
+              python_info(‹arm64-macos.release.none.cp313›, "implementation", "cpython")  [buildlog-python:layers/L4_python.dl:62]
+                #n84 python_cfg(‹arm64-macos.release.none.cp313›, "cp313", "$NANOBIND_VENVS/venv313/bin/python")  [buildlog-python:layers/L4_python.dl:50]
+                  ↑ config(‹arm64-macos.release.none.cp313›)  (#n35)  (via config_setting ← cfg_suffix ← cfg_suffix ← cfg_suffix)
+                  ↑ python_interpreter("cp313", "$NANOBIND_VENVS/venv313/bin/python")  (#n20)
+                #n89 req_python_interp("python:$NANOBIND_VENVS/venv313/bin/python", "$NANOBIND_VENVS/venv313/bin/python")  [asked: probe python_interp request; --demand explains why]
+                res_python_interp("python:$NANOBIND_VENVS/venv313/bin/python", "implementation", "cpython")  ← probe python_interp request "python:$NANOBIND_VENVS/venv313/bin/python"("$NANOBIND_VENVS/venv313/bin/python")
+              python_info(‹arm64-macos.release.none.cp313›, "gil_disabled", "no")  [buildlog-python:layers/L4_python.dl:62]
+                ↑ python_cfg(‹arm64-macos.release.none.cp313›, "cp313", "$NANOBIND_VENVS/venv313/bin/python")  (#n84)
+                ↑ req_python_interp("python:$NANOBIND_VENVS/venv313/bin/python", "$NANOBIND_VENVS/venv313/bin/python")  (#n89)
+                res_python_interp("python:$NANOBIND_VENVS/venv313/bin/python", "gil_disabled", "no")  ← probe python_interp request "python:$NANOBIND_VENVS/venv313/bin/python"("$NANOBIND_VENVS/venv313/bin/python")
+              python_info(‹arm64-macos.release.none.cp313›, "version_minor", "13")  [buildlog-python:layers/L4_python.dl:62]
+                ↑ python_cfg(‹arm64-macos.release.none.cp313›, "cp313", "$NANOBIND_VENVS/venv313/bin/python")  (#n84)
+                ↑ req_python_interp("python:$NANOBIND_VENVS/venv313/bin/python", "$NANOBIND_VENVS/venv313/bin/python")  (#n89)
+                res_python_interp("python:$NANOBIND_VENVS/venv313/bin/python", "version_minor", "13")  ← probe python_interp request "python:$NANOBIND_VENVS/venv313/bin/python"("$NANOBIND_VENVS/venv313/bin/python")
+              python_abi3_suffix(‹arm64-macos.release.none.cp313›, ".abi3.so")  [buildlog-python:layers/L4_python.dl:117]
+                python_info(‹arm64-macos.release.none.cp313›, "abi3_suffix", ".abi3.so")  [buildlog-python:layers/L4_python.dl:62]
+                  ↑ python_cfg(‹arm64-macos.release.none.cp313›, "cp313", "$NANOBIND_VENVS/venv313/bin/python")  (#n84)
+                  ↑ req_python_interp("python:$NANOBIND_VENVS/venv313/bin/python", "$NANOBIND_VENVS/venv313/bin/python")  (#n89)
+                  res_python_interp("python:$NANOBIND_VENVS/venv313/bin/python", "abi3_suffix", ".abi3.so")  ← probe python_interp request "python:$NANOBIND_VENVS/venv313/bin/python"("$NANOBIND_VENVS/venv313/bin/python")
+                ".abi3.so" != "none"
+              python_hex_digit(0, "0")  ← case-studies/nanobind/plugins/buildlog-python/src/buildlog_python/layers/L4_python.dl:121
+              python_hex_digit(12, "C")  ← case-studies/nanobind/plugins/buildlog-python/src/buildlog_python/layers/L4_python.dl:121
+              13 >= 12
+              ↑ 0 = 0  (#n34)
+              12 = 12
+            ↑ needed("Python::Headers", ‹arm64-macos.release.none.cp313›)  (#n77)
+    ↑ 1 = 1  (#n28)
+
+legend:
+  ‹arm64-macos.release.none.cp313› = ["arm64-macos", [["native.opt", "release"], [["native.sanitize", "none"], [["python.interpreter", "cp313"], nil]]]]

@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# macOS
+.DS_Store
+
+# Regenerable build products
+build/
+buildlog-build/
+examples/*/build/
+examples/*/check-build/
+tests/.work/
+
+# Ninja snapshots and timing scratch (scripts/ninja_snapshot.py)
+.snap/
+
+# Private timing scratch
+.timing-work/
+
+# IDEs
+.idea
+.vs
+linux/.ported
+env.local.sh

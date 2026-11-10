@@ -1,0 +1,7 @@
+# Rejected: derives a target from the needed closure. defined reads target
+# and fails reads !defined, so this closes a cycle through negation.
+name = "target-from-needed"
+version = "0.1.0"
+rank = 1
+layers = ["target_from_needed.dl"]
+extends = ["target"]

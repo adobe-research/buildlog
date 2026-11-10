@@ -1,0 +1,199 @@
+# Scope map for the Halide case study (M3, phase 0 baseline).
+#
+# normalize.py tags every build edge with a case-study phase (1-8) or marks it
+# excluded, using the rules below. Rules are tried in order and the first match
+# wins. Every key of a rule except `phase`/`exclude`/`why` is a condition, and all
+# conditions of a rule must hold:
+#
+#   target      fnmatch glob on the CMake target name (File API)
+#   dir         fnmatch glob on the target's CMake source directory ("." is the top)
+#   kind        record kind (compile, pch, link, archive, symlink, custom, copy, ...)
+#   tool        fnmatch glob on the basename of the command's main program
+#   output      fnmatch glob on any normalized output ("$BUILD/src/Foo.o")
+#   sampled     true: the target is in the dependency closure of a sampled test
+#   no_target   true: the record has no CMake target
+#
+# A rule sets `phase = N` or `exclude = "reason"`. Records that match no rule are
+# excluded with reason "unmapped" (normalize.py reports how many).
+
+[phases]
+1 = "libHalide core"
+2 = "generated sources and host tools"
+3 = "runtime / initmod"
+4 = "tools and autoschedulers"
+5 = "serialization"
+6 = "tests (sample)"
+7 = "variants"
+8 = "install"
+
+# ---------------------------------------------------------------------------
+# Test sample. ctest names; `targets` overrides the ctest-name -> executable target
+# mapping when they differ. Rationale per test is in scope.md.
+
+[tests]
+correctness = [
+  "correctness_bounds",
+  "correctness_plain_c_includes",
+  "correctness_image_io",
+  "correctness_gpu_allocation_cache",
+  "correctness_spirv_ir",
+  "correctness_x86_cpu_detect",
+  "correctness_extern_stage",
+  "correctness_serialization",
+  "correctness_generator_cache",
+  "correctness_auto_schedule_no_parallel",
+  "correctness_simd_op_check_arm",
+  "correctness_codegen_c",
+  "correctness_stmt_to_html",
+  "correctness_compile_to_multitarget",
+  "correctness_embed_bitcode",
+  "correctness_cross_compilation",
+  "correctness_callable_generator",
+  "correctness_custom_auto_scheduler",
+  "correctness_bad_schedule",
+  "correctness_multi_gpu_gpu_multi_device",
+]
+generator = [
+  "generator_aot_multitarget_0",
+  "generator_aot_multitarget_1",
+  "generator_aotcpp_example",
+  "generator_aot_runtime_prefixes_iso",
+  "generator_aot_cxx_mangling_define_extern",
+  "generator_aot_user_context",
+  "generator_aot_stubuser",
+  "generator_aot_alias",
+  "generator_aot_autograd",
+  "generator_aot_metadata_tester",
+  "rungen_test",
+  # RunGenMain (an INTERFACE library compiled into each consumer) plus the Adams2019
+  # plugin with its self-hosted cost model, run at build time via AUTOSCHEDULER.
+  "adams2019_demo_apps_autoscheduler",
+]
+
+[tests.targets]
+# ctest name = executable target (only where they differ)
+
+# ---------------------------------------------------------------------------
+# Rules, first match wins.
+
+# Out of scope by the case-study definition.
+[[rule]]
+dir = "python_bindings*"
+exclude = "python bindings (out of scope)"
+
+[[rule]]
+dir = "apps*"
+exclude = "apps/ (out of scope)"
+
+[[rule]]
+dir = "tutorial*"
+exclude = "tutorials (not in scope list)"
+
+[[rule]]
+dir = "util*"
+exclude = "util/ (HalideTraceViz/Dump; not in scope list)"
+
+# CMake housekeeping that no buildlog graph has an analogue for.
+[[rule]]
+kind = "meta"
+exclude = "CMake housekeeping (cpack/ctest/ccmake/rebuild_cache/help/clean)"
+
+[[rule]]
+target = "{edit_cache,rebuild_cache,package,package_source,test}"
+no_target = false
+exclude = "CMake housekeeping (cpack/ctest/ccmake/rebuild_cache/help/clean)"
+
+[[rule]]
+kind = "regen"
+exclude = "CMake regeneration edge (compared separately)"
+
+[[rule]]
+target = "{acc_gen,omp_gen,vt_gen,target_parser_gen,intrinsics_gen,clang-tablegen-targets}"
+exclude = "LLVM-exported utility target (empty phony)"
+
+# Install (phase 8): per-directory install/strip/local edges of in-scope dirs.
+[[rule]]
+kind = "install"
+dir = "{.,src,src/*,tools,packaging}"
+phase = 8
+
+[[rule]]
+kind = "install"
+exclude = "install edge of an out-of-scope directory"
+
+[[rule]]
+target = "{install,install/local,install/strip,list_install_components}"
+dir = "{.,src,src/*,tools,packaging}"
+phase = 8
+
+# Tests (phase 6): the dependency closure of the sampled tests, within test/.
+[[rule]]
+dir = "test*"
+sampled = true
+phase = 6
+
+[[rule]]
+dir = "test*"
+exclude = "test not in the sample"
+
+# Serialization (phase 5).
+[[rule]]
+target = "generate_fb_header"
+phase = 5
+
+[[rule]]
+tool = "flatc"
+phase = 5
+
+[[rule]]
+target = "Halide"
+output = "*/{Serialization,Deserialization}.cpp.o"
+phase = 5
+
+# Runtime / initmod (phase 3): clang -emit-llvm, llvm-as, the .ll copies, binary2cpp
+# of the bitcode, and compiling the resulting _initmod_*.cpp.
+[[rule]]
+target = "Halide_initmod"
+phase = 3
+
+[[rule]]
+dir = "src/runtime"
+phase = 3
+
+# Generated sources and host tools (phase 2).
+[[rule]]
+target = "{binary2cpp,build_halide_h,regexp_replace,HalideIncludes}"
+phase = 2
+
+[[rule]]
+target = "Halide"
+kind = "{custom,copy}"
+phase = 2
+
+[[rule]]
+target = "Halide"
+output = "*/{c_template,html_template}.*.cpp.o"
+phase = 2
+
+# libHalide core (phase 1).
+[[rule]]
+target = "Halide"
+phase = 1
+
+# Tools and autoschedulers (phase 4).
+[[rule]]
+dir = "tools"
+phase = 4
+
+[[rule]]
+dir = "src/autoschedulers*"
+phase = 4
+
+[[rule]]
+target = "{all,src/all,tools/all}"
+exclude = "aggregate 'all' phony"
+
+[[rule]]
+kind = "phony"
+no_target = true
+exclude = "phony edge with no CMake target"

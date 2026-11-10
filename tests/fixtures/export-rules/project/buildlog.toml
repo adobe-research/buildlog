@@ -1,0 +1,5 @@
+# A DSL library that ships its generator rules with its install
+# (tests/test_export_buildlog.py): minidsl's `rt` is a header-only runtime,
+# and packages/minidsl is the rule package its install carries (export_rules).
+uses = ["buildlog-cpp"]
+spec = ["spec.toml"]

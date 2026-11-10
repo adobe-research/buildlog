@@ -1,0 +1,5 @@
+# A header-only package with one library-directory file, configured for a
+# Linux platform (tests/test_install_layout.py). Found with --package-path
+# tests/fixtures/layout.
+uses = ["buildlog-cpp", "test-linux"]
+spec = ["spec.toml"]

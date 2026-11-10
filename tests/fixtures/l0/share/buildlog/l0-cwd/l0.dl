@@ -1,0 +1,13 @@
+action("out:a", "STEP").
+action_arg("out:a", 0, "", "/bin/step").
+action_cwd("out:a", "out:x").
+action_cwd("out:a", "out:y").
+action("out:b", "STEP").
+action_arg("out:b", 0, "", "/bin/step").
+action_cwd("out:b", "/tmp").
+action_depfile("out:b", "out:b.d").
+action("out:c", "COPY").
+action_builtin("out:c", "copy").
+action_builtin("out:c", "frobnicate").
+action_arg("out:c", 0, "", "/bin/cp").
+action_restat("out:nothing").

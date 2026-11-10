@@ -1,0 +1,14 @@
+===== arm64
+_adler32_fold_copy_neon
+_adler32_neon
+_arm_check_features
+_chunkmemset_safe_neon
+_compare256_neon
+_cpu_check_features
+_crc32_armv8
+_crc32_fold_armv8
+_crc32_fold_copy_armv8
+_inflate_fast_neon
+_longest_match_neon
+_longest_match_slow_neon
+_slide_hash_neon

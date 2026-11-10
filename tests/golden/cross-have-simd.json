@@ -1,0 +1,1753 @@
+{
+  "format": "buildlog-proof",
+  "nodes": {
+    "n0": {
+      "children": [
+        "n1",
+        "n70"
+      ],
+      "id": "n0",
+      "kind": "derived",
+      "relation": "action_arg",
+      "rule": "buildlog-cpp:layers/L4_cxx.dl:37",
+      "text": "action_arg(\"out:obj/x86_64-macos.release.none/app/app/main.cpp.o\", 21, \"-D\", \"HAVE_SIMD=1\")",
+      "tuple": [
+        "out:obj/x86_64-macos.release.none/app/app/main.cpp.o",
+        21,
+        "-D",
+        "HAVE_SIMD=1"
+      ]
+    },
+    "n1": {
+      "children": [
+        "n2",
+        "n51"
+      ],
+      "id": "n1",
+      "kind": "derived",
+      "relation": "buildlog_cpp__cxx_object",
+      "rule": "buildlog-cpp:layers/L4_cxx.dl:26",
+      "text": "cxx_object(\"app\", [\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], \"app/main.cpp\", \"out:obj/x86_64-macos.release.none/app/app/main.cpp.o\")",
+      "tuple": [
+        "app",
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "app/main.cpp",
+        "out:obj/x86_64-macos.release.none/app/app/main.cpp.o"
+      ]
+    },
+    "n2": {
+      "children": [
+        "n3",
+        "n51",
+        "n52"
+      ],
+      "id": "n2",
+      "kind": "derived",
+      "relation": "src_on",
+      "rule": "buildlog-cpp:layers/L4_cxx.dl:213",
+      "text": "src_on(\"app\", [\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], \"app/main.cpp\")",
+      "tuple": [
+        "app",
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "app/main.cpp"
+      ]
+    },
+    "n3": {
+      "children": [],
+      "demand_pruned": true,
+      "id": "n3",
+      "kind": "derived",
+      "relation": "needed",
+      "rule": "buildlog:L1_targets.dl:605",
+      "text": "needed(\"app\", [\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]])",
+      "tuple": [
+        "app",
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "n51": {
+      "children": [],
+      "id": "n51",
+      "kind": "fact",
+      "origins": [
+        {
+          "file": "<ROOT>/examples/cross/spec.toml",
+          "kind": "spec",
+          "line": 25
+        }
+      ],
+      "relation": "cxx_source",
+      "text": "cxx_source(\"app\", \"app/main.cpp\")",
+      "tuple": [
+        "app",
+        "app/main.cpp"
+      ]
+    },
+    "n52": {
+      "children": [],
+      "id": "n52",
+      "kind": "negation",
+      "relation": "buildlog_cpp__src_grouped",
+      "text": "!src_grouped(\"app\", \"app/main.cpp\")",
+      "tuple": [
+        "app",
+        "app/main.cpp"
+      ]
+    },
+    "n70": {
+      "children": [
+        "n71"
+      ],
+      "id": "n70",
+      "kind": "derived",
+      "relation": "use",
+      "rule": "buildlog:L1_targets.dl:773",
+      "text": "use(\"app\", [\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], \"cc.define\", \"HAVE_SIMD=1\", 1)",
+      "tuple": [
+        "app",
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "cc.define",
+        "HAVE_SIMD=1",
+        1
+      ]
+    },
+    "n71": {
+      "children": [
+        "n72",
+        "n93"
+      ],
+      "id": "n71",
+      "kind": "derived",
+      "relation": "buildlog__use_cand",
+      "rule": "buildlog:L1_targets.dl:758",
+      "text": "use_cand(\"app\", [\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], \"cc.define\", \"HAVE_SIMD=1\", 1)",
+      "tuple": [
+        "app",
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "cc.define",
+        "HAVE_SIMD=1",
+        1
+      ],
+      "via": {
+        "n93": [
+          "n92"
+        ]
+      }
+    },
+    "n72": {
+      "children": [
+        "n73",
+        "n84"
+      ],
+      "id": "n72",
+      "kind": "derived",
+      "relation": "eff_dep",
+      "rule": "buildlog:L1_targets.dl:612",
+      "text": "eff_dep(\"app\", [\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], \"simd\", \"private\")",
+      "tuple": [
+        "app",
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "simd",
+        "private"
+      ],
+      "via": {
+        "n84": [
+          "n83"
+        ]
+      }
+    },
+    "n73": {
+      "children": [
+        "n3",
+        "n74",
+        "n75"
+      ],
+      "id": "n73",
+      "kind": "derived",
+      "relation": "buildlog__eff_ref",
+      "rule": "buildlog:L1_targets.dl:611",
+      "text": "eff_ref(\"app\", [\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], \"simd\", \"private\")",
+      "tuple": [
+        "app",
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "simd",
+        "private"
+      ]
+    },
+    "n74": {
+      "children": [],
+      "id": "n74",
+      "kind": "fact",
+      "origins": [
+        {
+          "file": "<ROOT>/examples/cross/spec.toml",
+          "kind": "spec",
+          "line": 43
+        }
+      ],
+      "relation": "dep_when",
+      "text": "dep_when(\"app\", \"simd\", \"private\", \"is_x86\")",
+      "tuple": [
+        "app",
+        "simd",
+        "private",
+        "is_x86"
+      ]
+    },
+    "n75": {
+      "children": [
+        "n76",
+        "n77"
+      ],
+      "id": "n75",
+      "kind": "derived",
+      "relation": "cond_holds",
+      "rule": "buildlog:L1_targets.dl:397",
+      "text": "cond_holds([\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], \"is_x86\")",
+      "tuple": [
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "is_x86"
+      ]
+    },
+    "n76": {
+      "children": [],
+      "id": "n76",
+      "kind": "fact",
+      "origins": [
+        {
+          "file": "<ROOT>/examples/cross/spec.toml",
+          "kind": "spec",
+          "line": 2
+        }
+      ],
+      "relation": "condition",
+      "text": "condition(\"is_x86\", $Eq(\"platform.cpu\", \"x86_64\"))",
+      "tuple": [
+        "is_x86",
+        {
+          "adt": "Eq",
+          "args": [
+            "platform.cpu",
+            "x86_64"
+          ]
+        }
+      ]
+    },
+    "n77": {
+      "children": [
+        "n79"
+      ],
+      "id": "n77",
+      "kind": "derived",
+      "relation": "buildlog__holds",
+      "rule": "buildlog:L1_targets.dl:302",
+      "text": "holds([\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], $Eq(\"platform.cpu\", \"x86_64\"))",
+      "tuple": [
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "adt": "Eq",
+          "args": [
+            "platform.cpu",
+            "x86_64"
+          ]
+        }
+      ]
+    },
+    "n79": {
+      "children": [
+        "n81"
+      ],
+      "id": "n79",
+      "kind": "derived",
+      "relation": "config_attr",
+      "rule": "buildlog:L1_targets.dl:241",
+      "text": "config_attr([\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], \"platform.cpu\", \"x86_64\")",
+      "tuple": [
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "platform.cpu",
+        "x86_64"
+      ]
+    },
+    "n81": {
+      "children": [
+        "n82"
+      ],
+      "id": "n81",
+      "kind": "derived",
+      "relation": "platform_constraint",
+      "rule": "buildlog-cpp:layers/L2_toolchains.dl:31",
+      "text": "platform_constraint(\"x86_64-macos\", \"cpu\", \"x86_64\")",
+      "tuple": [
+        "x86_64-macos",
+        "cpu",
+        "x86_64"
+      ]
+    },
+    "n82": {
+      "children": [],
+      "id": "n82",
+      "kind": "fact",
+      "origins": [
+        {
+          "entry": "buildlog_cpp.probes:inventory",
+          "kind": "probe",
+          "package": "buildlog-cpp",
+          "probe": "inventory",
+          "request": "inventory:default",
+          "request_args": [],
+          "request_relation": "req_inventory"
+        }
+      ],
+      "relation": "res_platform_constraint",
+      "text": "res_platform_constraint(\"inventory:default\", \"x86_64-macos\", \"cpu\", \"x86_64\")",
+      "tuple": [
+        "inventory:default",
+        "x86_64-macos",
+        "cpu",
+        "x86_64"
+      ]
+    },
+    "n83": {
+      "collapsed": true,
+      "id": "n83",
+      "kind": "derived",
+      "relation": "dep_resolves",
+      "rule": "buildlog:L1_targets.dl:726",
+      "text": "dep_resolves(\"app\", \"simd\", \"simd\")",
+      "tuple": [
+        "app",
+        "simd",
+        "simd"
+      ]
+    },
+    "n84": {
+      "children": [
+        "n74",
+        "n86",
+        "n88",
+        "n89"
+      ],
+      "id": "n84",
+      "kind": "derived",
+      "relation": "buildlog__own_ref",
+      "rule": "buildlog:L1_targets.dl:722",
+      "text": "own_ref(\"app\", \"simd\", \"simd\")",
+      "tuple": [
+        "app",
+        "simd",
+        "simd"
+      ],
+      "via": {
+        "n74": [
+          "n85"
+        ],
+        "n88": [
+          "n87"
+        ]
+      }
+    },
+    "n85": {
+      "collapsed": true,
+      "id": "n85",
+      "kind": "derived",
+      "relation": "buildlog__dep_ref",
+      "rule": "buildlog:L1_targets.dl:715",
+      "text": "dep_ref(\"app\", \"simd\")",
+      "tuple": [
+        "app",
+        "simd"
+      ]
+    },
+    "n86": {
+      "children": [],
+      "id": "n86",
+      "kind": "negation",
+      "relation": "buildlog__scoped",
+      "text": "!scoped(\"app\")",
+      "tuple": [
+        "app"
+      ]
+    },
+    "n87": {
+      "collapsed": true,
+      "id": "n87",
+      "kind": "derived",
+      "relation": "target_id",
+      "rule": "buildlog:L1_targets.dl:299",
+      "text": "target_id(\"simd\")",
+      "tuple": [
+        "simd"
+      ]
+    },
+    "n88": {
+      "children": [],
+      "id": "n88",
+      "kind": "fact",
+      "origins": [
+        {
+          "file": "<ROOT>/examples/cross/spec.toml",
+          "kind": "spec",
+          "line": 93
+        }
+      ],
+      "relation": "target",
+      "text": "target(\"simd\")",
+      "tuple": [
+        "simd"
+      ]
+    },
+    "n89": {
+      "children": [],
+      "id": "n89",
+      "kind": "negation",
+      "relation": "buildlog__scoped",
+      "text": "!scoped(\"simd\")",
+      "tuple": [
+        "simd"
+      ]
+    },
+    "n92": {
+      "collapsed": true,
+      "id": "n92",
+      "kind": "derived",
+      "relation": "iface",
+      "rule": "buildlog:L1_targets.dl:748",
+      "text": "iface(\"simd\", [\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], \"cc.define\", \"HAVE_SIMD=1\")",
+      "tuple": [
+        "simd",
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "cc.define",
+        "HAVE_SIMD=1"
+      ]
+    },
+    "n93": {
+      "children": [
+        "n94",
+        "n95"
+      ],
+      "id": "n93",
+      "kind": "derived",
+      "relation": "eff_prop",
+      "rule": "buildlog:L1_targets.dl:734",
+      "text": "eff_prop(\"simd\", [\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]], \"cc.define\", \"HAVE_SIMD=1\", \"public\")",
+      "tuple": [
+        "simd",
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "cc.define",
+        "HAVE_SIMD=1",
+        "public"
+      ]
+    },
+    "n94": {
+      "children": [],
+      "demand_pruned": true,
+      "id": "n94",
+      "kind": "derived",
+      "relation": "needed",
+      "rule": "buildlog:L1_targets.dl:618",
+      "text": "needed(\"simd\", [\"x86_64-macos\", [[\"native.opt\", \"release\"], [[\"native.sanitize\", \"none\"], [[\"native.linkage\", \"default\"], nil]]]])",
+      "tuple": [
+        "simd",
+        {
+          "record": [
+            "x86_64-macos",
+            {
+              "record": [
+                {
+                  "record": [
+                    "native.opt",
+                    "release"
+                  ]
+                },
+                {
+                  "record": [
+                    {
+                      "record": [
+                        "native.sanitize",
+                        "none"
+                      ]
+                    },
+                    {
+                      "record": [
+                        {
+                          "record": [
+                            "native.linkage",
+                            "default"
+                          ]
+                        },
+                        {
+                          "nil": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "n95": {
+      "children": [],
+      "id": "n95",
+      "kind": "fact",
+      "origins": [
+        {
+          "file": "<ROOT>/examples/cross/spec.toml",
+          "kind": "spec",
+          "line": 66
+        }
+      ],
+      "relation": "prop",
+      "text": "prop(\"simd\", \"cc.define\", \"HAVE_SIMD=1\", \"public\")",
+      "tuple": [
+        "simd",
+        "cc.define",
+        "HAVE_SIMD=1",
+        "public"
+      ]
+    }
+  },
+  "queries": [
+    "action_arg(\"out:obj/x86_64-macos.release.none/app/app/main.cpp.o\", 21, \"-D\", \"HAVE_SIMD=1\")"
+  ],
+  "relations": {
+    "action_arg": {
+      "attributes": [
+        {
+          "name": "a",
+          "type": "symbol"
+        },
+        {
+          "name": "rank",
+          "type": "number"
+        },
+        {
+          "name": "prefix",
+          "type": "symbol"
+        },
+        {
+          "name": "value",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L0_actions.dl",
+        "line": 14
+      },
+      "input": false,
+      "name": "action_arg",
+      "package": "buildlog"
+    },
+    "buildlog__dep_ref": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "d",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 713
+      },
+      "input": false,
+      "name": "dep_ref",
+      "package": "buildlog"
+    },
+    "buildlog__eff_ref": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "c",
+          "type": "Cfg"
+        },
+        {
+          "name": "d",
+          "type": "symbol"
+        },
+        {
+          "name": "vis",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 609
+      },
+      "input": false,
+      "name": "eff_ref",
+      "package": "buildlog"
+    },
+    "buildlog__holds": {
+      "attributes": [
+        {
+          "name": "c",
+          "type": "Cfg"
+        },
+        {
+          "name": "e",
+          "type": "Cond"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 273
+      },
+      "input": false,
+      "name": "holds",
+      "package": "buildlog"
+    },
+    "buildlog__own_ref": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "d",
+          "type": "symbol"
+        },
+        {
+          "name": "id",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 720
+      },
+      "input": false,
+      "name": "own_ref",
+      "package": "buildlog"
+    },
+    "buildlog__scoped": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 673
+      },
+      "input": false,
+      "name": "scoped",
+      "package": "buildlog"
+    },
+    "buildlog__use_cand": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "c",
+          "type": "Cfg"
+        },
+        {
+          "name": "key",
+          "type": "symbol"
+        },
+        {
+          "name": "value",
+          "type": "symbol"
+        },
+        {
+          "name": "rank",
+          "type": "number"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 756
+      },
+      "input": false,
+      "name": "use_cand",
+      "package": "buildlog"
+    },
+    "buildlog_cpp__cxx_object": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "c",
+          "type": "Cfg"
+        },
+        {
+          "name": "src",
+          "type": "symbol"
+        },
+        {
+          "name": "obj",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/plugins/buildlog-cpp/src/buildlog_cpp/layers/L4_cxx.dl",
+        "line": 25
+      },
+      "input": false,
+      "name": "cxx_object",
+      "package": "buildlog-cpp"
+    },
+    "buildlog_cpp__src_grouped": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "src",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/plugins/buildlog-cpp/src/buildlog_cpp/layers/L4_cxx.dl",
+        "line": 209
+      },
+      "input": false,
+      "name": "src_grouped",
+      "package": "buildlog-cpp"
+    },
+    "cond_holds": {
+      "attributes": [
+        {
+          "name": "c",
+          "type": "Cfg"
+        },
+        {
+          "name": "cond",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 396
+      },
+      "input": false,
+      "name": "cond_holds",
+      "package": "buildlog"
+    },
+    "condition": {
+      "attributes": [
+        {
+          "name": "cond",
+          "type": "symbol"
+        },
+        {
+          "name": "e",
+          "type": "Cond"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 263
+      },
+      "input": true,
+      "name": "condition",
+      "package": "buildlog"
+    },
+    "config_attr": {
+      "attributes": [
+        {
+          "name": "c",
+          "type": "Cfg"
+        },
+        {
+          "name": "key",
+          "type": "symbol"
+        },
+        {
+          "name": "value",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 239
+      },
+      "input": false,
+      "name": "config_attr",
+      "package": "buildlog"
+    },
+    "cxx_source": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "src",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/plugins/buildlog-cpp/src/buildlog_cpp/layers/L4_cxx.dl",
+        "line": 7
+      },
+      "input": true,
+      "name": "cxx_source",
+      "package": "buildlog-cpp"
+    },
+    "dep_resolves": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "d",
+          "type": "symbol"
+        },
+        {
+          "name": "id",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 725
+      },
+      "input": false,
+      "name": "dep_resolves",
+      "package": "buildlog"
+    },
+    "dep_when": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "d",
+          "type": "symbol"
+        },
+        {
+          "name": "vis",
+          "type": "symbol"
+        },
+        {
+          "name": "cond",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 23
+      },
+      "input": true,
+      "name": "dep_when",
+      "package": "buildlog"
+    },
+    "eff_dep": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "c",
+          "type": "Cfg"
+        },
+        {
+          "name": "d",
+          "type": "symbol"
+        },
+        {
+          "name": "vis",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 604
+      },
+      "input": false,
+      "name": "eff_dep",
+      "package": "buildlog"
+    },
+    "eff_prop": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "c",
+          "type": "Cfg"
+        },
+        {
+          "name": "key",
+          "type": "symbol"
+        },
+        {
+          "name": "value",
+          "type": "symbol"
+        },
+        {
+          "name": "vis",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 733
+      },
+      "input": false,
+      "name": "eff_prop",
+      "package": "buildlog"
+    },
+    "iface": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "c",
+          "type": "Cfg"
+        },
+        {
+          "name": "key",
+          "type": "symbol"
+        },
+        {
+          "name": "value",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 747
+      },
+      "input": false,
+      "name": "iface",
+      "package": "buildlog"
+    },
+    "needed": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "c",
+          "type": "Cfg"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 603
+      },
+      "demand": "target",
+      "input": false,
+      "name": "needed",
+      "package": "buildlog"
+    },
+    "platform_constraint": {
+      "attributes": [
+        {
+          "name": "p",
+          "type": "symbol"
+        },
+        {
+          "name": "key",
+          "type": "symbol"
+        },
+        {
+          "name": "value",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 48
+      },
+      "input": false,
+      "name": "platform_constraint",
+      "package": "buildlog"
+    },
+    "prop": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "key",
+          "type": "symbol"
+        },
+        {
+          "name": "value",
+          "type": "symbol"
+        },
+        {
+          "name": "vis",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 37
+      },
+      "input": true,
+      "name": "prop",
+      "package": "buildlog"
+    },
+    "res_platform_constraint": {
+      "attributes": [
+        {
+          "name": "req",
+          "type": "symbol"
+        },
+        {
+          "name": "p",
+          "type": "symbol"
+        },
+        {
+          "name": "key",
+          "type": "symbol"
+        },
+        {
+          "name": "value",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/plugins/buildlog-cpp/src/buildlog_cpp/layers/L2_toolchains.dl",
+        "line": 23
+      },
+      "input": true,
+      "name": "res_platform_constraint",
+      "package": "buildlog-cpp",
+      "probe": "inventory"
+    },
+    "src_on": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "c",
+          "type": "Cfg"
+        },
+        {
+          "name": "src",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/plugins/buildlog-cpp/src/buildlog_cpp/layers/L4_cxx.dl",
+        "line": 211
+      },
+      "input": false,
+      "name": "src_on",
+      "package": "buildlog-cpp"
+    },
+    "target": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 8
+      },
+      "input": true,
+      "name": "target",
+      "package": "buildlog"
+    },
+    "target_id": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 297
+      },
+      "input": false,
+      "name": "target_id",
+      "package": "buildlog"
+    },
+    "use": {
+      "attributes": [
+        {
+          "name": "t",
+          "type": "symbol"
+        },
+        {
+          "name": "c",
+          "type": "Cfg"
+        },
+        {
+          "name": "key",
+          "type": "symbol"
+        },
+        {
+          "name": "value",
+          "type": "symbol"
+        },
+        {
+          "name": "rank",
+          "type": "number"
+        }
+      ],
+      "declared": {
+        "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+        "line": 772
+      },
+      "input": false,
+      "name": "use",
+      "package": "buildlog"
+    }
+  },
+  "roots": [
+    "n0"
+  ],
+  "rules": {
+    "buildlog-cpp:layers/L2_toolchains.dl:31": {
+      "engine_text": "platform_constraint(p,k,v) :- res_platform_constraint(req,p,k,v), req_inventory(req).",
+      "file": "<ROOT>/plugins/buildlog-cpp/src/buildlog_cpp/layers/L2_toolchains.dl",
+      "line": 31,
+      "number": 1,
+      "package": "buildlog-cpp",
+      "relation": "platform_constraint",
+      "source": "platform_constraint(p, k, v) :- res_platform_constraint(req, p, k, v), req_inventory(req)."
+    },
+    "buildlog-cpp:layers/L4_cxx.dl:213": {
+      "engine_text": "src_on(t,c,s) :- needed(t,c), cxx_source(t,s), !buildlog_cpp__src_grouped(t,s).",
+      "file": "<ROOT>/plugins/buildlog-cpp/src/buildlog_cpp/layers/L4_cxx.dl",
+      "line": 213,
+      "number": 2,
+      "package": "buildlog-cpp",
+      "relation": "src_on",
+      "source": "src_on(t, c, s) :- needed(t, c), cxx_source(t, s), !buildlog_cpp__src_grouped(t, s)."
+    },
+    "buildlog-cpp:layers/L4_cxx.dl:26": {
+      "engine_text": "buildlog_cpp__cxx_object(t,c,s,cat(\"out:obj/\",n,\"/\",t,\"/\",s,\".o\")) :- src_on(t,c,s), cxx_source(t,s), cfg_name(c,n).",
+      "file": "<ROOT>/plugins/buildlog-cpp/src/buildlog_cpp/layers/L4_cxx.dl",
+      "line": 26,
+      "number": 1,
+      "package": "buildlog-cpp",
+      "relation": "buildlog_cpp__cxx_object",
+      "source": "buildlog_cpp__cxx_object(t, c, s, cat(\"out:obj/\", n, \"/\", t, \"/\", s, \".o\")) :- src_on(t, c, s), cxx_source(t, s), cfg_name(c, n)."
+    },
+    "buildlog-cpp:layers/L4_cxx.dl:37": {
+      "engine_text": "action_arg(o,(20+r),\"-D\",v) :- buildlog_cpp__cxx_object(t,c,+underscore_6995,o), use(t,c,\"cc.define\",v,r).",
+      "file": "<ROOT>/plugins/buildlog-cpp/src/buildlog_cpp/layers/L4_cxx.dl",
+      "line": 37,
+      "number": 77,
+      "package": "buildlog-cpp",
+      "relation": "action_arg",
+      "source": "action_arg(o, 20 + r, \"-D\", v) :- buildlog_cpp__cxx_object(t, c, _, o), use(t, c, \"cc.define\", v, r)."
+    },
+    "buildlog:L1_targets.dl:241": {
+      "engine_text": "config_attr(c,cat(\"platform.\",k),v) :- config_platform(c,p), platform_constraint(p,k,v).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 241,
+      "number": 2,
+      "package": "buildlog",
+      "relation": "config_attr",
+      "source": "config_attr(c, cat(\"platform.\", k), v) :- config_platform(c, p), platform_constraint(p, k, v)."
+    },
+    "buildlog:L1_targets.dl:299": {
+      "engine_text": "target_id(t) :- target(t).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 299,
+      "number": 2,
+      "package": "buildlog",
+      "relation": "target_id",
+      "source": "target_id(t) :- target(t)."
+    },
+    "buildlog:L1_targets.dl:302": {
+      "engine_text": "buildlog__holds(c,$Eq(k, v)) :- buildlog__cond_sub($Eq(k, v)), config_attr(c,k,v).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 302,
+      "number": 1,
+      "package": "buildlog",
+      "relation": "buildlog__holds",
+      "source": "buildlog__holds(c, buildlog__EQ(k, v)) :- buildlog__cond_sub(buildlog__EQ(k, v)), config_attr(c, k, v)."
+    },
+    "buildlog:L1_targets.dl:397": {
+      "engine_text": "cond_holds(c,n) :- condition(n,e), buildlog__holds(c,e).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 397,
+      "number": 1,
+      "package": "buildlog",
+      "relation": "cond_holds",
+      "source": "cond_holds(c, n) :- condition(n, e), buildlog__holds(c, e)."
+    },
+    "buildlog:L1_targets.dl:605": {
+      "engine_text": "needed(t,c) :- request(t,n), config_active(n), decl_cfg(n,c), config(c).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 605,
+      "number": 1,
+      "package": "buildlog",
+      "relation": "needed",
+      "source": "needed(t, c) :- request(t, n), config_active(n), decl_cfg(n, c), config(c)."
+    },
+    "buildlog:L1_targets.dl:611": {
+      "engine_text": "buildlog__eff_ref(t,c,d,v) :- needed(t,c), dep_when(t,d,v,n), cond_holds(c,n).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 611,
+      "number": 2,
+      "package": "buildlog",
+      "relation": "buildlog__eff_ref",
+      "source": "buildlog__eff_ref(t, c, d, v) :- needed(t, c), dep_when(t, d, v, n), cond_holds(c, n)."
+    },
+    "buildlog:L1_targets.dl:612": {
+      "engine_text": "eff_dep(t,c,id,v) :- buildlog__eff_ref(t,c,d,v), dep_resolves(t,d,id), !library_both(id,c).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 612,
+      "number": 1,
+      "package": "buildlog",
+      "relation": "eff_dep",
+      "source": "eff_dep(t, c, id, v) :- buildlog__eff_ref(t, c, d, v), dep_resolves(t, d, id), !buildlog__linkage_split(id, c)."
+    },
+    "buildlog:L1_targets.dl:618": {
+      "engine_text": "needed(d,c) :- eff_dep(+underscore_8851,c,d,+underscore_8852).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 618,
+      "number": 3,
+      "package": "buildlog",
+      "relation": "needed",
+      "source": "needed(d, c) :- eff_dep(_, c, d, _)."
+    },
+    "buildlog:L1_targets.dl:715": {
+      "engine_text": "buildlog__dep_ref(t,d) :- dep_when(t,d,+underscore_7767,+underscore_7768).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 715,
+      "number": 2,
+      "package": "buildlog",
+      "relation": "buildlog__dep_ref",
+      "source": "buildlog__dep_ref(t, d) :- dep_when(t, d, _, _)."
+    },
+    "buildlog:L1_targets.dl:722": {
+      "engine_text": "buildlog__own_ref(t,d,d) :- buildlog__dep_ref(t,d), !buildlog__scoped(t), target_id(d), !buildlog__scoped(d).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 722,
+      "number": 1,
+      "package": "buildlog",
+      "relation": "buildlog__own_ref",
+      "source": "buildlog__own_ref(t, d, d) :- buildlog__dep_ref(t, d), !buildlog__scoped(t), target_id(d), !buildlog__scoped(d)."
+    },
+    "buildlog:L1_targets.dl:726": {
+      "engine_text": "dep_resolves(t,d,id) :- buildlog__own_ref(t,d,id).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 726,
+      "number": 1,
+      "package": "buildlog",
+      "relation": "dep_resolves",
+      "source": "dep_resolves(t, d, id) :- buildlog__own_ref(t, d, id)."
+    },
+    "buildlog:L1_targets.dl:734": {
+      "engine_text": "eff_prop(t,c,k,v,vis) :- needed(t,c), prop(t,k,v,vis).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 734,
+      "number": 1,
+      "package": "buildlog",
+      "relation": "eff_prop",
+      "source": "eff_prop(t, c, k, v, vis) :- needed(t, c), prop(t, k, v, vis)."
+    },
+    "buildlog:L1_targets.dl:748": {
+      "engine_text": "iface(t,c,k,v) :- eff_prop(t,c,k,v,vis), buildlog__exported(vis).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 748,
+      "number": 1,
+      "package": "buildlog",
+      "relation": "iface",
+      "source": "iface(t, c, k, v) :- eff_prop(t, c, k, v, vis), buildlog__exported(vis)."
+    },
+    "buildlog:L1_targets.dl:758": {
+      "engine_text": "buildlog__use_cand(t,c,k,v,1) :- eff_dep(t,c,d,vis), buildlog__used(vis), iface(d,c,k,v).",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 758,
+      "number": 2,
+      "package": "buildlog",
+      "relation": "buildlog__use_cand",
+      "source": "buildlog__use_cand(t, c, k, v, 1) :- eff_dep(t, c, d, vis), buildlog__used(vis), iface(d, c, k, v)."
+    },
+    "buildlog:L1_targets.dl:773": {
+      "engine_text": "use(t,c,k,v,@generator_0) :- buildlog__use_cand(t,c,k,v,+underscore_8987), set_key(k), @generator_0 = min r2 : { buildlog__use_cand(t,c,k,v,r2) }.",
+      "file": "<ROOT>/src/buildlog/layers/core/L1_targets.dl",
+      "line": 773,
+      "number": 1,
+      "package": "buildlog",
+      "relation": "use",
+      "source": "use(t, c, k, v, r) :- buildlog__use_cand(t, c, k, v, _), set_key(k), r = min r2 : { buildlog__use_cand(t, c, k, v, r2) }."
+    }
+  },
+  "shape": {
+    "collapse": true,
+    "depth": null,
+    "fold": true,
+    "hide_structural": true,
+    "leaves": false,
+    "path_to": null,
+    "prune_demand": true,
+    "raw": false,
+    "with_target_demand": false
+  },
+  "version": 1
+}

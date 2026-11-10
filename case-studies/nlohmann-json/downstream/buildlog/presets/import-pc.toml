@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Bind nlohmann_json to an install's pkg-config file: -D NLOHMANN_PREFIX=<prefix>.
+package_search_dir = [["pc", "${NLOHMANN_PREFIX}/share/pkgconfig"]]

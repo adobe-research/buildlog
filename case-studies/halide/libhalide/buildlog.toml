@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# libHalide (M3 phase 1): the core library, against LLVM bound by
+# the LLVM packages (llvm-install/) of the preset's search directories.
+# Configure with the case study's packages on the path:
+#   uv run --frozen buildlog configure case-studies/halide/libhalide -C BUILD \
+#     --package-path case-studies/halide/packages
+uses = ["buildlog-cpp", "buildlog-python", "halide-build"]
+source_root = "${HALIDE_SRC}"
+spec = [
+  "astests.toml",
+  "autoschedulers.toml",
+  "bindings.toml",
+  "headers.toml",
+  "python.toml",
+  "python_fixtures.toml",
+  "python_tutorials.toml",
+  "python_tutorials.dl",
+  "python_apps.toml",
+  "python_apps.dl",
+  "python_runtime.toml",
+  "python_runtime.dl",
+  "python.dl",
+  "sources.toml",
+  "spec.toml",
+  "suites.toml",
+  "generators.toml",
+  "tests.toml",
+  "tutorials.toml",
+  "tutorials.dl",
+  "rules.dl"
+]
+
+[vars]
+# The pinned export the CMake baseline builds (Halide main 4e272cbfcc; see
+# baseline/run-cmake.sh). Since phase 5 nothing comes from its build tree.
+HALIDE_SRC = "${REPO_ROOT}/case-studies/halide/upstream"
+HOMEBREW = "/opt/homebrew"
+# A venv with pybind11 and numpy for presets/python.toml.
+HALIDE_PYVENV = "${REPO_ROOT}/build/py310"
+# The Linux sysroot of the cross scenario (docker/sysroot.sh); presets/cross-linux-aarch64.toml.
+SYSROOT = "${REPO_ROOT}/case-studies/halide/docker/xvol/sysroot"

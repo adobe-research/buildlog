@@ -1,0 +1,15 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// zlib.pc's zlib_VERSION is the library's version (stated once, in
+// spec.toml's native_version).
+prop("zlib_pc", "configure.define", cat("zlib_VERSION=", v), "private") :- native_version("zlib", v, _).
+
+// Include order. zlib.h does `#include <zconf.h>` under ZLIB_BUILD, which
+// must find the configured copy, not the source tree's zconf.h. CMake gets
+// this from the order of target_include_directories(PUBLIC
+// ${zlib_BINARY_DIR} ${zlib_SOURCE_DIR}); buildlog emits one include class
+// as a set, so the collision is stated (the generated dir also happens to
+// sort first). Both are the library's own dirs (-I), and its users'
+// dependency dirs (-isystem): the fact orders both classes.
+cc_include_before(d, "src:") :- cc_configured_header_dir("zlib", _, d).

@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The install layout (upstream's install(TARGETS ...)): the libraries to
+# libdir; each CPU backend module to bindir, next to the programs, which is
+# where the loader looks (ggml-backend-reg.cpp: the executable's directory,
+# then the working directory; GGML_BACKEND_DIR, a compile-time path, is not
+# modelled; rules.dl installs the modules). The files come from the targets
+# and the active configuration, copied as built: their rpath is the build
+# tree's (@loader_path/../../lib/<cfg>), and the export of native components
+# is not supported yet (the README). Install one configuration: two would
+# install two libggml-base under one name (an error).
+install_target = [["ggml-base", "libdir"], ["ggml", "libdir"]]

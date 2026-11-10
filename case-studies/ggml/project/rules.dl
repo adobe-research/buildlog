@@ -1,0 +1,202 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// ggml's CPU backend as one logical library instantiated per ISA level
+// (the ggml case study; case-studies/ggml/README.md). CMake's
+// ggml_add_cpu_backend_variant_impl(tag) is called once per level and
+// creates a target per call; here the backend is stated once, as core target
+// templates (cpu.toml), and each instance is derived with its level as a
+// parameter (below).
+
+// ==== ISA levels ====
+// Each level is a buildlog-cpp ISA set (step 4, design input §2): it
+// requires its architecture and its features' extensions, and excludes its
+// excluded features'. buildlog-cpp derives the flags (x86: -m<ext> each;
+// ARM: one -march=<base>+<tag>...), the fit and the errors (an extension
+// the architecture lacks cannot coexist with it).
+.decl isa_level(level:symbol)
+.decl isa_level_arch(level:symbol, arch:symbol)     // a feature level of arch (a platform cpu)
+.decl isa_level_parent(level:symbol, parent:symbol) // the level has its parent's arch and features, and more
+.decl isa_level_feature(level:symbol, feat:symbol)  // the level needs feat
+.decl isa_level_excludes(level:symbol, feat:symbol) // the level compiles with feat off
+.decl ggml_feature_ext(feat:symbol, ext:symbol)     // ggml's feature name, as ISA extensions
+isa_level_arch(l, a) :- isa_level_parent(l, p), isa_level_arch(p, a).
+isa_level_feature(l, f) :- isa_level_parent(l, p), isa_level_feature(p, f).
+isa_requires(l, a) :- isa_level_arch(l, a).
+isa_requires(l, e) :- isa_level_feature(l, f), ggml_feature_ext(f, e).
+isa_excludes(l, e) :- isa_level_excludes(l, f), ggml_feature_ext(f, e).
+
+.decl ggml_feature(feat:symbol)
+ggml_feature(f) :- ggml_feature_ext(f, _).
+error("ggml feature without ISA extensions", f) :- isa_level_feature(_, f), !ggml_feature(f).
+error("ggml feature without ISA extensions", f) :- isa_level_excludes(_, f), !ggml_feature(f).
+error("ISA level of two architectures", cat(l, ": ", a, ", ", b)) :- isa_level_arch(l, a), isa_level_arch(l, b), a < b.
+error("feature of an undeclared ISA level", l) :- isa_level_feature(l, _), !isa_level(l).
+error("feature of an undeclared ISA level", l) :- isa_level_excludes(l, _), !isa_level(l).
+error("ISA level without an architecture", l) :- isa_level(l), !isa_level_arch(l, _).
+
+// ==== the backend and its instances ====
+.decl ggml_arch_dir(arch:symbol, dir:symbol)   // the architecture's directory under arch/
+.decl ggml_cpu_variant(os:symbol, arch:symbol, level:symbol)
+.decl ggml_isa_define(feat:symbol, define:symbol)
+.decl ggml_isa_score(feat:symbol, weight:symbol)
+
+// The options (spec.toml's [option.*], a user file's option_value), as
+// every configuration's option.<name> attribute: build-wide, so any
+// configuration's is the build's. Rules may read them for errors only: the
+// attributes share a stratum with discovered ones (configure checks), which
+// come after `needed`, so what is built cannot be derived from them here
+// except through conditions (dep_when, prop_when), below.
+.decl ggml_option(name:symbol, value:symbol)
+ggml_option(substr(k, 7, strlen(k) - 7), v) :- config(c), config_attr(c, k, v), substr(k, 0, 7) = "option.".
+.decl ggml_dl()
+ggml_dl() :- ggml_option("GGML_BACKEND_DL", "on").
+.decl ggml_all_variants()
+ggml_all_variants() :- ggml_option("GGML_CPU_ALL_VARIANTS", "on").
+// Upstream rejects this on x86 (FATAL_ERROR) but on ARM builds every
+// variant with the machine's -mcpu=native and no score function: modules the
+// loader cannot rank (the README's ledger). Here it is an error on both.
+
+// The backend's instances (cpu.toml's templates): each variant level is
+// ggml-cpu-<level>, a ggml-cpu-backend and a ggml-cpu-variant, with its
+// feature-detection object ggml-cpu-<level>-feats; the native instance is
+// ggml-cpu (cpu.toml). A level gives its instances their architecture's
+// directory and its features' definitions; and the variant its flags (a
+// rule, not a template parameter: a parameter may not depend on the needed
+// closure, and the ARM flag is an ordered join, whose groups do).
+instance_of(t, "ggml-cpu-backend"), instance_of(t, "ggml-cpu-variant"), instance_param(t, "level", l),
+instance_of(f, "ggml-cpu-feats"), instance_param(f, "level", l) :-
+  ggml_cpu_variant(_, a, l), isa_level_arch(l, a), t = cat("ggml-cpu-", l), f = cat(t, "-feats").
+instance_param(t, "arch_dir", d) :- instance_param(t, "level", l), isa_level_arch(l, a), ggml_arch_dir(a, d).
+instance_param(t, "isa_define", d) :- instance_param(t, "level", l), isa_level_feature(l, x), ggml_isa_define(x, d).
+isa_target(t, l) :- instance_of(t, "ggml-cpu-variant"), instance_param(t, "level", l).
+// An ARM level without a feature still compiles for the lowest baseline
+// (-march=armv8-a: "begin with the lowest baseline"); buildlog-cpp spells a
+// flag only for what a level adds.
+.decl ggml_level_has_feature(level:symbol)
+ggml_level_has_feature(l) :- isa_level_feature(l, _).
+prop_in(t, c, "cc.compile_flag", "-march=armv8-a", "private") :- isa_target(t, l),
+  isa_level_arch(l, "arm64"), !ggml_level_has_feature(l), needed(t, c).
+ggml_dir_member(t) :- instance_of(t, _).
+install_target(t, "bindir") :- instance_of(t, "ggml-cpu-variant").
+
+// Which instances a build makes: with GGML_CPU_ALL_VARIANTS, every variant
+// for the configuration's platform (its os and cpu), which the loader ggml
+// needs at run time and finds beside the executables that use it (core's
+// runtime_dep_optional: built with ggml, linked into bin/<cfg>/, never linked
+// into ggml; optional because ggml loads whichever variants it finds, at
+// least one of them, and upstream installs them to bindir: install_target
+// above); else the native instance, linked into ggml (spec.toml's dep_when).
+.decl ggml_platform_variant(p:symbol, level:symbol)
+ggml_platform_variant(p, l) :- platform_constraint(p, "os", os), platform_constraint(p, "cpu", a),
+  ggml_cpu_variant(os, a, l).
+condition(cat("ggml.variants.", os, ".", a),
+  $And($Eq("option.GGML_CPU_ALL_VARIANTS", "on"), $And($Eq("platform.os", os), $Eq("platform.cpu", a)))) :-
+  ggml_cpu_variant(os, a, _).
+runtime_dep_optional_when("ggml", t, "beside_executables", cat("ggml.variants.", os, ".", a)) :-
+  instance_of(t, "ggml-cpu-variant"), instance_param(t, "level", l), ggml_cpu_variant(os, a, l).
+error("GGML_BACKEND_DL without GGML_CPU_ALL_VARIANTS is not modelled", "set GGML_CPU_ALL_VARIANTS=on") :-
+  ggml_dl(), !ggml_all_variants().
+.decl ggml_has_variants(p:symbol)
+ggml_has_variants(p) :- ggml_platform_variant(p, _).
+error("GGML_CPU_ALL_VARIANTS has no variants for this platform", cat(n, " (", p, ")")) :-
+  ggml_all_variants(), config(c), config_platform(c, p), !ggml_has_variants(p), cfg_name(c, n).
+
+// ISA compatibility: buildlog-cpp rejects a variant needed in a
+// configuration whose cpu lacks its level's extensions, whoever asks for it.
+
+// ==== GGML_NATIVE: the machine's own ISA ====
+// The native instance is compiled for the build machine: GGML_NATIVE_CPU
+// (-mcpu=native unless the user states the compiler's own list), plus
+// +<tag> for each feature the machine has and +no<tag> (and the matching
+// __ARM_FEATURE_ macro undefined) for each it lacks, in CMakeLists.txt's
+// order (dotprod, i8mm, sve, sme), where the compiler accepts the modifier.
+// The answers are cpu.toml's checks.
+.decl ggml_native_tag(feat:symbol, tag:symbol, rank:number)
+ggml_native_tag("DOTPROD", "dotprod", 1).
+ggml_native_tag("MATMUL_INT8", "i8mm", 2).
+ggml_native_tag("SVE", "sve", 3).
+ggml_native_tag("SME", "sme", 4).
+// What the machine can run: the feature's `runs` check (+<tag> on the native
+// flag), as CMake's check_cxx_source_runs; for the features no -mcpu tag
+// of ggml's depends on, the machine check of the same name.
+.decl ggml_native_has(c:Cfg, feat:symbol, answer:symbol)
+ggml_native_has(c, f, v) :- ggml_native_tag(f, _, _), config_attr(c, cat("cc.check.GGML_NATIVE_PLUS_", f), v).
+ggml_native_has(c, f, v) :- ggml_machine_feature(f), config_attr(c, cat("cc.check.GGML_MACHINE_", f), v).
+.decl ggml_machine_feature(feat:symbol)
+ggml_machine_feature("FP16_VECTOR_ARITHMETIC"). ggml_machine_feature("SVE2").
+// ggml_native_on: it ran. ggml_native_off: it did not, and the compiler
+// accepts +no<tag> (which CMake then adds, with -U__ARM_FEATURE_<F>).
+.decl ggml_native_on(c:Cfg, feat:symbol)
+ggml_native_on(c, f) :- ggml_native_tag(f, _, _), ggml_native_has(c, f, "yes").
+.decl ggml_native_off(c:Cfg, feat:symbol)
+ggml_native_off(c, f) :- ggml_native_tag(f, _, _), ggml_native_has(c, f, "no"),
+  config_attr(c, cat("cc.check.GGML_NATIVE_NO_", f), "yes").
+.decl ggml_native_cfg(t:symbol, c:Cfg)
+ggml_native_cfg("ggml-cpu", c) :- needed("ggml-cpu", c).
+join_part(cat("ggml.native.", n), 0, b) :- ggml_native_cfg(_, c), cfg_name(c, n), ggml_option("GGML_NATIVE_CPU", b).
+join_part(cat("ggml.native.", n), r, cat("+", g)) :-
+  ggml_native_cfg(_, c), ggml_native_on(c, f), ggml_native_tag(f, g, r), cfg_name(c, n).
+join_part(cat("ggml.native.", n), r, cat("+no", g)) :-
+  ggml_native_cfg(_, c), ggml_native_off(c, f), ggml_native_tag(f, g, r), cfg_name(c, n).
+prop_in(t, c, "cc.compile_flag", m, "private") :- ggml_native_cfg(t, c), cfg_name(c, n),
+  joined(cat("ggml.native.", n), m).
+prop_in(t, c, "cc.compile_flag", cat("-U__ARM_FEATURE_", f), "private") :- ggml_native_cfg(t, c),
+  ggml_native_off(c, f).
+// The build machine's features say nothing about another platform's.
+error_at("GGML_NATIVE for a configuration the build machine does not run",
+         cat(t, " in ", n, " (", p, "; the build machine is ", q, ")"), t, c) :-
+  ggml_native_cfg(t, c), exec_config(c, e), config_platform(c, p), config_platform(e, q), p != q,
+  cfg_name(c, n).
+error_at("GGML_NATIVE=off without variants: no CPU ISA level stated",
+         cat(t, " in ", n, " (GGML_CPU_ARM_ARCH and friends are not modelled)"), t, c) :-
+  ggml_native_cfg(t, c), ggml_option("GGML_NATIVE", "off"), cfg_name(c, n).
+
+// ==== src/'s directory-wide properties ====
+.decl ggml_dir_prop(key:symbol, value:symbol)
+.decl ggml_dir_member(t:symbol)
+ggml_dir_member("ggml-base"). ggml_dir_member("ggml").
+prop(t, k, v, "private") :- ggml_dir_member(t), ggml_dir_prop(k, v).
+.decl ggml_dir_prop_os(os:symbol, key:symbol, value:symbol)
+condition(cat("ggml.os.", os), $Eq("platform.os", os)) :- ggml_dir_prop_os(os, _, _).
+prop_when(t, k, v, "private", cat("ggml.os.", os)) :- ggml_dir_member(t), ggml_dir_prop_os(os, k, v).
+// The warnings of the compiler family (cxx.family, buildlog-cpp's attribute,
+// CMake's CMAKE_CXX_COMPILER_ID).
+.decl ggml_dir_prop_family(family:symbol, key:symbol, value:symbol)
+condition(cat("ggml.cxx.", f), $Eq("cxx.family", f)) :- ggml_dir_prop_family(f, _, _).
+prop_when(t, k, v, "private", cat("ggml.cxx.", f)) :- ggml_dir_member(t), ggml_dir_prop_family(f, k, v).
+// C-only flags: buildlog-cpp has cxx.compile_flag but no C counterpart (and
+// no C standard), so they go on the C compile actions (label CC) of the
+// directory's targets, at an argv position of their own before the
+// cc.compile_flag ones (15+).
+.decl ggml_dir_c_flag(flag:symbol)
+action_arg(o, 14, "", v), action_arg_set(o, 14) :- ggml_dir_member(t), target_action(t, _, o), action(o, "CC"),
+  ggml_dir_c_flag(v).
+
+// ggml-version.h is ggml-base's private header (CMake's
+// target_include_directories(ggml-base PRIVATE ${CMAKE_CURRENT_BINARY_DIR})),
+// not the public own dir buildlog-cpp's cc_configured_header makes it.
+prop_in("ggml-base", c, "cc.include_dir", substr(p, 0, strlen(p) - 15), "private"),
+prop_in("ggml-base", c, "cc.generated_header", p, "private") :-
+  configured_file("ggml-base", c, "ggml-version.h", p).
+
+// ==== the loader's choice ====
+// In c, the loader ggml searches a directory (ggml-backend-reg.cpp:
+// GGML_BACKEND_DIR, else the executable's directory, else the working
+// directory) for libggml-<name>-*.so, dlopens each and keeps the
+// highest-scoring one: each module's ggml_backend_score() (0 where the
+// machine lacks a feature its level needs, else 1 plus its features'
+// weights), from the same machine answers as GGML_NATIVE, where the
+// configuration runs here. The tests check that the loader agrees
+// (tests.toml).
+.decl ggml_machine_lacks(c:Cfg, level:symbol)
+ggml_machine_lacks(c, l) :- eff_runtime_dep("ggml", c, t, _), instance_param(t, "level", l), isa_level_feature(l, f),
+  !ggml_native_has(c, f, "yes").
+.decl ggml_score(c:Cfg, level:symbol, score:number)
+ggml_score(c, l, 1 + s) :- eff_runtime_dep("ggml", c, t, _), instance_param(t, "level", l),
+  !ggml_machine_lacks(c, l), exec_config(c, e), config_platform(c, p), config_platform(e, p),
+  s = sum to_number(w) : { isa_level_feature(l, f), ggml_isa_score(f, w) }.
+.decl ggml_chosen(c:Cfg, level:symbol)
+ggml_chosen(c, l) :- ggml_score(c, l, s), s = max x : { ggml_score(c, _, x) }.
+test_regex(n, "pass", cat("loaded CPU backend from .*/libggml-cpu-", l, "[.]so")) :-
+  test(n, p), ggml_chosen(c, l), needed(p, c).

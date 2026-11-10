@@ -1,0 +1,6 @@
+# L0 integrity fixture: a default output nobody produces
+name = "l0-default-output"
+version = "0.1.0"
+rank = 1
+layers = ["l0.dl"]
+extends = ["action", "action_arg", "default_output"]

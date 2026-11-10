@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Qt's base package as Qt would install it (<prefix>/share/buildlog/Qt6, next to
+# lib/cmake/Qt6): Qt6Targets.cmake's platform targets (Qt6::Platform: C++17, the
+# include directories). Nothing else; one manifest per Qt6 CMake package, as
+# upstream has one Qt6*Config.cmake each.
+name = "Qt6"
+version = "6.11.3"
+rank = 5
+requires = { Threads = ">=0", buildlog-cpp = ">=0.1" }
+imports = [
+  { format = "cmake", file = "../../../lib/cmake/Qt6/Qt6Targets.cmake", namespace = "Qt6" }
+]

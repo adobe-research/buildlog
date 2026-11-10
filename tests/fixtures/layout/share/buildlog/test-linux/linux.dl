@@ -1,0 +1,7 @@
+// test_linux_platform(p, triple, cpu): a Linux platform; test_linux_distro(p,
+// family): its distribution family (none: unknown).
+.decl test_linux_platform(p:symbol, triple:symbol, cpu:symbol)
+.decl test_linux_distro(p:symbol, family:symbol)
+platform(p, t) :- test_linux_platform(p, t, _).
+platform_constraint(p, "os", "linux"), platform_constraint(p, "cpu", c) :- test_linux_platform(p, _, c).
+platform_distro(p, f) :- test_linux_distro(p, f).

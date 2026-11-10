@@ -1,0 +1,182 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# test/autoschedulers: the demos, the public-API tests (tests(...) with the
+# plugin as the argument) and the internal unit tests. Patterns are in rules.dl
+# (hl_demo, halide_as_tests, halide_tests).
+
+hl_demo_skip_bad_environment = ["anderson2021_demo", "anderson2021_included_schedule_file"]
+
+halide_as_test_extra = [
+  ["anderson2021_test_function_dag", "FunctionDAG.cpp"],
+  ["anderson2021_test_bounds", "FunctionDAG.cpp"],
+  ["anderson2021_test_bounds", "LoopNest.cpp"],
+  ["anderson2021_test_bounds", "GPULoopInfo.cpp"],
+  ["anderson2021_test_bounds", "Tiling.cpp"],
+  ["anderson2021_test_state", "FunctionDAG.cpp"],
+  ["anderson2021_test_state", "LoopNest.cpp"],
+  ["anderson2021_test_state", "GPULoopInfo.cpp"],
+  ["anderson2021_test_state", "State.cpp"],
+  ["anderson2021_test_state", "Tiling.cpp"],
+  ["anderson2021_test_storage_strides", "FunctionDAG.cpp"],
+  ["anderson2021_test_storage_strides", "LoopNest.cpp"],
+  ["anderson2021_test_storage_strides", "GPULoopInfo.cpp"],
+  ["anderson2021_test_storage_strides", "State.cpp"],
+  ["anderson2021_test_storage_strides", "Tiling.cpp"],
+  ["anderson2021_test_thread_info", "LoopNest.cpp"],
+  ["anderson2021_test_thread_info", "FunctionDAG.cpp"],
+  ["anderson2021_test_thread_info", "GPULoopInfo.cpp"],
+  ["anderson2021_test_thread_info", "Tiling.cpp"],
+  ["anderson2021_test_tiling", "Tiling.cpp"],
+  ["adams2019_test_function_dag", "FunctionDAG.cpp"],
+]
+
+# test.cpp: the public-API test loads the plugin (and Adams2019 reads weights).
+target = ["adams2019_test_apps_autoscheduler", "anderson2021_test_apps_autoscheduler"]
+native_kind = [
+  ["adams2019_test_apps_autoscheduler", "executable"],
+  ["anderson2021_test_apps_autoscheduler", "executable"],
+]
+request_all = ["adams2019_test_apps_autoscheduler", "anderson2021_test_apps_autoscheduler"]
+cxx_source = [
+  ["adams2019_test_apps_autoscheduler", "test/autoschedulers/adams2019/test.cpp"],
+  ["anderson2021_test_apps_autoscheduler", "test/autoschedulers/anderson2021/test.cpp"],
+]
+dep = [
+  ["adams2019_test_apps_autoscheduler", "Halide", "private"],
+  ["adams2019_test_apps_autoscheduler", "Halide_Tools", "private"],
+  ["adams2019_test_apps_autoscheduler", "test_defaults", "private"],
+  ["adams2019_test_apps_autoscheduler", "test_warnings", "private"],
+  ["anderson2021_test_apps_autoscheduler", "Halide", "private"],
+  ["anderson2021_test_apps_autoscheduler", "Halide_Tools", "private"],
+  ["anderson2021_test_apps_autoscheduler", "test_defaults", "private"],
+  ["anderson2021_test_apps_autoscheduler", "test_warnings", "private"],
+]
+halide_build_test = [
+  ["adams2019_test_apps_autoscheduler", "adams2019_test_apps_autoscheduler"],
+  ["anderson2021_test_apps_autoscheduler", "anderson2021_test_apps_autoscheduler"],
+]
+halide_build_test_group = [
+  ["adams2019_test_apps_autoscheduler", "adams2019"],
+  ["adams2019_test_apps_autoscheduler", "autoschedulers_cpu"],
+  ["adams2019_test_apps_autoscheduler", "multithreaded"],
+  ["anderson2021_test_apps_autoscheduler", "anderson2021"],
+  ["anderson2021_test_apps_autoscheduler", "autoschedulers_cuda"],
+  ["anderson2021_test_apps_autoscheduler", "multithreaded"],
+]
+test_arg_ref = [
+  ["adams2019_test_apps_autoscheduler", 0, "autoschedule_adams2019"],
+  ["anderson2021_test_apps_autoscheduler", 0, "autoschedule_anderson2021"],
+]
+test_arg = [
+  ["adams2019_test_apps_autoscheduler", 1, "src:src/autoschedulers/adams2019/baseline.weights"]
+]
+
+[hl_demo.adams2019_demo]
+dir = "adams2019"
+file = "demo_generator.cpp"
+generator = "demo"
+scheduler = "Adams2019"
+exe = "adams2019_demo_apps_autoscheduler"
+group = ["adams2019", "autoschedulers_cpu", "multithreaded"]
+
+[hl_demo.adams2019_included_schedule_file]
+dir = "adams2019"
+file = "included_schedule_file_generator.cpp"
+generator = "included_schedule_file"
+scheduler = "Adams2019"
+exe = "adams2019_demo_included_schedule_file"
+group = ["adams2019", "autoschedulers_cpu", "multithreaded"]
+
+[hl_demo.li2018_demo_gradient]
+dir = "li2018"
+file = "demo_generator.cpp"
+generator = "demo"
+function = "demo"
+scheduler = "Li2018"
+exe = "li2018_demo_gradient_autoscheduler"
+group = ["li2018", "autoschedulers_cpu", "autoschedulers_gpu", "multithreaded"]
+
+[hl_demo.anderson2021_demo]
+dir = "anderson2021"
+file = "demo_generator.cpp"
+generator = "demo"
+scheduler = "Anderson2021"
+exe = "anderson2021_demo_apps_autoscheduler"
+group = ["anderson2021", "autoschedulers_cuda", "multithreaded"]
+feature = ["cuda", "cuda_capability_70"]
+
+[hl_demo.anderson2021_included_schedule_file]
+dir = "anderson2021"
+file = "included_schedule_file_generator.cpp"
+generator = "included_schedule_file"
+scheduler = "Anderson2021"
+exe = "anderson2021_demo_included_schedule_file"
+group = ["anderson2021", "autoschedulers_cuda", "multithreaded"]
+feature = ["cuda", "cuda_capability_70"]
+
+[halide_tests.mullapudi2016_api]
+prefix = "mullapudi2016"
+dir = "test/autoschedulers/mullapudi2016"
+group = ["mullapudi2016", "autoschedulers_cpu"]
+source = ["extern.cpp", "param.cpp"]
+arg_ref = { 0 = "autoschedule_mullapudi2016" }
+
+[halide_tests.mullapudi2016]
+prefix = "mullapudi2016"
+dir = "test/autoschedulers/mullapudi2016"
+group = ["mullapudi2016", "autoschedulers_cpu", "multithreaded"]
+source = [
+  "cost_function.cpp",
+  "data_dependent.cpp",
+  "fibonacci.cpp",
+  "histogram.cpp",
+  "large_window.cpp",
+  "mat_mul.cpp",
+  "max_filter.cpp",
+  "multi_output.cpp",
+  "overlap.cpp",
+  "reorder.cpp",
+  "small_pure_update.cpp",
+  "tile_vs_inline.cpp",
+  "unused_func.cpp",
+  "vectorize_var_in_update.cpp",
+]
+arg_ref = { 0 = "autoschedule_mullapudi2016" }
+
+[halide_tests.li2018]
+prefix = "li2018"
+dir = "test/autoschedulers/li2018"
+group = ["li2018", "autoschedulers_cpu", "autoschedulers_gpu"]
+source = ["test.cpp"]
+arg_ref = { 0 = "autoschedule_li2018" }
+
+[halide_as_tests.common]
+prefix = ""
+dir = "test/autoschedulers/common"
+group = ["autoschedulers_cpu"]
+source = ["test_perfect_hash_map.cpp"]
+
+[halide_as_tests.adams2019]
+prefix = "adams2019"
+dir = "test/autoschedulers/adams2019"
+src = "src/autoschedulers/adams2019"
+group = ["adams2019", "autoschedulers_cpu"]
+include = ["src/autoschedulers/adams2019"]
+source = ["test_function_dag.cpp"]
+
+[halide_as_tests.anderson2021]
+prefix = "anderson2021"
+dir = "test/autoschedulers/anderson2021"
+src = "src/autoschedulers/anderson2021"
+group = ["anderson2021", "autoschedulers_cuda"]
+include = ["src/autoschedulers/anderson2021", "test/autoschedulers/anderson2021"]
+source = [
+  "test_function_dag.cpp",
+  "test_bounds.cpp",
+  "test_parser.cpp",
+  "test_state.cpp",
+  "test_storage_strides.cpp",
+  "test_thread_info.cpp",
+  "test_tiling.cpp",
+]

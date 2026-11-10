@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# What the agent invoking the build chooses: the configuration, the
+# toolchain, which LLVM (several are installed; nothing picks one by
+# availability: the llvm provider searches exactly these directories, and
+# two candidates for a name are an error until narrowed or pinned), and its
+# linkage.
+#
+# [M3 phase 7] Every configuration the case study builds is declared here;
+# `buildlog configure --config NAME` picks (default: release). universal2
+# and x86_64 generate graphs only: Homebrew's LLVM is arm64-only, so the
+# link stops at core's coverage check (no x86_64 slice of libLLVM).
+config_decl = [
+  ["release", "arm64-macos"],
+  ["debug", "arm64-macos"],
+  ["asan", "arm64-macos"],
+  ["universal2", "universal2-macos"],
+  ["x86_64", "x86_64-macos"],
+]
+config_decl_setting = [
+  ["release", "native.opt", "release"],
+  ["debug", "native.opt", "debug"],
+  # CMake's asan variant (baseline/run-cmake.sh): Release plus
+  # -fsanitize=address on every C/C++ compile and link.
+  ["asan", "native.opt", "release"],
+  ["asan", "native.sanitize", "address"],
+  ["universal2", "native.opt", "release"],
+  ["x86_64", "native.opt", "release"],
+]

@@ -1,0 +1,10 @@
+action("out:a", "STEP").
+action_arg("out:a", 0, "", "/bin/step").
+action_stdin("out:a", "src:a.in").
+action_stdin("out:a", "src:b.in").
+action_stdout("out:a", "out:a").
+action("out:b", "STEP").
+action_arg("out:b", 0, "", "/bin/step").
+action_out("out:b", "out:b.log").
+action_stdout("out:b", "out:b.log").
+action_stdout("out:b", "out:elsewhere").

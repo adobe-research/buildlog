@@ -1,0 +1,16 @@
+# Scope map for case-studies/halide/baseline/normalize.py over buildlog's
+# build.ninja in this case study: everything but phonies and the
+# regeneration edge is in scope (one "phase").
+[phases]
+1 = "the bazel-flatc slice"
+
+[[rule]]
+kind = "phony"
+exclude = "phony"
+
+[[rule]]
+kind = "regen"
+exclude = "buildlog regeneration"
+
+[[rule]]
+phase = 1

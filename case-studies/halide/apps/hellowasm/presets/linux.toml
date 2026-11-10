@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The Linux counterpart of homebrew-arm64.toml (linux/Dockerfile): where the
+# installed Halide's CMake exports are (/opt/halide, BUILDLOG_HALIDE_PREFIX), and
+# apt's libpng and libjpeg (pkg-config) for the native run program. The host
+# toolchain is the image's (BUILDLOG_LINUX_TOOLCHAINS names the family); the
+# emsdk toolchain targets only wasm32-emscripten, so nothing needs a pin.
+package_file = [
+  ["cmake", "${HALIDE_PREFIX}/lib/cmake/HalideCompiler/HalideCompiler-shared-targets.cmake"],
+]
+package_search_dir = [["pc", "/usr/lib/aarch64-linux-gnu/pkgconfig"]]
+package_system_includes = [["cmake"], ["pc"]]

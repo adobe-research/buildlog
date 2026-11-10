@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# flatbuffers v25.12.19, as its CMakeLists.txt builds it (the flatbuffers
+# case study; case-studies/flatbuffers/README.md): the runtime library, the
+# flatc compiler, flatc's generated C++ for the tests and the sample, the
+# tests and the samples. Configure with a user file:
+#   uv run --frozen buildlog configure --user case-studies/flatbuffers/project/presets/apple-clang.toml \
+#     -C BUILD case-studies/flatbuffers/project [--config release|x86_64|universal2]
+# Nothing here says where flatc runs: the generated-code actions name it by
+# target reference (tests.toml, the flatc_cpp generator), and core builds it for the
+# machine running the build.
+uses = ["buildlog-cpp"]
+source_root = "${FLATBUFFERS_SRC}"
+spec = ["spec.toml", "tests.toml", "rules.dl"]
+
+[vars]
+# The pinned checkout the CMake baseline builds (tag v25.12.19, 7e163021;
+# see baseline/run-cmake.sh).
+FLATBUFFERS_SRC = "${REPO_ROOT}/case-studies/flatbuffers/upstream"
+
+# CMakeLists.txt's GCC branch of ProjectConfig adds -Werror=unused-parameter
+# for every user of the library. Upstream's author decides that, so it is
+# stated (spec.toml); the macOS configuration never reaches the GCC branch.
+[author_decides]
+cc_werror = "upstream's CMakeLists.txt compiles every flatbuffers target with -Werror=unused-parameter under GCC"

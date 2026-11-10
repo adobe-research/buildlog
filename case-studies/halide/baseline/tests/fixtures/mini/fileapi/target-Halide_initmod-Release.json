@@ -1,0 +1,32 @@
+{
+ "backtrace": 0,
+ "backtraceGraph": {
+  "commands": [],
+  "files": [
+   "src/runtime/CMakeLists.txt"
+  ],
+  "nodes": [
+   {
+    "file": 0
+   }
+  ]
+ },
+ "dependencies": [
+  {
+   "id": "binary2cpp::@3"
+  }
+ ],
+ "id": "Halide_initmod::@2",
+ "name": "Halide_initmod",
+ "paths": {
+  "build": "src/runtime",
+  "source": "src/runtime"
+ },
+ "sources": [
+  {
+   "isGenerated": true,
+   "path": "/work/build/src/runtime/_initmod_posix.cpp"
+  }
+ ],
+ "type": "OBJECT_LIBRARY"
+}

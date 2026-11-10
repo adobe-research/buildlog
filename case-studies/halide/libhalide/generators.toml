@@ -1,0 +1,351 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# test/generator/CMakeLists.txt: _add_halide_libraries, _add_halide_aot_tests
+# and the JIT/stub tests (rules.dl, "hl_lib", "hl_aot", "hl_jit").
+
+# _add_halide_libraries(n) and _add_halide_aot_tests(n)
+hl_simple = [
+  "abstractgeneratortest",
+  "all_type_names",
+  "argvcall",
+  "bit_operations",
+  "buffer_copy",
+  "can_use_target",
+  "configure",
+  "embed_image",
+  "error_codes",
+  "float16_t",
+  "gpu_only",
+  "gpu_texture",
+  "image_from_array",
+  "opencl_runtime",
+  "output_assign",
+  "rdom_input",
+  "shuffler",
+  "templated",
+]
+hl_jit = ["configure", "example", "stubtest"]
+hl_lib_gradient = ["autograd_grad"]
+hl_lib_omit_c = [
+  "memory_profiler_mandelbrot",
+  "profiler_instances",
+  "msan",
+  "sanitizercoverage",
+  "multitarget",
+  "stubtest",
+  "stubuser",
+  "stubuser_auto",
+]
+
+[hl_lib.acquire_release]
+
+[hl_lib.define_extern_opencl]
+
+[hl_lib.async_parallel]
+feature = ["user_context"]
+
+[hl_lib.blur2x2]
+registration = "registration_test"
+
+[hl_lib.cleanup_on_error]
+
+[hl_lib.example]
+registration = "rungen_test"
+
+[hl_lib.extern_output]
+
+[hl_lib.gpu_object_lifetime]
+feature = ["debug"]
+
+[hl_lib.mandelbrot]
+
+[hl_lib.memory_profiler_mandelbrot]
+feature = ["profile"]
+
+[hl_lib.profiler_instances]
+feature = ["profile"]
+
+[hl_lib.metal_completion_handler_override]
+feature = ["user_context"]
+
+[hl_lib.msan]
+feature = ["msan"]
+
+[hl_lib.sanitizercoverage]
+feature = ["sanitizer_coverage"]
+
+[hl_lib.pyramid]
+registration = "registration_test"
+param = ["levels=10"]
+
+[hl_lib.string_param]
+param = ["rpn_expr=5 y * x +"]
+
+[hl_lib.user_context]
+feature = ["user_context"]
+
+[hl_lib.user_context_insanity]
+feature = ["user_context"]
+
+[hl_lib.variable_num_threads]
+
+[hl_lib.tiled_blur]
+call = ["blur2x2"]
+
+[hl_lib.sever]
+
+[hl_lib.sever_dequantize]
+from = "sever.generator"
+generator = "sever"
+param = ["direction=dequantize"]
+
+[hl_lib.thread_pool_lost_wakeup]
+
+# alias: four more pipelines from the same generator, each scheduled by every
+# autoscheduler plugin.
+[hl_lib.alias]
+
+[hl_lib.alias_with_offset_42]
+from = "alias.generator"
+plugin = ["Adams2019", "Li2018", "Mullapudi2016"]
+
+[hl_lib.alias_Adams2019]
+from = "alias.generator"
+plugin = ["Adams2019", "Li2018", "Mullapudi2016"]
+
+[hl_lib.alias_Li2018]
+from = "alias.generator"
+plugin = ["Adams2019", "Li2018", "Mullapudi2016"]
+
+[hl_lib.alias_Mullapudi2016]
+from = "alias.generator"
+plugin = ["Adams2019", "Li2018", "Mullapudi2016"]
+
+[hl_lib.autograd]
+
+[hl_lib.autograd_grad]
+from = "autograd.generator"
+generator = "autograd"
+scheduler = "Mullapudi2016"
+plugin = ["Mullapudi2016"]
+
+[hl_lib.cxx_mangling]
+registration = "registration_test"
+function = "HalideTest::AnotherNamespace::cxx_mangling"
+feature = ["c_plus_plus_name_mangling"]
+extern = ["cxx_mangling_externs"]
+
+[hl_lib.cxx_mangling_define_extern]
+function = "HalideTest::cxx_mangling_define_extern"
+feature = ["c_plus_plus_name_mangling", "user_context"]
+extern = ["cxx_mangling_define_extern_externs", "cxx_mangling"]
+
+[hl_lib.gpu_multi_context_threaded_add]
+from = "gpu_multi_context_threaded.generator"
+feature = ["user_context"]
+
+[hl_lib.gpu_multi_context_threaded_mul]
+from = "gpu_multi_context_threaded.generator"
+feature = ["user_context"]
+
+[hl_lib.metadata_tester]
+param = [
+  "input.type=uint8",
+  "input.dim=3",
+  "dim_only_input_buffer.type=uint8",
+  "untyped_input_buffer.type=uint8",
+  "untyped_input_buffer.dim=3",
+  "output.type=float32,float32",
+  "output.dim=3",
+  "input_not_nod.type=uint8",
+  "input_not_nod.dim=3",
+  "input_nod.dim=3",
+  "input_not.type=uint8",
+  "array_input.size=2",
+  "array_i8.size=2",
+  "array_i16.size=2",
+  "array_i32.size=2",
+  "array_h.size=2",
+  "buffer_array_input2.dim=3",
+  "buffer_array_input3.type=float32",
+  "buffer_array_input4.dim=3",
+  "buffer_array_input4.type=float32",
+  "buffer_array_input5.size=2",
+  "buffer_array_input6.size=2",
+  "buffer_array_input6.dim=3",
+  "buffer_array_input7.size=2",
+  "buffer_array_input7.type=float32",
+  "buffer_array_input8.size=2",
+  "buffer_array_input8.dim=3",
+  "buffer_array_input8.type=float32",
+  "buffer_f16_untyped.type=float16",
+  "untyped_scalar_input.type=uint8",
+  "array_outputs.size=2",
+  "array_outputs7.size=2",
+  "array_outputs8.size=2",
+  "array_outputs9.size=2",
+]
+
+[hl_lib.metadata_tester_ucon]
+from = "metadata_tester.generator"
+generator = "metadata_tester"
+feature = ["user_context"]
+param_set = "metadata_tester"
+
+[hl_lib.multitarget]
+function = "HalideTest::multitarget"
+feature = ["c_plus_plus_name_mangling"]
+
+[hl_lib.nested_externs_root]
+from = "nested_externs.generator"
+call = ["nested_externs_inner", "nested_externs_combine"]
+feature = ["user_context", "c_plus_plus_name_mangling"]
+
+[hl_lib.nested_externs_inner]
+from = "nested_externs.generator"
+call = ["nested_externs_leaf", "nested_externs_combine"]
+feature = ["user_context", "c_plus_plus_name_mangling"]
+
+[hl_lib.nested_externs_combine]
+from = "nested_externs.generator"
+feature = ["user_context", "c_plus_plus_name_mangling"]
+
+[hl_lib.nested_externs_leaf]
+from = "nested_externs.generator"
+feature = ["user_context", "c_plus_plus_name_mangling"]
+
+[hl_lib.stubtest]
+from = "stubtest.generator"
+param = [
+  "untyped_buffer_input.type=uint8",
+  "untyped_buffer_input.dim=3",
+  "simple_input.type=float32",
+  "array_input.type=float32",
+  "array_input.size=2",
+  "int_arg.size=2",
+  "tuple_output.type=float32,float32",
+  "vectorize=true",
+]
+
+[hl_lib.stubuser]
+from = "stubuser.generator"
+
+[hl_lib.stubuser_auto]
+from = "stubuser.generator"
+generator = "stubuser"
+scheduler = "Mullapudi2016"
+plugin = ["Mullapudi2016"]
+
+[hl_aot.acquire_release]
+group = ["LINK_TO_GPU"]
+
+[hl_aot.define_extern_opencl]
+group = ["LINK_TO_GPU"]
+
+[hl_aot.async_parallel]
+group = ["multithreaded"]
+
+[hl_aot.blur2x2]
+
+[hl_aot.cleanup_on_error]
+include = ["src/runtime"]
+
+[hl_aot.example]
+group = ["multithreaded"]
+
+[hl_aot.extern_output]
+group = ["multithreaded"]
+
+[hl_aot.gpu_object_lifetime]
+
+[hl_aot.mandelbrot]
+group = ["multithreaded"]
+
+[hl_aot.memory_profiler_mandelbrot]
+group = ["multithreaded"]
+
+[hl_aot.profiler_instances]
+group = ["multithreaded"]
+
+[hl_aot.metal_completion_handler_override]
+
+[hl_aot.msan]
+group = ["multithreaded"]
+
+[hl_aot.sanitizercoverage]
+
+[hl_aot.pyramid]
+group = ["multithreaded"]
+
+[hl_aot.string_param]
+
+[hl_aot.user_context]
+group = ["multithreaded"]
+
+[hl_aot.user_context_insanity]
+group = ["multithreaded"]
+
+[hl_aot.variable_num_threads]
+group = ["multithreaded"]
+
+[hl_aot.tiled_blur]
+library = ["tiled_blur", "blur2x2"]
+
+[hl_aot.sever]
+library = ["sever", "sever_dequantize"]
+
+[hl_aot.thread_pool_lost_wakeup]
+group = ["multithreaded"]
+
+[hl_aot.alias]
+library = [
+  "alias",
+  "alias_with_offset_42",
+  "alias_Adams2019",
+  "alias_Li2018",
+  "alias_Mullapudi2016"
+]
+group = ["multithreaded"]
+
+[hl_aot.autograd]
+library = ["autograd", "autograd_grad"]
+group = ["multithreaded"]
+
+[hl_aot.cxx_mangling]
+
+[hl_aot.cxx_mangling_define_extern]
+library = ["cxx_mangling_define_extern", "cxx_mangling"]
+
+[hl_aot.gpu_multi_context_threaded]
+library = ["gpu_multi_context_threaded_add", "gpu_multi_context_threaded_mul"]
+runtime = "gpu_multi_context_threaded_add.runtime"
+group = ["LINK_TO_GPU", "multithreaded"]
+
+[hl_aot.metadata_tester]
+library = ["metadata_tester", "metadata_tester_ucon"]
+
+[hl_aot.multitarget_0]
+library = ["multitarget"]
+runtime = "multitarget.runtime"
+source = "multitarget_aottest.cpp"
+
+[hl_aot.multitarget_1]
+library = ["multitarget"]
+runtime = "multitarget.runtime"
+source = "multitarget_aottest.cpp"
+
+[hl_aot.nested_externs]
+library = [
+  "nested_externs_root",
+  "nested_externs_inner",
+  "nested_externs_combine",
+  "nested_externs_leaf",
+]
+runtime = "nested_externs_root.runtime"
+group = ["multithreaded"]
+
+[hl_aot.stubtest]
+
+[hl_aot.stubuser]
+library = ["stubuser", "stubuser_auto"]

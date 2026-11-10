@@ -1,0 +1,69 @@
+# bazel 8.8.1, flags: --platforms=@build_bazel_apple_support//platforms:darwin_x86_64 --experimental_platform_in_output_dir
+
+## cquery 'deps(//:sample_binary)': the slice's targets and their configurations
+@com_github_google_flatbuffers//:flatbuffers (0c8de79)
+@com_github_google_flatbuffers//:flatbuffers (af7c1be)
+@com_github_google_flatbuffers//:flatc (af7c1be)
+@com_github_google_flatbuffers//:runtime_cc (0c8de79)
+@com_github_google_flatbuffers//:runtime_cc (af7c1be)
+@com_github_google_flatbuffers//src:flatbuffers (0c8de79)
+@com_github_google_flatbuffers//src:flatbuffers (af7c1be)
+@com_github_google_flatbuffers//src:flatc (af7c1be)
+//:monster_fbs (0c8de79)
+//:monster_fbs_srcs (0c8de79)
+//:monster.fbs (null)
+//:sample_binary (0c8de79)
+//:sample_binary.cpp (null)
+
+## cquery --transitions=lite 'deps(//:monster_fbs_srcs, 1)': the genrule's tools edge
+NoTransition -> //:monster_fbs_srcs (0c8de79)
+  srcs#//:monster.fbs#(null transition) -> 
+  tools#@com_github_google_flatbuffers//:flatc#(exec + (TestTrimmingTransition + ConfigFeatureFlagTaggedTrimmingTransition)) -> af7c1be
+  $genrule_setup#@bazel_tools//tools/genrule:genrule-setup.sh#(null transition) -> 
+
+## bazel config 0c8de79 af7c1be: what the exec transition changed
+Displaying diff between configs 0c8de79 and af7c1be
+FragmentOptions com.google.devtools.build.lib.analysis.PlatformOptions {
+  platforms: [@@apple_support+//platforms:darwin_x86_64], [@@platforms//host:host]
+}
+FragmentOptions com.google.devtools.build.lib.analysis.config.CoreOptions {
+  compilation_mode: fastbuild, opt
+  is exec configuration: false, true
+  platform_suffix: null, exec
+}
+FragmentOptions com.google.devtools.build.lib.rules.cpp.CppOptions {
+  copt: [], [-g0]
+  crosstool_top: @@bazel_tools//tools/cpp:toolchain, @bazel_tools//tools/cpp:toolchain
+  cxxopt: [], [-g0]
+  strip: sometimes, always
+}
+FragmentOptions com.google.devtools.build.lib.rules.java.JavaOptions {
+  java_runtime_version: local_jdk, remotejdk_11
+  jvmopt: [], [-XX:ErrorFile=/dev/stderr]
+}
+
+## toolchain resolution (--toolchain_resolution_debug=@bazel_tools//tools/cpp:toolchain_type)
+ToolchainResolution:   Rejected toolchain @@apple_support++apple_cc_configure_extension+local_config_apple_cc//:cc-compiler-darwin_arm64; mismatching values: aarch64
+ToolchainResolution:   Rejected toolchain @@apple_support++apple_cc_configure_extension+local_config_apple_cc//:cc-compiler-darwin_arm64e; mismatching values: arm64e
+ToolchainResolution:   Toolchain @@apple_support++apple_cc_configure_extension+local_config_apple_cc//:cc-compiler-darwin_arm64 is compatible with target platform, searching for execution platforms:
+ToolchainResolution:   Toolchain @@apple_support++apple_cc_configure_extension+local_config_apple_cc//:cc-compiler-darwin_x86_64 is compatible with target platform, searching for execution platforms:
+ToolchainResolution: Target platform @@apple_support+//platforms:darwin_x86_64: Selected execution platform @@platforms//host:host, type @@bazel_tools//tools/cpp:toolchain_type -> toolchain @@apple_support++apple_cc_configure_extension+local_config_apple_cc//:cc-compiler-darwin_x86_64
+ToolchainResolution: Target platform @@platforms//host:host: Selected execution platform @@platforms//host:host, type @@bazel_tools//tools/cpp:toolchain_type -> toolchain @@apple_support++apple_cc_configure_extension+local_config_apple_cc//:cc-compiler-darwin_arm64
+
+## artifacts
+sample_binary: Mach-O 64-bit executable x86_64
+flatc: Mach-O 64-bit executable arm64
+sample_binary: darwin_x86_64-fastbuild
+flatc: darwin_arm64-opt-exec
+monster_generated.h sha256: b735c911b19b778f954531add4978e49894627793c465da8d4b84f84de2bb8ac
+
+## run
+The FlatBuffer was successfully created and verified!
+
+## without --experimental_platform_in_output_dir: the configurations' output dirs
+darwin_arm64-fastbuild False
+
+## the annotation experiment: flatc in srcs, not tools (//:monster_misannotated)
+bazel build //:monster_misannotated: succeeded
+  srcs#@com_github_google_flatbuffers//:flatc#NoTransition -> 
+the genrule runs bazel-out/darwin_x86_64-fastbuild/bin/external/flatbuffers+/flatc: Mach-O 64-bit executable x86_64

@@ -1,0 +1,64 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# HelloAndroid. Upstream: Gradle's externalNativeBuild runs
+# app/src/main/cpp/CMakeLists.txt under the NDK's toolchain file, and that
+# file configures itself a second time on the host to build the generators
+# (execute_process, into app/.cxx-generators). Here the ABIs are two
+# configurations of one graph and the generators are targets the Halide
+# libraries name, so core builds them for the host.
+#
+# app/build.gradle: minSdk = 23, abiFilters arm64-v8a and x86_64.
+platform_os_level = [["android", "23"]]
+halide_build_install = [["${HALIDE_PREFIX}"]]
+halide_build_runtime_defaults = [["Halide::GenRT", "Halide::Runtime"]]
+
+[defaults.config_decl]
+setting = { "native.opt" = "release" }
+
+[defaults.target]
+profile = "cxx17"
+
+[config_decl.arm64-v8a]
+p = "arm64-android"
+
+[config_decl.x86_64]
+p = "x86_64-android"
+
+# CMAKE_CXX_STANDARD 17.
+[profile.cxx17]
+private = { "cxx.std" = "17" }
+
+[target.deinterleave_generator]
+halide_build_generator = true
+sources = "generators/deinterleave_generator.cpp"
+
+[target.edge_detect_generator]
+halide_build_generator = true
+sources = "generators/edge_detect_generator.cpp"
+
+# add_halide_library(<name> FROM <generator>): the generator's one generator,
+# the configuration's Halide target (arm-64-android or x86-64-android).
+[target.deinterleave]
+halide_build_library = { from = "deinterleave_generator" }
+
+[target.edge_detect]
+halide_build_library = { from = "edge_detect_generator" }
+
+[target.HelloAndroid]
+kind = "library"
+default_linkage = "shared"
+sources = [
+  "AndroidBufferUtilities.cpp",
+  "HalideFilters.cpp",
+  "LockedSurface.cpp",
+  "YuvBufferT.cpp",
+]
+deps = { private = [
+  "deinterleave",
+  "edge_detect",
+  "ndk::log",
+  "ndk::android",
+  "ndk::atomic",
+] }
+request = ["arm64-v8a", "x86_64"]

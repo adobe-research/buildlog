@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Qt6CoreTools as Qt would install it: the host tools (moc, rcc, ...) that
+# Qt6CoreToolsTargets.cmake imports.
+name = "Qt6CoreTools"
+version = "6.11.3"
+rank = 5
+requires = { buildlog-cpp = ">=0.1" }
+imports = [
+  { format = "cmake", file = "../../../lib/cmake/Qt6CoreTools/Qt6CoreToolsTargets.cmake", namespace = "Qt6" }
+]

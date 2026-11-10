@@ -1,0 +1,52 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// TCC (tinycc) toolchains, stated by their author rather than discovered.
+//
+// tcc_toolchain(tc, compiler, runtime, home, version): toolchain tc is the
+// TCC that target `compiler` builds; `runtime` is its support library
+// (libtcc1.a: target ids, both built in this graph), `home` its tccdir (-B:
+// where tcc finds its own include/ directory, here the source tree's), and
+// `version` the release its sources are. The one program is every role: the
+// compiler driver (cc), the link driver (link) and, as `tcc -ar`, the
+// archiver (ar).
+.decl tcc_toolchain(tc:symbol, compiler:symbol, runtime:symbol, home:symbol, version:symbol)   // accepted
+// tcc_compiler(t): t builds a TCC (tcc.c), whether or not the build uses it
+// as a toolchain (a bootstrap's last stage is only compared).
+.decl tcc_compiler(t:symbol)   // accepted
+error("tcc toolchain named twice", tc) :- tcc_toolchain(tc, a, ra, ha, va), tcc_toolchain(tc, b, rb, hb, vb),
+  cat(a, " ", ra, " ", ha, " ", va) < cat(b, " ", rb, " ", hb, " ", vb).
+
+toolchain(tc, "tcc", v) :- tcc_toolchain(tc, _, _, _, v).
+toolchain_tool_target(tc, r, t) :- tcc_toolchain(tc, t, _, _, _), (r = "cc" ; r = "link" ; r = "ar").
+toolchain_tool_arg(tc, "ar", "-ar") :- tcc_toolchain(tc, _, _, _, _).
+toolchain_runtime(tc, r) :- tcc_toolchain(tc, _, r, _, _).
+
+// What a TCC runs on and targets. Its program is built for the build
+// machine (a tool runs in the exec configuration, whose platform is the
+// host), and a native TCC targets the machine it was compiled for: its
+// target is chosen at compile time from the building compiler's predefined
+// macros (tcc.h), not by a flag. TCC 0.9.28 generates code for these
+// (Mach-O on macOS, ELF on Linux).
+.decl tcc_supported(os:symbol, cpu:symbol)
+tcc_supported("macos", "arm64"). tcc_supported("macos", "x86_64").
+tcc_supported("linux", "arm64"). tcc_supported("linux", "x86_64").
+.decl tcc_host(h:symbol)
+tcc_host(h) :- host_platform(h), platform_constraint(h, "os", os), platform_constraint(h, "cpu", cpu),
+  tcc_supported(os, cpu).
+toolchain_runs_on(tc, h), toolchain_can_target(tc, "c", h), toolchain_can_target(tc, "native-link", h) :-
+  tcc_toolchain(tc, _, _, _, _), tcc_host(h).
+
+// How a TCC is aimed and how buildlog's settings are spelled for it.
+tc_platform_arg(tc, p, "-B ", home) :- tcc_toolchain(tc, _, _, home, _), tcc_host(p).
+family_setting_arg("tcc", "compile", "native.opt", "debug", "-g").
+family_setting_arg("tcc", "compile", "native.opt", "release", "-O2").
+family_setting_arg("tcc", "compile", "native.opt", "release", "-DNDEBUG").
+
+// A TCC compiler bakes its target's system headers in (CONFIG_SYSROOT: its
+// include path is {B}/include, then <sysroot>/usr/include, in that order,
+// so TCC's own float.h and stddef.h win). On macOS that is the platform's
+// SDK, as tinycc's configure finds it with xcrun.
+tcc_compiler(t) :- tcc_toolchain(_, t, _, _, _).
+prop_in(t, c, "cc.define", cat("CONFIG_SYSROOT=\"", s, "\""), "private") :- tcc_compiler(t), needed(t, c),
+  config_platform(c, p), platform_sdk(p, s).

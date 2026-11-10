@@ -1,0 +1,17 @@
+{
+ "cmake": {
+  "version": {
+   "string": "4.4.3"
+  }
+ },
+ "reply": {
+  "codemodel-v2": {
+   "jsonFile": "codemodel-v2-mini.json",
+   "kind": "codemodel",
+   "version": {
+    "major": 2,
+    "minor": 11
+   }
+  }
+ }
+}

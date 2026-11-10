@@ -1,0 +1,137 @@
+action_arg("out:bin/arm64-macos.release.none/flatc", 0, "", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++")  [buildlog:L3_native.dl:216]
+  executable("flatc", ‹arm64-macos.release.none›, "out:bin/arm64-macos.release.none/flatc")  [buildlog:L3_native.dl:75]  (via linked)
+    needed("flatc", ‹arm64-macos.release.none›)  [buildlog:L1_targets.dl:291]
+      tool_dep("monster_fbs", ‹x86_64-macos.debug.none›, "flatc")  [buildlog:L1_targets.dl:534]
+        #n5 tool_ref("monster_fbs", ‹x86_64-macos.debug.none›, "out:gen/x86_64-macos.debug.none/monster_fbs/monster_generated.h", "flatc", "run")  [buildlog:L1_targets.dl:520]
+          action_run("out:gen/x86_64-macos.debug.none/monster_fbs/monster_generated.h", 0, "", "flatc", "run")  [project:rules.dl:40]
+            #n7 fbs_cc_out("monster_fbs", ‹x86_64-macos.debug.none›, "out:gen/x86_64-macos.debug.none/monster_fbs", "out:gen/x86_64-macos.debug.none/monster_fbs/monster_generated.h")  [project:rules.dl:29]
+              #n8 fbs_cc_library("monster_fbs")  ← case-studies/bazel-flatc/project/spec.toml:82 (package project)
+              fbs_cc_base("monster_fbs", "monster")  [project:rules.dl:21]
+                #n10 fbs_cc_schema("monster_fbs", "samples/monster.fbs")  ← case-studies/bazel-flatc/project/spec.toml:84 (package project)
+                fbs_cc_slash("samples/monster.fbs", 7)  [project:rules.dl:19]
+                  ↑ fbs_cc_schema("monster_fbs", "samples/monster.fbs")  (#n10)
+                  "/" = "/"
+                  #n13 7 = 7
+                ".fbs" = ".fbs"
+                ↑ 7 = 7  (#n13)
+              eff_dep("sample_binary", ‹x86_64-macos.debug.none›, "monster_fbs", "private")  [buildlog:L1_targets.dl:289]  (via needed)
+                eff_ref("sample_binary", ‹x86_64-macos.debug.none›, "monster_fbs", "private")  [buildlog:L1_targets.dl:287]
+                  #n18 needed("sample_binary", ‹x86_64-macos.debug.none›)  [buildlog:L1_targets.dl:282]
+                    request("sample_binary", "cross")  [buildlog:L1_targets.dl:267]
+                      request_all("sample_binary")  ← case-studies/bazel-flatc/project/spec.toml:15 (package project)
+                      #n21 config_decl("cross", "x86_64-macos")  ← case-studies/bazel-flatc/project/spec.toml:7 (package project)
+                    #n23 config_select("cross")  ← driver: config_select: --config on the configure command line  (via config_active)
+                    #n24 decl_cfg("cross", ‹x86_64-macos.debug.none›)  [buildlog:L1_targets.dl:84]
+                      ↑ config_decl("cross", "x86_64-macos")  (#n21)
+                      decl_suffix("cross", 0, [["native.opt", "debug"], [["native.sanitize", "none"], nil]])  [buildlog:L1_targets.dl:82]
+                        decl_suffix("cross", 1, [["native.sanitize", "none"], nil])  [buildlog:L1_targets.dl:82]
+                          ↑ config_decl("cross", "x86_64-macos")  (#n21)  (via decl_suffix)
+                          decl_value("cross", "native.sanitize", "none")  [buildlog:L1_targets.dl:70]
+                            ↑ config_decl("cross", "x86_64-macos")  (#n21)
+                            !decl_has("cross", "native.sanitize")
+                          #n33 2 > 0
+                          #n34 1 = 1
+                        config_decl_setting("cross", "native.opt", "debug")  ← case-studies/bazel-flatc/project/spec.toml:11 (package project)  (via decl_value)
+                        #n39 1 > 0
+                        #n40 0 = 0
+                    #n41 config(‹x86_64-macos.debug.none›)  [buildlog:L1_targets.dl:89]
+                      ↑ decl_cfg("cross", ‹x86_64-macos.debug.none›)  (#n24)
+                      platform("x86_64-macos", "x86_64-apple-macos13")  [buildlog-cpp:layers/L2_toolchains.dl:24]
+                        res_platform("inventory:default", "x86_64-macos", "x86_64-apple-macos13")  ← probe inventory request "inventory:default"
+                        ↑ config_decl("cross", "x86_64-macos")  (#n21)  (via req_inventory)
+                  #n46 dep("sample_binary", "monster_fbs", "private")  ← case-studies/bazel-flatc/project/spec.toml:90 (package project)
+                own_ref("sample_binary", "monster_fbs", "monster_fbs")  [buildlog:L1_targets.dl:367]  (via dep_resolves)
+                  ↑ dep("sample_binary", "monster_fbs", "private")  (#n46)  (via dep_ref)
+                  !scoped("sample_binary")
+                  ↑ fbs_cc_library("monster_fbs")  (#n8)  (via target_id ← target)
+                  #n53 !scoped("monster_fbs")
+              #n54 cfg_name(‹x86_64-macos.debug.none›, "x86_64-macos.debug.none")  [buildlog:L1_targets.dl:145]
+                ↑ config(‹x86_64-macos.debug.none›)  (#n41)
+                settings_name([["native.opt", "debug"], [["native.sanitize", "none"], nil]], ".debug.none")  [buildlog:L1_targets.dl:143]
+                  ↑ config(‹x86_64-macos.debug.none›)  (#n41)  (via settings_suffix)
+            fbs_cc_tool("monster_fbs", "flatc")  ← case-studies/bazel-flatc/project/spec.toml:83 (package project)
+          ↑ fbs_cc_out("monster_fbs", ‹x86_64-macos.debug.none›, "out:gen/x86_64-macos.debug.none/monster_fbs", "out:gen/x86_64-macos.debug.none/monster_fbs/monster_generated.h")  (#n7)  (via target_action)
+        tool_resolves("monster_fbs", "flatc", "flatc")  [buildlog:L1_targets.dl:527]
+          ↑ tool_ref("monster_fbs", ‹x86_64-macos.debug.none›, "out:gen/x86_64-macos.debug.none/monster_fbs/monster_generated.h", "flatc", "run")  (#n5)
+          ↑ !scoped("monster_fbs")  (#n53)
+          project_name("flatc")  [buildlog:L1_targets.dl:524]
+            target("flatc")  ← case-studies/bazel-flatc/project/spec.toml:41 (package project)  (via target_id)
+            !scoped("flatc")
+      exec_config(‹x86_64-macos.debug.none›, ‹arm64-macos.release.none›)  [buildlog:L1_targets.dl:133]
+        ↑ config(‹x86_64-macos.debug.none›)  (#n41)
+        #n68 host_platform("arm64-macos")  [buildlog-cpp:layers/L2_toolchains.dl:23]
+          res_host_platform("inventory:default", "arm64-macos")  ← probe inventory request "inventory:default"
+          ↑ config_decl("cross", "x86_64-macos")  (#n21)  (via req_inventory)
+        exec_settings([["native.opt", "debug"], [["native.sanitize", "none"], nil]], [["native.opt", "release"], [["native.sanitize", "none"], nil]])  [buildlog:L1_targets.dl:131]
+          ↑ config(‹x86_64-macos.debug.none›)  (#n41)  (via settings_suffix)
+          #n71 exec_settings([["native.sanitize", "none"], nil], [["native.sanitize", "none"], nil])  [buildlog:L1_targets.dl:131]
+            ↑ config(‹x86_64-macos.debug.none›)  (#n41)  (via settings_suffix ← settings_suffix)
+            !exec_overridden("native.sanitize")  (via exec_value)
+          #n79 !exec_overridden("native.opt")  (via exec_value)
+    #n80 native_kind("flatc", "executable")  ← case-studies/bazel-flatc/project/spec.toml:42 (package project)
+    native_name("flatc", "flatc")  [buildlog:L3_native.dl:24]
+      ↑ native_kind("flatc", "executable")  (#n80)
+      !has_native_output_name("flatc")
+    cfg_name(‹arm64-macos.release.none›, "arm64-macos.release.none")  [buildlog:L1_targets.dl:145]
+      #n84 config(‹arm64-macos.release.none›)  [buildlog:L1_targets.dl:89]
+        decl_cfg("opt", ‹arm64-macos.release.none›)  [buildlog:L1_targets.dl:84]
+          #n86 config_decl("opt", "arm64-macos")  ← case-studies/bazel-flatc/project/spec.toml:7 (package project)
+          decl_suffix("opt", 0, [["native.opt", "release"], [["native.sanitize", "none"], nil]])  [buildlog:L1_targets.dl:82]
+            decl_suffix("opt", 1, [["native.sanitize", "none"], nil])  [buildlog:L1_targets.dl:82]
+              ↑ config_decl("opt", "arm64-macos")  (#n86)  (via decl_suffix)
+              decl_value("opt", "native.sanitize", "none")  [buildlog:L1_targets.dl:70]
+                ↑ config_decl("opt", "arm64-macos")  (#n86)
+                !decl_has("opt", "native.sanitize")
+              ↑ 2 > 0  (#n33)
+              ↑ 1 = 1  (#n34)
+            config_decl_setting("opt", "native.opt", "release")  ← case-studies/bazel-flatc/project/spec.toml:10 (package project)  (via decl_value)
+            ↑ 1 > 0  (#n39)
+            ↑ 0 = 0  (#n40)
+        #n95 platform("arm64-macos", "arm64-apple-macos13")  [buildlog-cpp:layers/L2_toolchains.dl:24]
+          res_platform("inventory:default", "arm64-macos", "arm64-apple-macos13")  ← probe inventory request "inventory:default"
+          ↑ config_decl("cross", "x86_64-macos")  (#n21)  (via req_inventory)
+      settings_name([["native.opt", "release"], [["native.sanitize", "none"], nil]], ".release.none")  [buildlog:L1_targets.dl:143]
+        ↑ config(‹arm64-macos.release.none›)  (#n84)  (via settings_suffix)
+        ↑ config(‹x86_64-macos.debug.none›)  (#n41)  (via settings_name ← settings_suffix ← settings_suffix)
+  !has_link_role("flatc", ‹arm64-macos.release.none›)
+  tc_for("native-link", ‹arm64-macos.release.none›, "apple-clang")  [buildlog:L2_toolchains.dl:57]
+    ↑ config(‹arm64-macos.release.none›)  (#n84)  (via config_platform)
+    exec_config(‹arm64-macos.release.none›, ‹arm64-macos.release.none›)  [buildlog:L1_targets.dl:133]
+      ↑ config(‹arm64-macos.release.none›)  (#n84)
+      ↑ host_platform("arm64-macos")  (#n68)
+      exec_settings([["native.opt", "release"], [["native.sanitize", "none"], nil]], [["native.opt", "release"], [["native.sanitize", "none"], nil]])  [buildlog:L1_targets.dl:131]
+        ↑ config(‹arm64-macos.release.none›)  (#n84)  (via settings_suffix)
+        ↑ exec_settings([["native.sanitize", "none"], nil], [["native.sanitize", "none"], nil])  (#n71)
+        ↑ !exec_overridden("native.opt")  (#n79)  (via exec_value)
+    tc_select("native-link", "arm64-macos", "arm64-macos", "apple-clang")  [buildlog:L2_toolchains.dl:33]
+      tc_candidate("native-link", "arm64-macos", "arm64-macos", "apple-clang")  [buildlog:L2_toolchains.dl:26]
+        toolchain_runs_on("apple-clang", "arm64-macos")  [buildlog-cpp:layers/L2_toolchains.dl:37]
+          res_toolchain_runs_on("inventory:default", "apple-clang", "arm64-macos")  ← probe inventory request "inventory:default"
+          ↑ config_decl("cross", "x86_64-macos")  (#n21)  (via req_inventory)
+        toolchain_can_target("apple-clang", "native-link", "arm64-macos")  [buildlog-cpp:layers/L2_toolchains.dl:38]
+          res_cc_capability("cc-cap:apple-clang:native-link:arm64-macos", "apple-clang", "native-link", "arm64-macos", "yes")  ← probe cc_capability request "cc-cap:apple-clang:native-link:arm64-macos"("apple-clang", "native-link", "arm64-macos")
+          domain_cc_capability("cc-cap:apple-clang:native-link:arm64-macos", "apple-clang", "native-link", "arm64-macos")  [buildlog-cpp:layers/L2_toolchains.dl:45]  (via req_cc_capability)
+            #n113 toolchain("apple-clang", "clang", "21.0.0")  [buildlog-cpp:layers/L2_toolchains.dl:35]
+              res_toolchain("inventory:default", "apple-clang", "clang", "21.0.0")  ← probe inventory request "inventory:default"
+              ↑ config_decl("cross", "x86_64-macos")  (#n21)  (via req_inventory)
+            ↑ platform("arm64-macos", "arm64-apple-macos13")  (#n95)
+            build_platform("arm64-macos")  [buildlog:L1_targets.dl:276]
+              ↑ host_platform("arm64-macos")  (#n68)
+              ↑ config_select("cross")  (#n23)  (via config_active)
+            executable("sample_binary", ‹x86_64-macos.debug.none›, "out:bin/x86_64-macos.debug.none/sample_binary")  [buildlog:L3_native.dl:75]  (via tc_required)
+              ↑ needed("sample_binary", ‹x86_64-macos.debug.none›)  (#n18)
+              #n119 native_kind("sample_binary", "executable")  ← case-studies/bazel-flatc/project/spec.toml:88 (package project)
+              native_name("sample_binary", "sample_binary")  [buildlog:L3_native.dl:24]
+                ↑ native_kind("sample_binary", "executable")  (#n119)
+                !has_native_output_name("sample_binary")
+              ↑ cfg_name(‹x86_64-macos.debug.none›, "x86_64-macos.debug.none")  (#n54)
+      toolchain_pin("native-link", "arm64-macos", "arm64-macos", "apple-clang")  ← case-studies/bazel-flatc/project/presets/apple-clang.toml:7 (package project)
+  toolchain_tool("apple-clang", "link", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++")  [buildlog-cpp:layers/F_clang.dl:9]
+    ↑ toolchain("apple-clang", "clang", "21.0.0")  (#n113)
+    toolchain_tool("apple-clang", "cxx", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++")  [buildlog-cpp:layers/L2_toolchains.dl:36]
+      res_toolchain_tool("inventory:default", "apple-clang", "cxx", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++")  ← probe inventory request "inventory:default"
+      ↑ config_decl("cross", "x86_64-macos")  (#n21)  (via req_inventory)
+
+legend:
+  ‹arm64-macos.release.none› = ["arm64-macos", [["native.opt", "release"], [["native.sanitize", "none"], nil]]]
+  ‹x86_64-macos.debug.none› = ["x86_64-macos", [["native.opt", "debug"], [["native.sanitize", "none"], nil]]]

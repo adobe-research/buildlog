@@ -1,0 +1,7 @@
+# Core-only: default target namespace (the package name); defines
+# ids-amb-b::util, so a bare "util" outside both packages is ambiguous.
+name = "ids-amb-b"
+version = "0.1.0"
+rank = 1
+layers = []
+facts = ["facts.toml"]

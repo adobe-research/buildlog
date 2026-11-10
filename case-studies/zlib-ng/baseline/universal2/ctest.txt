@@ -1,0 +1,70 @@
+ 1/69 Test  #4: CVE-2004-0797 ....................   Passed
+ 2/69 Test  #3: CVE-2002-0059 ....................   Passed
+ 3/69 Test  #6: CVE-2005-2096 ....................   Passed
+ 4/69 Test  #5: CVE-2005-1849 ....................   Passed
+ 5/69 Test  #2: infcover .........................   Passed
+ 6/69 Test  #1: example ..........................   Passed
+ 7/69 Test  #9: CVE-2018-25032-fixed-level-1 .....   Passed
+ 8/69 Test  #8: CVE-2018-25032-default-level-6 ...   Passed
+ 9/69 Test  #7: CVE-2018-25032-fixed-level-6 .....   Passed
+10/69 Test #10: CVE-2018-25032-default-level-1 ...   Passed
+11/69 Test #11: CVE-2018-25032-fixed-level-2 .....   Passed
+12/69 Test #12: CVE-2018-25032-default-level-2 ...   Passed
+13/69 Test #15: minigzip-fireworks.jpg-T .........   Passed
+14/69 Test #13: minigzip-fireworks.jpg-R .........   Passed
+15/69 Test #14: minigzip-fireworks.jpg-h .........   Passed
+16/69 Test #16: minigzip-fireworks.jpg-0 .........   Passed
+17/69 Test #17: minigzip-fireworks.jpg-1 .........   Passed
+18/69 Test #18: minigzip-fireworks.jpg-2 .........   Passed
+19/69 Test #19: minigzip-fireworks.jpg-4 .........   Passed
+20/69 Test #20: minigzip-fireworks.jpg-5 .........   Passed
+21/69 Test #21: minigzip-fireworks.jpg-F .........   Passed
+22/69 Test #22: minigzip-fireworks.jpg-6 .........   Passed
+23/69 Test #23: minigzip-fireworks.jpg-9 .........   Passed
+24/69 Test #24: minigzip-fireworks.jpg-f .........   Passed
+25/69 Test #27: minigzip-lcet10.txt-T ............   Passed
+26/69 Test #26: minigzip-lcet10.txt-h ............   Passed
+27/69 Test #25: minigzip-lcet10.txt-R ............   Passed
+28/69 Test #28: minigzip-lcet10.txt-0 ............   Passed
+29/69 Test #29: minigzip-lcet10.txt-1 ............   Passed
+30/69 Test #30: minigzip-lcet10.txt-2 ............   Passed
+31/69 Test #31: minigzip-lcet10.txt-4 ............   Passed
+32/69 Test #32: minigzip-lcet10.txt-5 ............   Passed
+33/69 Test #33: minigzip-lcet10.txt-F ............   Passed
+34/69 Test #34: minigzip-lcet10.txt-6 ............   Passed
+35/69 Test #35: minigzip-lcet10.txt-9 ............   Passed
+36/69 Test #39: minigzip-paper-100k.pdf-T ........   Passed
+37/69 Test #37: minigzip-paper-100k.pdf-R ........   Passed
+38/69 Test #36: minigzip-lcet10.txt-f ............   Passed
+39/69 Test #38: minigzip-paper-100k.pdf-h ........   Passed
+40/69 Test #40: minigzip-paper-100k.pdf-0 ........   Passed
+41/69 Test #42: minigzip-paper-100k.pdf-2 ........   Passed
+42/69 Test #41: minigzip-paper-100k.pdf-1 ........   Passed
+43/69 Test #43: minigzip-paper-100k.pdf-4 ........   Passed
+44/69 Test #45: minigzip-paper-100k.pdf-F ........   Passed
+45/69 Test #44: minigzip-paper-100k.pdf-5 ........   Passed
+46/69 Test #46: minigzip-paper-100k.pdf-6 ........   Passed
+47/69 Test #47: minigzip-paper-100k.pdf-9 ........   Passed
+48/69 Test #48: minigzip-paper-100k.pdf-f ........   Passed
+49/69 Test #50: minigzip-detect-binary-A .........   Passed
+50/69 Test #49: minigzip-detect-text-A ...........   Passed
+51/69 Test #53: GH-382 ...........................   Passed
+52/69 Test #51: GH-361 ...........................   Passed
+53/69 Test #56: GH-536-zero-stored-block .........   Passed
+54/69 Test #54: GH-536-segfault ..................   Passed
+55/69 Test #55: GH-536-incomplete-read ...........   Passed
+56/69 Test #58: GH-1600-no-window-check ..........   Passed
+57/69 Test #59: GH-1600-no-window-no-check .......   Passed
+58/69 Test #61: minideflate-file_compress ........   Passed
+59/69 Test #52: GH-364 ...........................   Passed
+60/69 Test #62: minigzip-help ....................   Passed
+61/69 Test #63: minigzip-invalid .................   Passed
+62/69 Test #64: minideflate-help .................   Passed
+63/69 Test #60: minigzip-file_compress ...........   Passed
+64/69 Test #65: minideflate-invalid ..............   Passed
+65/69 Test #66: switchlevels-help ................   Passed
+66/69 Test #57: GH-751 ...........................   Passed
+67/69 Test #68: makefixed ........................   Passed
+68/69 Test #67: makecrct .........................   Passed
+69/69 Test #69: maketrees ........................   Passed
+100% tests passed out of 69

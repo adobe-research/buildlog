@@ -1,0 +1,8 @@
+# Defines beta::util and beta::api; api's bare dep "util" means beta::util.
+name = "beta"
+version = "0.1.0"
+rank = 5
+namespace = "beta"
+layers = []
+facts = ["beta.facts.toml"]
+requires = { buildlog-cpp = ">=0.1" }

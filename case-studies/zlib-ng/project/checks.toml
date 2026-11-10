@@ -1,0 +1,199 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# CMakeLists.txt's and cmake/detect-intrinsics.cmake's configure checks on
+# this Mac, as questions to the C toolchain of each configuration
+# (buildlog-cpp's compact check tables, one row per check, and cc_check
+# tables for the probes with a program). Each configuration (each slice of universal2)
+# has cc.check.<name> = yes | no; conditions read it (spec.toml, isa.toml).
+#
+# Spellings. check_c_compiler_flag and check_c_source_compiles with
+# FAIL_REGEX treat a diagnostic as failure; a buildlog check has no
+# FAIL_REGEX, so those probes pass -Werror (README ledger).
+# ADDITIONAL_CHECK_FLAGS is the three -Werror=... flags whose own checks
+# (HAVE_W_ERROR_*) answer yes with Apple clang; buildlog cannot chain one
+# check's arguments on another's answer, so they are stated resolved.
+#
+# The ISA probes (HAVE_*_INTRIN, NEON_*, HAVE_ARMV8_*) pass the flags
+# upstream passes (its <ISA>FLAG and NOLTOFLAG), stated here: the plugin
+# keeps a check's arguments private, so the ISA model cannot derive them
+# from the set's flags. Every configuration asks every check, so the x86
+# probes also run for arm64 and answer no there, and the reverse (README
+# "Design input": these are facts about the toolchain, not questions).
+#
+# A check's program is one line (a fact value cannot hold a line break), so
+# the prelude's #includes are cc_check_headers and upstream's preprocessor
+# conditionals are resolved: HAVE_CPUID_GNU calls __cpuid_count (upstream
+# tests the macro with #ifndef), the visibility probes spell the attribute
+# out, HAVE_ARMV8_INLINE_ASM keeps its __aarch64__ branch (README ledger).
+
+# GCC rejects the -Werror=unguarded-availability family, which CMake finds
+# out (its HAVE_W_ERROR_* checks answer no) and leaves out of the checks that
+# follow: for GCC the stated-resolved arguments below are the plain ones.
+# Clang, Apple's or not, accepts them.
+cc_check_args_family = [
+  ["HAVE_NO_INTERPOSITION", "gcc", "-Werror -fno-semantic-interposition"],
+  ["HAVE_FSEEKO", "gcc", ""],
+  ["HAVE_STRERROR", "gcc", ""],
+]
+
+# ---- compiler flags (check_c_compiler_flag): a trivial program builds with them ----
+[cc_check_flag]
+HAVE_W_ERROR_UNGUARDED_AVAILABILITY = "-Werror -Werror=unguarded-availability"
+HAVE_W_ERROR_UNGUARDED_AVAILABILITY_NEW = "-Werror -Werror=unguarded-availability-new"
+HAVE_W_ERROR_UNUSED_COMMAND_LINE_ARGUMENT = "-Werror -Werror=unused-command-line-argument"
+HAVE_NO_INTERPOSITION = "-Werror -Werror=unguarded-availability -Werror=unguarded-availability-new -Werror=unused-command-line-argument -fno-semantic-interposition"
+HAVE_CASCADE_LAKE = "-Werror -mtune=cascadelake"
+
+# ---- headers (check_include_file) ----
+[cc_check_include]
+HAVE_ARM_ACLE_H = "arm_acle.h"
+HAVE_SYS_AUXV_H = "sys/auxv.h"
+HAVE_SYS_SDT_H = "sys/sdt.h"
+HAVE_UNISTD_H = "unistd.h"
+HAVE_LINUX_AUXVEC_H = "linux/auxvec.h"
+
+# ---- types (check_type_size, with CMAKE_REQUIRED_DEFINITIONS) ----
+# Upstream's third check, __off64_t, decides nothing (no HAVE___OFF64_T
+# consumer), so it is not asked.
+[cc_check_type]
+HAVE_OFF64_T = "off64_t"
+HAVE__OFF64_T = "_off64_t"
+
+# ---- functions (check_function_exists, with ADDITIONAL_CHECK_FLAGS) ----
+[cc_check_function]
+HAVE_FSEEKO = "fseeko"
+HAVE_STRERROR = "strerror"
+
+# Their preludes and arguments.
+[cc_check_headers]
+HAVE_OFF64_T = "sys/types.h stdint.h stddef.h"
+HAVE__OFF64_T = "sys/types.h stdint.h stddef.h"
+
+[cc_check_args]
+HAVE_OFF64_T = "-D_LARGEFILE64_SOURCE=1 -D__USE_LARGEFILE64"
+HAVE__OFF64_T = "-D_LARGEFILE64_SOURCE=1 -D__USE_LARGEFILE64"
+HAVE_FSEEKO = "-Werror=unguarded-availability -Werror=unguarded-availability-new -Werror=unused-command-line-argument"
+HAVE_STRERROR = "-Werror=unguarded-availability -Werror=unguarded-availability-new -Werror=unused-command-line-argument"
+
+# ---- programs (check_symbol_exists, check_c_source_compiles, and the ISA
+# probes of cmake/detect-intrinsics.cmake) ----
+[defaults.cc_check]
+lang = "c"
+kind = "compiles"
+
+[cc_check.FNO_LTO_AVAILABLE]
+cc_check_args = "-Werror -fno-lto"
+subject = "int main() { return 0; }"
+
+# check_symbol_exists(__cpuid_count cpuid.h): CMake's program for it.
+[cc_check.HAVE_CPUID_GNU]
+cc_check_headers = "cpuid.h"
+subject = "int main(void) { unsigned int a, b, c, d; __cpuid_count(0, 0, a, b, c, d); return (int)(a ^ b ^ c ^ d); }"
+
+[cc_check.HAVE_CPUID_MS]
+cc_check_headers = "intrin.h"
+subject = "static inline void cpuid_ms(int info, unsigned int *eax, unsigned int *ebx, unsigned int *ecx, unsigned int *edx) { unsigned int registers[4]; __cpuid((int *)registers, info); *eax = registers[0]; *ebx = registers[1]; *ecx = registers[2]; *edx = registers[3]; } int main(void) { unsigned int eax, ebx, ecx, edx; cpuid_ms(0, &eax, &ebx, &ecx, &edx); return eax; }"
+
+[cc_check.HAVE_ATTRIBUTE_VISIBILITY_HIDDEN]
+cc_check_args = "-Werror"
+subject = 'int __attribute__((visibility ("hidden"))) foo; int main() { return 0; }'
+
+[cc_check.HAVE_ATTRIBUTE_VISIBILITY_INTERNAL]
+cc_check_args = "-Werror"
+subject = 'int __attribute__((visibility ("internal"))) foo; int main() { return 0; }'
+
+[cc_check.HAVE_ATTRIBUTE_ALIGNED]
+cc_check_args = "-Werror"
+subject = "int main(void) { __attribute__((aligned(8))) int test = 0; (void)test; return 0; }"
+
+[cc_check.HAVE_BUILTIN_ASSUME_ALIGNED]
+cc_check_args = "-fno-lto"
+subject = "char *test(char *buffer) { char *abuffer = __builtin_assume_aligned(buffer,64); return abuffer; } int main() { return 0; }"
+
+[cc_check.HAVE_BUILTIN_CTZ]
+cc_check_args = "-fno-lto"
+subject = "int main(void) { unsigned int zero = 0; long test = __builtin_ctz(zero); (void)test; return 0; }"
+
+[cc_check.HAVE_BUILTIN_CTZLL]
+cc_check_args = "-fno-lto"
+subject = "int main(void) { unsigned int zero = 0; long test = __builtin_ctzll(zero); (void)test; return 0; }"
+
+[cc_check.HAVE_PTRDIFF_T]
+cc_check_headers = "stddef.h"
+subject = "int main() { ptrdiff_t *a; (void)a; return 0; }"
+
+# The Linux aarch64 branch of WITH_OPTIM's AArch64 detection: getauxval
+# reports HWCAP_CRC32 (a Linux-only probe: the define is conditional on the os).
+[cc_check.ARM_AUXV_HAS_CRC32]
+cc_check_headers = "sys/auxv.h"
+subject = "int main() { return (getauxval(AT_HWCAP) & HWCAP_CRC32); }"
+
+[cc_check.HAVE_ARMV8_INLINE_ASM]
+cc_check_args = "-march=armv8-a+crc -fno-lto"
+subject = 'unsigned int f(unsigned int a, unsigned int b) { unsigned int c; __asm__( "crc32w %w0, %w1, %w2" : "=r" (c) : "r" (a), "r" (b)); return (int)c; } int main(void) { return f(1,2); }'
+
+[cc_check.HAVE_ARMV8_INTRIN]
+cc_check_headers = "arm_acle.h"
+cc_check_args = "-march=armv8-a+crc -fno-lto"
+subject = "unsigned int f(unsigned int a, unsigned int b) { return __crc32w(a, b); } int main(void) { return 0; }"
+
+[cc_check.NEON_AVAILABLE]
+cc_check_headers = "arm_neon.h"
+cc_check_args = "-Werror -march=armv8-a+simd -fno-lto"
+subject = "int main() { return 0; }"
+
+[cc_check.NEON_HAS_LD4]
+cc_check_headers = "arm_neon.h"
+cc_check_args = "-march=armv8-a+simd -fno-lto"
+subject = "int32x4x4_t f(int var[16]) { return vld1q_s32_x4(var); } int main(void) { return 0; }"
+
+[cc_check.HAVE_XSAVE_INTRIN]
+cc_check_headers = "immintrin.h"
+cc_check_args = "-Werror -mxsave -fno-lto"
+subject = "unsigned int f(unsigned int a) { return (int) _xgetbv(a); } int main(void) { return 0; }"
+
+[cc_check.HAVE_SSE2_INTRIN]
+cc_check_headers = "immintrin.h"
+cc_check_args = "-msse2 -fno-lto"
+subject = "__m128i f(__m128i x, __m128i y) { return _mm_sad_epu8(x, y); } int main(void) { return 0; }"
+
+[cc_check.HAVE_SSSE3_INTRIN]
+cc_check_headers = "immintrin.h"
+cc_check_args = "-mssse3 -fno-lto"
+subject = "__m128i f(__m128i u) { __m128i v = _mm_set1_epi32(1); return _mm_hadd_epi32(u, v); } int main(void) { return 0; }"
+
+[cc_check.HAVE_SSE41_INTRIN]
+cc_check_headers = "smmintrin.h"
+cc_check_args = "-msse4.1 -fno-lto"
+subject = "__m128i f(__m128i a, __m128i b) { return _mm_min_epi32(a, b); } int main(void) { return 0; }"
+
+[cc_check.HAVE_SSE42_INTRIN]
+cc_check_headers = "nmmintrin.h"
+cc_check_args = "-msse4.2 -fno-lto"
+subject = "unsigned int f(unsigned int a, unsigned int b) { return _mm_crc32_u32(a, b); } int main(void) { return 0; }"
+
+[cc_check.HAVE_PCLMULQDQ_INTRIN]
+cc_check_headers = "immintrin.h wmmintrin.h"
+cc_check_args = "-mpclmul -fno-lto"
+subject = "__m128i f(__m128i a, __m128i b) { return _mm_clmulepi64_si128(a, b, 0x10); } int main(void) { return 0; }"
+
+[cc_check.HAVE_AVX2_INTRIN]
+cc_check_headers = "immintrin.h"
+cc_check_args = "-mavx2 -mbmi2 -fno-lto"
+subject = "__m256i f(__m256i x) { const __m256i y = _mm256_set1_epi16(1); return _mm256_subs_epu16(x, y); } int main(void) { return 0; }"
+
+[cc_check.HAVE_AVX512_INTRIN]
+cc_check_headers = "immintrin.h"
+cc_check_args = "-mavx512f -mavx512dq -mavx512bw -mavx512vl -mbmi2 -mtune=cascadelake -fno-lto"
+subject = "__m512i f(__m512i y) { __m512i x = _mm512_set1_epi8(2); return _mm512_sub_epi8(x, y); } int main(void) { return 0; }"
+
+[cc_check.HAVE_AVX512VNNI_INTRIN]
+cc_check_headers = "immintrin.h"
+cc_check_args = "-mavx512f -mavx512dq -mavx512bw -mavx512vl -mavx512vnni -mbmi2 -mtune=cascadelake -fno-lto"
+subject = "int main(void) { const __m512i z512 = _mm512_setzero_si512(); const __m256i z256 = _mm256_setzero_si256(); volatile __m512i r512 = _mm512_dpbusd_epi32(z512, z512, z512); volatile __m256i r256 = _mm256_dpbusd_epi32(z256, z256, z256); (void)r512; (void)r256; return 0; }"
+
+[cc_check.HAVE_VPCLMULQDQ_INTRIN]
+cc_check_headers = "immintrin.h wmmintrin.h"
+cc_check_args = "-mvpclmulqdq -mavx512f -fno-lto"
+subject = "__m512i f(__m512i a) { __m512i b = _mm512_setzero_si512(); return _mm512_clmulepi64_epi128(a, b, 0x10); } int main(void) { return 0; }"

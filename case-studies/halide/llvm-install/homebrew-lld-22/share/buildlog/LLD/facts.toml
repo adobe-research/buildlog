@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+lld_version = [["22", "1", "8"]]
+lld_include_dir = "${PACKAGE_PREFIX}/include"

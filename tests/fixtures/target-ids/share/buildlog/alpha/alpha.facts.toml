@@ -1,0 +1,4 @@
+target = [["alpha::util"], ["alpha::api"]]
+native_kind = [["alpha::util", "library"], ["alpha::api", "library"]]
+cxx_source = [["alpha::util", "vendor/alpha/util.cpp"], ["alpha::api", "vendor/alpha/api.cpp"]]
+dep = [["alpha::api", "util", "public"]]

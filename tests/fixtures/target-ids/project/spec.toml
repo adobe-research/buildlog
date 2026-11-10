@@ -1,0 +1,10 @@
+target = [["app"], ["util"]]
+native_kind = [["app", "executable"], ["util", "library"]]
+cxx_source = [["app", "main.cpp"], ["util", "util.cpp"]]
+dep = [
+  ["app", "alpha::api", "private"],
+  ["app", "beta::api", "private"],
+  ["app", "util", "private"]
+]
+config_decl = [["native", "arm64-macos"]]
+request = [["app", "native"]]

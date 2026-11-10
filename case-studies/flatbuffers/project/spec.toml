@@ -1,0 +1,148 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# flatbuffers (CMakeLists.txt, v25.12.19) with upstream's default options:
+# the static runtime library flatbuffers and the compiler flatc here, and
+# FLATBUFFERS_BUILD_TESTS's tests and samples in tests.toml. The shared
+# library (FLATBUFFERS_BUILD_SHAREDLIB), flathash, the benchmarks and
+# grpctest are off by default and not stated.
+#
+# Three configurations: native, an x86_64 cross build and universal2. None
+# of them says where flatc runs; that follows from its use (tests.toml).
+config_decl = [
+  ["release", "arm64-macos"],
+  ["x86_64", "x86_64-macos"],
+  ["universal2", "universal2-macos"],
+]
+config_decl_setting = [
+  ["release", "native.opt", "release"],
+  ["x86_64", "native.opt", "release"],
+  ["universal2", "native.opt", "release"],
+]
+# The products: CMake's default `all` builds both, and installs both.
+request_all = [["flatbuffers"], ["flatc"]]
+
+# The configure checks (check_cxx_symbol_exists, check_symbol_exists), as
+# questions to each configuration's C++ toolchain: buildlog-cpp's
+# cc_check_symbol, whose program is CMake's CheckSymbolExists program for a
+# symbol that is not a macro (take its address).
+cc_check_lang = "cxx"
+cc_check_symbol = [
+  ["FLATBUFFERS_HAS_STRTOF_L", "strtof_l", "stdlib.h"],
+  ["FLATBUFFERS_HAS_STRTOULL_L", "strtoull_l", "stdlib.h"],
+  ["HAVE_REALPATH", "realpath", "stdlib.h"],
+]
+
+# include_directories(include), include_directories(grpc) and add_definitions():
+# every native target's own properties. ProjectConfig is interface-only, so
+# native targets opt into this profile rather than using file-wide defaults.
+[profile.dir_props]
+private = { "cc.include_dir" = ["src:include", "src:grpc"] }
+when."cc.check.FLATBUFFERS_HAS_STRTOF_L & cc.check.FLATBUFFERS_HAS_STRTOULL_L".private."cc.define" = "FLATBUFFERS_LOCALE_INDEPENDENT=1"
+when."!(cc.check.FLATBUFFERS_HAS_STRTOF_L & cc.check.FLATBUFFERS_HAS_STRTOULL_L)".private."cc.define" = "FLATBUFFERS_LOCALE_INDEPENDENT=0"
+when."!cc.check.HAVE_REALPATH".private."cc.define" = "FLATBUFFERS_NO_ABSOLUTE_PATH_RESOLUTION"
+
+# add_library(ProjectConfig INTERFACE): what every target links privately
+# (BUILD_INTERFACE), the language level and the warning flags. The flags
+# are clang's and GCC's branches; the compiler-version guards (> 3.8, > 4.4,
+# ...) are always true for the compilers buildlog-cpp knows and are not
+# stated. FLATBUFFERS_STRICT_MODE's -Werror is the user's cc_werror.
+[target.ProjectConfig]
+interface = { "cxx.std" = "11", "cc.compile_flag" = [
+  "-Wall",
+  "-pedantic",
+  "-Wextra",
+  "-Wno-unused-parameter",
+  "-Wold-style-cast",
+  "-fsigned-char",
+  "-Wnon-virtual-dtor",
+] }
+# compiler-family conditions use cxx.family, buildlog-cpp's attribute for
+# the family of the configuration's C++ toolchain, and the version guards
+# ($<VERSION_GREATER:$<CXX_COMPILER_VERSION>,...>) compare cxx.version.
+when."cxx.family == clang".interface."cc.compile_flag" = [
+  "-Wnewline-eof",
+  "-Wno-unknown-warning-option",
+  "-Wmissing-declarations",
+  "-Wzero-as-null-pointer-constant",
+]
+when."cxx.family == clang & cxx.version > 3.8".interface."cc.compile_flag" = [
+  "-Wimplicit-fallthrough",
+  "-Wextra-semi",
+]
+when."cxx.family == gcc & cxx.version > 4.4".interface."cc.compile_flag" = [
+  "-Wunused-result",
+  "-Wunused-parameter",
+  "-Werror=unused-parameter",
+  "-Wmissing-declarations",
+]
+when."cxx.family == gcc & cxx.version > 4.7".interface."cc.compile_flag" = [
+  "-Wzero-as-null-pointer-constant",
+]
+when."cxx.family == gcc & cxx.version > 7.0".interface."cc.compile_flag" = ["-faligned-new"]
+when."cxx.family == gcc & cxx.version > 8.0".interface."cc.compile_flag" = ["-Wextra-semi"]
+
+# add_library(flatbuffers STATIC ${FlatBuffers_Library_SRCS}), with the
+# include dir as its build interface.
+[target.flatbuffers]
+kind = "library"
+linkage = { require = "static", why = "upstream builds this target STATIC; its shared build is the separate flatbuffers_shared target (FLATBUFFERS_BUILD_SHAREDLIB)" }
+profile = "dir_props"
+srclist_use = ["FlatBuffers_Library_SRCS"]
+deps = { private = ["ProjectConfig"] }
+interface = { "cc.include_dir" = "src:include" }
+
+# add_executable(flatc ${FlatBuffers_Compiler_SRCS}).
+[target.flatc]
+kind = "executable"
+profile = "dir_props"
+srclist_use = ["FlatBuffers_Compiler_SRCS"]
+deps = { private = ["ProjectConfig"] }
+
+# CMake's source lists. flatc, flattests and the text/bfbs samples compile
+# FlatBuffers_Library_SRCS themselves rather than link the library.
+[srclist.FlatBuffers_Library_SRCS]
+srclist_source = [
+  "src/file_manager.cpp",
+  "src/file_name_manager.cpp",
+  "src/idl_parser.cpp",
+  "src/idl_gen_text.cpp",
+  "src/reflection.cpp",
+  "src/util.cpp",
+]
+
+[srclist.FlatBuffers_Compiler_SRCS]
+srclist_splice = ["FlatBuffers_Library_SRCS"]
+srclist_source = [
+  "src/idl_gen_binary.cpp",
+  "src/idl_gen_cpp.cpp",
+  "src/idl_gen_csharp.cpp",
+  "src/idl_gen_dart.cpp",
+  "src/idl_gen_kotlin.cpp",
+  "src/idl_gen_kotlin_kmp.cpp",
+  "src/idl_gen_go.cpp",
+  "src/idl_gen_java.cpp",
+  "src/idl_gen_ts.cpp",
+  "src/idl_gen_php.cpp",
+  "src/idl_gen_python.cpp",
+  "src/idl_gen_lobster.cpp",
+  "src/idl_gen_rust.cpp",
+  "src/idl_gen_fbs.cpp",
+  "src/idl_gen_grpc.cpp",
+  "src/idl_gen_json_schema.cpp",
+  "src/idl_gen_swift.cpp",
+  "src/flatc.cpp",
+  "src/flatc_main.cpp",
+  "include/codegen/python.cc",
+  "src/binary_annotator.cpp",
+  "src/annotated_binary_text_gen.cpp",
+  "src/bfbs_gen_lua.cpp",
+  "src/bfbs_gen_nim.cpp",
+  "src/code_generators.cpp",
+  "grpc/src/compiler/cpp_generator.cc",
+  "grpc/src/compiler/go_generator.cc",
+  "grpc/src/compiler/java_generator.cc",
+  "grpc/src/compiler/python_generator.cc",
+  "grpc/src/compiler/swift_generator.cc",
+  "grpc/src/compiler/ts_generator.cc",
+]

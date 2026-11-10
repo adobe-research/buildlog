@@ -1,0 +1,18 @@
+// minidsl's consumer-side rule, shipped with its install: a target that
+// depends on minidsl:rt and lists `.dsl` sources gets each one translated
+// into a C++ source, compiled into the target. No spec relation says so:
+// the dependency does.
+.decl minidsl_user(t:symbol, c:Cfg)
+minidsl_user(t, c) :- eff_dep(t, c, "minidsl:rt", _).
+.decl minidsl_input(t:symbol, f:symbol)
+path_want(f) :- target_sources(_, f).
+minidsl_input(t, f) :- target_sources(t, f), path_ext(f, ".dsl").
+source_claimed(t, f) :- minidsl_input(t, f).
+.decl minidsl_gen(t:symbol, c:Cfg, f:symbol, out:symbol)
+minidsl_gen(t, c, f, cat(g, "/", s, ".dsl.cpp")) :- minidsl_user(t, c), minidsl_input(t, f), gen_dir(t, c, g),
+  path_stem(f, s).
+// `const NAME VALUE` lines become MINIDSL_CONST(NAME, VALUE), minidsl's runtime macro.
+cxx_generated_source(t, c, o), target_action(t, c, o), action_in(o, cat("src:", f), "explicit"),
+action(o, "MINIDSL"), action_arg(o, 0, "", "sh"), action_arg(o, 1, "", "-c"),
+action_arg(o, 2, "", "{ echo '#include <minidsl/rt.h>'; sed -E 's/^const ([A-Za-z_]+) ([0-9]+)$/MINIDSL_CONST(\\1, \\2)/' \"$0\"; } > \"$1\""),
+action_arg(o, 3, "", cat("src:", f)), action_arg(o, 4, "", o) :- minidsl_gen(t, c, f, o).

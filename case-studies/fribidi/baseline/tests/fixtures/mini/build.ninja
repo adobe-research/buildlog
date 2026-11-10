@@ -1,0 +1,67 @@
+# A miniature of a Meson build.ninja (fribidi's shape): a native tool, the
+# custom target that runs it, a shared library and an executable both named
+# `fribidi`. Source root /work/src, build root /work/build.
+ninja_required_version = 1.8.2
+
+rule c_COMPILER
+ command = /opt/homebrew/bin/ccache cc $ARGS -MD -MQ $out -MF $DEPFILE -o $out -c $in
+ deps = gcc
+ depfile = $DEPFILE_UNQUOTED
+ description = Compiling C object $out
+
+rule c_LINKER
+ command = cc $ARGS -o $out $in $LINK_ARGS
+ description = Linking target $out
+
+rule SHSYM
+ command = /opt/homebrew/bin/meson --internal symbolextractor /work/build $in $IMPLIB $out $CROSS
+ description = Generating symbol file $out
+ restat = 1
+
+rule CUSTOM_COMMAND
+ command = $COMMAND
+ description = $DESC
+ restat = 1
+
+rule REGENERATE_BUILD
+ command = /opt/homebrew/bin/meson --internal regenerate /work/src .
+ description = Regenerating build files
+ generator = 1
+
+build gen.tab/gen-tab.p/gen-tab.c.o: c_COMPILER ../src/gen.tab/gen-tab.c
+ DEPFILE = gen.tab/gen-tab.p/gen-tab.c.o.d
+ DEPFILE_UNQUOTED = gen.tab/gen-tab.p/gen-tab.c.o.d
+ ARGS = -Igen.tab/gen-tab.p -Igen.tab -I../src/gen.tab -I. -I../src -O3 -UHAVE_CONFIG_H
+
+build gen.tab/gen-tab: c_LINKER gen.tab/gen-tab.p/gen-tab.c.o
+ LINK_ARGS = -Wl,-dead_strip_dylibs
+
+build gen.tab/x.tab.i: CUSTOM_COMMAND ../src/gen.tab/unidata/Data.txt | gen.tab/gen-tab
+ DESC = Generating$ gen.tab/gen-tab$ with$ a$ custom$ command$ (output$ captured)
+ COMMAND = /opt/homebrew/bin/meson --internal exe --capture gen.tab/x.tab.i -- /work/build/gen.tab/gen-tab 2 ../src/gen.tab/unidata/Data.txt gen-tab
+
+build lib/libfribidi.0.dylib.p/fribidi.c.o: c_COMPILER ../src/lib/fribidi.c || gen.tab/x.tab.i
+ DEPFILE = lib/libfribidi.0.dylib.p/fribidi.c.o.d
+ DEPFILE_UNQUOTED = lib/libfribidi.0.dylib.p/fribidi.c.o.d
+ ARGS = -Ilib/libfribidi.0.dylib.p -Ilib -I../src/lib -I. -I../src -Igen.tab -fvisibility=hidden -O3 -DHAVE_CONFIG_H
+
+build lib/libfribidi.0.dylib: c_LINKER lib/libfribidi.0.dylib.p/fribidi.c.o
+ LINK_ARGS = -shared -Wl,-install_name,@rpath/libfribidi.0.dylib
+
+build lib/libfribidi.0.dylib.p/libfribidi.0.dylib.symbols: SHSYM lib/libfribidi.0.dylib
+ IMPLIB = lib/libfribidi.0.dylib
+
+build bin/fribidi.p/fribidi-main.c.o: c_COMPILER ../src/bin/fribidi-main.c
+ DEPFILE = bin/fribidi.p/fribidi-main.c.o.d
+ DEPFILE_UNQUOTED = bin/fribidi.p/fribidi-main.c.o.d
+ ARGS = -Ibin/fribidi.p -Ibin -I../src/bin -I. -I../src -Ilib -O3
+
+build bin/fribidi: c_LINKER bin/fribidi.p/fribidi-main.c.o | lib/libfribidi.0.dylib.p/libfribidi.0.dylib.symbols
+ LINK_ARGS = -Wl,-rpath,@loader_path/../lib lib/libfribidi.0.dylib
+
+build all: phony gen.tab/gen-tab gen.tab/x.tab.i lib/libfribidi.0.dylib bin/fribidi
+
+build build.ninja: REGENERATE_BUILD ../src/meson.build
+ pool = console
+
+default all

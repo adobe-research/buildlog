@@ -1,0 +1,2 @@
+===== file flatc
+$BUILD/flatc: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (GNU/Linux), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, BuildID[sha1]=228a01da597d3f55fdead2a761dbcda8ed575d3e, for GNU/Linux 3.7.0, not stripped

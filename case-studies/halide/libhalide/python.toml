@@ -1,0 +1,147 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Halide's Python bindings (python_bindings/): the pybind11 modules
+# halide.halide_ and halide.runtime._runtime, the package's Python files, and
+# the Python tests. Opt-in: presets/python.toml puts a Python interpreter on
+# a configuration (buildlog-python); tests are gated on that setting.
+python_package_file = [
+  ["python_bindings/halide/src/__init__.py", "halide/__init__.py"],
+  ["python_bindings/halide/src/_generator_helpers.py", "halide/_generator_helpers.py"],
+  ["python_bindings/halide/src/imageio.py", "halide/imageio.py"],
+  ["python_bindings/halide-bin/src/halide/bin/__init__.py", "halide/bin/__init__.py"],
+  ["python_bindings/halide-runtime/src/halide/runtime/__init__.py", "halide/runtime/__init__.py"],
+]
+halide_py_test = [
+  [
+    "addconstant_test",
+    "python_bindings/halide/test/correctness/addconstant_test.py",
+    "python_correctness"
+  ],
+  ["atomics", "python_bindings/halide/test/correctness/atomics.py", "python_correctness"],
+  ["autodiff", "python_bindings/halide/test/correctness/autodiff.py", "python_correctness"],
+  ["basics", "python_bindings/halide/test/correctness/basics.py", "python_correctness"],
+  ["bit_test", "python_bindings/halide/test/correctness/bit_test.py", "python_correctness"],
+  [
+    "boundary_conditions",
+    "python_bindings/halide/test/correctness/boundary_conditions.py",
+    "python_correctness"
+  ],
+  ["buffer", "python_bindings/halide/test/correctness/buffer.py", "python_correctness"],
+  ["callable", "python_bindings/halide/test/correctness/callable.py", "python_correctness"],
+  ["compile_to", "python_bindings/halide/test/correctness/compile_to.py", "python_correctness"],
+  ["division", "python_bindings/halide/test/correctness/division.py", "python_correctness"],
+  ["extern", "python_bindings/halide/test/correctness/extern.py", "python_correctness"],
+  [
+    "float_precision_test",
+    "python_bindings/halide/test/correctness/float_precision_test.py",
+    "python_correctness"
+  ],
+  ["iroperator", "python_bindings/halide/test/correctness/iroperator.py", "python_correctness"],
+  ["memoize", "python_bindings/halide/test/correctness/memoize.py", "python_correctness"],
+  [
+    "multi_method_module_test",
+    "python_bindings/halide/test/correctness/multi_method_module_test.py",
+    "python_correctness"
+  ],
+  [
+    "multipass_constraints",
+    "python_bindings/halide/test/correctness/multipass_constraints.py",
+    "python_correctness"
+  ],
+  [
+    "profiler_scope",
+    "python_bindings/halide/test/correctness/profiler_scope.py",
+    "python_correctness"
+  ],
+  ["pystub", "python_bindings/halide/test/correctness/pystub.py", "python_correctness"],
+  ["rdom", "python_bindings/halide/test/correctness/rdom.py", "python_correctness"],
+  [
+    "realize_warnings",
+    "python_bindings/halide/test/correctness/realize_warnings.py",
+    "python_correctness"
+  ],
+  [
+    "runtime_prefixes",
+    "python_bindings/halide/test/correctness/runtime_prefixes.py",
+    "python_correctness"
+  ],
+  [
+    "serialization",
+    "python_bindings/halide/test/correctness/serialization.py",
+    "python_correctness"
+  ],
+  [
+    "struct_type",
+    "python_bindings/halide/test/correctness/struct_type.py",
+    "python_correctness"
+  ],
+  ["target", "python_bindings/halide/test/correctness/target.py", "python_correctness"],
+  [
+    "tuple_select",
+    "python_bindings/halide/test/correctness/tuple_select.py",
+    "python_correctness"
+  ],
+  ["type", "python_bindings/halide/test/correctness/type.py", "python_correctness"],
+  [
+    "user_context_test",
+    "python_bindings/halide/test/correctness/user_context_test.py",
+    "python_correctness"
+  ],
+  ["var", "python_bindings/halide/test/correctness/var.py", "python_correctness"],
+]
+
+[python_requires.pybind11]
+module = "pybind11"
+spec = ">=2.6"
+
+[pybind11_module.Halide_Python]
+
+[pybind11_module.Halide_PythonRuntime]
+
+[target.Halide_Python]
+sources = [
+  "python_bindings/halide/src/halide_/PyArgument.cpp",
+  "python_bindings/halide/src/halide_/PyBoundaryConditions.cpp",
+  "python_bindings/halide/src/halide_/PyBuffer.cpp",
+  "python_bindings/halide/src/halide_/PyCallable.cpp",
+  "python_bindings/halide/src/halide_/PyConciseCasts.cpp",
+  "python_bindings/halide/src/halide_/PyDerivative.cpp",
+  "python_bindings/halide/src/halide_/PyEnums.cpp",
+  "python_bindings/halide/src/halide_/PyError.cpp",
+  "python_bindings/halide/src/halide_/PyExpr.cpp",
+  "python_bindings/halide/src/halide_/PyExternFuncArgument.cpp",
+  "python_bindings/halide/src/halide_/PyFunc.cpp",
+  "python_bindings/halide/src/halide_/PyFuncRef.cpp",
+  "python_bindings/halide/src/halide_/PyGenerator.cpp",
+  "python_bindings/halide/src/halide_/PyHalide.cpp",
+  "python_bindings/halide/src/halide_/PyImageParam.cpp",
+  "python_bindings/halide/src/halide_/PyInlineReductions.cpp",
+  "python_bindings/halide/src/halide_/PyIROperator.cpp",
+  "python_bindings/halide/src/halide_/PyLambda.cpp",
+  "python_bindings/halide/src/halide_/PyLoopLevel.cpp",
+  "python_bindings/halide/src/halide_/PyModule.cpp",
+  "python_bindings/halide/src/halide_/PyParam.cpp",
+  "python_bindings/halide/src/halide_/PyParameter.cpp",
+  "python_bindings/halide/src/halide_/PyPipeline.cpp",
+  "python_bindings/halide/src/halide_/PyRDom.cpp",
+  "python_bindings/halide/src/halide_/PySerialization.cpp",
+  "python_bindings/halide/src/halide_/PyStage.cpp",
+  "python_bindings/halide/src/halide_/PyTarget.cpp",
+  "python_bindings/halide/src/halide_/PyTuple.cpp",
+  "python_bindings/halide/src/halide_/PyType.cpp",
+  "python_bindings/halide/src/halide_/PyVar.cpp",
+  "python_bindings/halide/src/halide_/PyVarOrRVar.cpp",
+]
+python_extension = [["halide", "halide_"]]
+deps = { private = ["Halide"] }
+
+[target.Halide_PythonRuntime]
+sources = [
+  "python_bindings/halide-runtime/src/halide/runtime/PyRuntime.cpp",
+  "python_bindings/halide-runtime/src/halide/runtime/PyRuntimeBuffer.cpp",
+  "src/Float16.cpp",
+]
+python_extension = [["halide/runtime", "_runtime"]]
+deps = { private = ["Halide_Runtime"] }
+private = { "cc.include_dir" = "src:src" }

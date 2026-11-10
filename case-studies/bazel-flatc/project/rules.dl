@@ -1,0 +1,5 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Bazel's generated header target is a default output of the requested graph.
+default_output(p) :- gen_output("monster_fbs", _, p).

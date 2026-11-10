@@ -1,0 +1,6 @@
+# L0 integrity fixture: typed stdin/stdout (two stdins, stdout not an output)
+name = "l0-streams"
+version = "0.1.0"
+rank = 1
+layers = ["l0.dl"]
+extends = ["action", "action_arg", "action_out", "action_stdin", "action_stdout"]

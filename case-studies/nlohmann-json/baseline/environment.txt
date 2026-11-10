@@ -1,0 +1,8 @@
+# Environment
+Darwin arm64
+26.5.2
+cmake version 4.4.3
+ninja 1.13.2
+pkg-config 3.0.7
+Apple clang version 21.0.0 (clang-2100.1.1.101)
+nlohmann/json v3.12.0 55f93686c01528224f448c19128836e7df245f72

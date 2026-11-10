@@ -1,0 +1,6 @@
+# Rejected with ids-amb-a: target namespaces are unique ignoring case.
+name = "ids-tq-clash"
+version = "0.1.0"
+rank = 1
+target_namespace = "Amba"
+layers = []

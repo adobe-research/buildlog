@@ -1,0 +1,56 @@
+# bazel 8.8.1, flags: -c opt
+
+## cquery 'deps(//:sample_binary)': the slice's targets and their configurations
+//:monster.fbs (null)
+//:monster_fbs (446b45b)
+//:monster_fbs_srcs (446b45b)
+//:sample_binary (446b45b)
+//:sample_binary.cpp (null)
+@com_github_google_flatbuffers//:flatbuffers (446b45b)
+@com_github_google_flatbuffers//:flatbuffers (8e2a2dc)
+@com_github_google_flatbuffers//:flatc (8e2a2dc)
+@com_github_google_flatbuffers//:runtime_cc (446b45b)
+@com_github_google_flatbuffers//:runtime_cc (8e2a2dc)
+@com_github_google_flatbuffers//src:flatbuffers (446b45b)
+@com_github_google_flatbuffers//src:flatbuffers (8e2a2dc)
+@com_github_google_flatbuffers//src:flatc (8e2a2dc)
+
+## cquery --transitions=lite 'deps(//:monster_fbs_srcs, 1)': the genrule's tools edge
+NoTransition -> //:monster_fbs_srcs (446b45b)
+  srcs#//:monster.fbs#(null transition) -> 
+  tools#@com_github_google_flatbuffers//:flatc#(exec + (TestTrimmingTransition + ConfigFeatureFlagTaggedTrimmingTransition)) -> 8e2a2dc
+  $genrule_setup#@bazel_tools//tools/genrule:genrule-setup.sh#(null transition) -> 
+
+## bazel config 446b45b 8e2a2dc: what the exec transition changed
+Displaying diff between configs 446b45b and 8e2a2dc
+FragmentOptions com.google.devtools.build.lib.analysis.PlatformOptions {
+  platforms: [@@bazel_tools//tools:host_platform], [@@platforms//host:host]
+}
+FragmentOptions com.google.devtools.build.lib.analysis.config.CoreOptions {
+  is exec configuration: false, true
+  platform_suffix: null, exec
+}
+FragmentOptions com.google.devtools.build.lib.rules.cpp.CppOptions {
+  copt: [], [-g0]
+  crosstool_top: @@bazel_tools//tools/cpp:toolchain, @bazel_tools//tools/cpp:toolchain
+  cxxopt: [], [-g0]
+  strip: sometimes, always
+}
+FragmentOptions com.google.devtools.build.lib.rules.java.JavaOptions {
+  java_runtime_version: local_jdk, remotejdk_11
+  jvmopt: [], [-XX:ErrorFile=/dev/stderr]
+}
+
+## toolchain resolution (--toolchain_resolution_debug=@bazel_tools//tools/cpp:toolchain_type)
+ToolchainResolution:   Toolchain @@rules_cc++cc_configure_extension+local_config_cc//:cc-compiler-aarch64 is compatible with target platform, searching for execution platforms:
+ToolchainResolution: Target platform @@platforms//host:host: Selected execution platform @@platforms//host:host, type @@bazel_tools//tools/cpp:toolchain_type -> toolchain @@rules_cc++cc_configure_extension+local_config_cc//:cc-compiler-aarch64
+
+## artifacts
+sample_binary: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, for GNU/Linux 3.7.0, BuildID[xxHash]=ca5fc62abe8fc608, not stripped
+flatc: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, for GNU/Linux 3.7.0, BuildID[xxHash]=898cc90699db9902, not stripped
+sample_binary: aarch64-opt
+flatc: aarch64-opt-exec-ST-d57f47055a04
+monster_generated.h sha256: b735c911b19b778f954531add4978e49894627793c465da8d4b84f84de2bb8ac
+
+## run
+The FlatBuffer was successfully created and verified!

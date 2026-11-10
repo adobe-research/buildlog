@@ -1,0 +1,67 @@
+action("out:hub", "STEP").
+action_arg("out:hub", 0, "", "/bin/step").
+action("out:x0", "STEP").
+action_arg("out:x0", 0, "", "/bin/step").
+action_in("out:hub", "out:x0", "explicit").
+action("out:x1", "STEP").
+action_arg("out:x1", 0, "", "/bin/step").
+action_in("out:hub", "out:x1", "explicit").
+action("out:x2", "STEP").
+action_arg("out:x2", 0, "", "/bin/step").
+action_in("out:hub", "out:x2", "explicit").
+action("out:x3", "STEP").
+action_arg("out:x3", 0, "", "/bin/step").
+action_in("out:hub", "out:x3", "explicit").
+action("out:x4", "STEP").
+action_arg("out:x4", 0, "", "/bin/step").
+action_in("out:hub", "out:x4", "explicit").
+action("out:x5", "STEP").
+action_arg("out:x5", 0, "", "/bin/step").
+action_in("out:hub", "out:x5", "explicit").
+action("out:x6", "STEP").
+action_arg("out:x6", 0, "", "/bin/step").
+action_in("out:hub", "out:x6", "explicit").
+action("out:x7", "STEP").
+action_arg("out:x7", 0, "", "/bin/step").
+action_in("out:hub", "out:x7", "explicit").
+action("out:x8", "STEP").
+action_arg("out:x8", 0, "", "/bin/step").
+action_in("out:hub", "out:x8", "explicit").
+action("out:x9", "STEP").
+action_arg("out:x9", 0, "", "/bin/step").
+action_in("out:hub", "out:x9", "explicit").
+action("out:x10", "STEP").
+action_arg("out:x10", 0, "", "/bin/step").
+action_in("out:hub", "out:x10", "explicit").
+action("out:x11", "STEP").
+action_arg("out:x11", 0, "", "/bin/step").
+action_in("out:hub", "out:x11", "explicit").
+action("out:x12", "STEP").
+action_arg("out:x12", 0, "", "/bin/step").
+action_in("out:hub", "out:x12", "explicit").
+action("out:x13", "STEP").
+action_arg("out:x13", 0, "", "/bin/step").
+action_in("out:hub", "out:x13", "explicit").
+action("out:x14", "STEP").
+action_arg("out:x14", 0, "", "/bin/step").
+action_in("out:hub", "out:x14", "explicit").
+action("out:x15", "STEP").
+action_arg("out:x15", 0, "", "/bin/step").
+action_in("out:hub", "out:x15", "explicit").
+action("out:x16", "STEP").
+action_arg("out:x16", 0, "", "/bin/step").
+action_in("out:hub", "out:x16", "explicit").
+action("out:x17", "STEP").
+action_arg("out:x17", 0, "", "/bin/step").
+action_in("out:hub", "out:x17", "explicit").
+action("out:x18", "STEP").
+action_arg("out:x18", 0, "", "/bin/step").
+action_in("out:hub", "out:x18", "explicit").
+action("out:x19", "STEP").
+action_arg("out:x19", 0, "", "/bin/step").
+action_in("out:hub", "out:x19", "explicit").
+action_in("out:x7", "out:hub", "explicit").
+action("out:y", "STEP").
+action_arg("out:y", 0, "", "/bin/step").
+action_in("out:y", "out:hub", "explicit").
+action_in("out:x3", "out:x4", "explicit").

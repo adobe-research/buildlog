@@ -1,0 +1,237 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L2 (buildlog-cuda): the toolkit, nvcc as a toolchain, the host compiler,
+// the architecture sets, the packages. Nothing here is a default for a GPU:
+// no architecture is chosen for a configuration, and none is detected.
+
+// ==== sources and what needs CUDA ====
+// cuda_source(t, src): a CUDA source of t, compiled by nvcc. Its suffix
+// claims it (below); a project may also state it.
+.decl cuda_source(t:symbol, src:symbol)
+source_claimed(t, f) :- cuda_source(t, f).
+cuda_source(t, f) :- target_sources(t, f), strlen(f) > 3, substr(f, strlen(f) - 3, 3) = ".cu".
+source_claimed(t, f) :- target_sources(t, f), strlen(f) > 4, substr(f, strlen(f) - 4, 4) = ".cuh".
+
+// A target with CUDA sources in a configuration it is built in.
+.decl cuda_target(t:symbol, c:Cfg)
+cuda_target(t, c) :- needed(t, c), cuda_source(t, _).
+tc_required("cuda", c) :- cuda_target(_, c).
+
+// ==== the toolkit ====
+.decl req_cuda_toolkit(id:symbol)
+.decl domain_cuda_toolkit(id:symbol)
+// Asked for by every project that uses the plugin, not only where CUDA is
+// built: the toolkit's packages and nvcc's selection precede what is needed,
+// and a project with no .cu pays one cheap probe. Not finding it is an error
+// only where a CUDA target is needed.
+req_cuda_toolkit("cuda-toolkit:default").
+domain_cuda_toolkit("cuda-toolkit:default").
+
+.decl res_cuda_toolkit(req:symbol, version:symbol, root:symbol, platform:symbol, include:symbol)
+.decl res_cuda_toolkit_code(req:symbol, code:symbol)
+.decl res_cuda_toolkit_tool(req:symbol, role:symbol, path:symbol)
+.decl res_cuda_toolkit_lib(req:symbol, name:symbol, kind:symbol, path:symbol)
+.decl res_cuda_toolkit_status(req:symbol, status:symbol)
+
+.decl cuda_toolkit(version:symbol, root:symbol, platform:symbol, include:symbol)
+cuda_toolkit(v, r, p, i) :- res_cuda_toolkit(req, v, r, p, i), req_cuda_toolkit(req).
+.decl cuda_toolkit_code(code:symbol)
+cuda_toolkit_code(c) :- res_cuda_toolkit_code(req, c), req_cuda_toolkit(req).
+.decl cuda_toolkit_lib(name:symbol, kind:symbol, path:symbol)
+cuda_toolkit_lib(n, k, p) :- res_cuda_toolkit_lib(req, n, k, p), req_cuda_toolkit(req).
+.decl cuda_toolkit_missing(why:symbol)
+cuda_toolkit_missing(s) :- res_cuda_toolkit_status(req, s), req_cuda_toolkit(req), s != "found".
+error("CUDA toolkit not found", cat(s, "; set CUDAToolkit_ROOT or CUDA_PATH, or put nvcc on PATH")) :-
+  cuda_toolkit_missing(s), cuda_target(_, _).
+
+// nvcc is a toolchain for the one platform the toolkit serves, run on the
+// build machine. It has no `toolchain` fact: that is the C-family
+// inventory's (its capability probes would read a cxx tool nvcc lacks), and
+// nothing here needs a family. Two candidates for "cuda" (nvcc and another
+// toolchain a plugin adds) are core's ambiguity error, settled by the
+// user's toolchain_pin, never by a tie-break.
+toolchain_tool("nvcc", r, p) :- res_cuda_toolkit_tool(req, r, p), req_cuda_toolkit(req).
+toolchain_runs_on("nvcc", h) :- cuda_toolkit(_, _, _, _), host_platform(h).
+toolchain_can_target("nvcc", "cuda", p) :- cuda_toolkit(_, _, p, _).
+
+// ==== the host compiler ====
+// nvcc compiles the host side of a .cu with a C++ compiler (-ccbin). It is
+// the configuration's own C++ toolchain (an ambiguous choice is core's
+// error: nothing here picks one), unless the user pins another for CUDA:
+// cuda_host_pin(config, toolchain), where config is a configuration's name
+// or "*".
+.decl cuda_host_pin(config:symbol, tc:symbol)
+.decl cuda_host_pinned(c:Cfg)
+// (Stated from the configurations alone: what is needed depends on it.)
+cuda_host_pinned(c) :- cfg_name(c, n), cuda_host_pin(n, _).
+cuda_host_pinned(c) :- cfg_name(c, _), cuda_host_pin("*", _).
+.decl cuda_host(c:Cfg, tc:symbol)
+cuda_host(c, tc) :- cuda_target(_, c), cfg_name(c, n), cuda_host_pin(n, tc).
+cuda_host(c, tc) :- cuda_target(_, c), cuda_host_pin("*", tc).
+cuda_host(c, tc) :- cuda_target(_, c), !cuda_host_pinned(c), tc_for("cxx", c, tc).
+tc_required("cxx", c) :- cuda_target(_, c), !cuda_host_pinned(c).
+
+error_at("ambiguous CUDA host compiler", cat(n, ": ", a, " vs ", b, " (the pin must name one)"), t, c) :-
+  cuda_target(t, c), cuda_host(c, a), cuda_host(c, b), a < b, cfg_name(c, n).
+error_at("CUDA host compiler pin is not a C++ toolchain for the platform", cat(n, ": ", tc), t, c) :-
+  cuda_target(t, c), cuda_host_pinned(c), cuda_host(c, tc), config_platform(c, p),
+  !toolchain_can_target(tc, "cxx", p), cfg_name(c, n).
+error("cuda_host_pin names a configuration that does not exist", n) :- cuda_host_pin(n, _), n != "*",
+  !cfg_name(_, n).
+
+// Does the toolkit accept the host compiler? Its own check says (host_config.h),
+// run through nvcc; its message is the explanation. There is no override.
+.decl req_cuda_host_check(id:symbol, nvcc:symbol, tc:symbol, cxx:symbol)
+.decl domain_cuda_host_check(id:symbol, nvcc:symbol, tc:symbol, cxx:symbol)
+domain_cuda_host_check(id, nvcc, tc, cxx) :- cuda_host(_, tc), toolchain_tool("nvcc", "nvcc", nvcc),
+  toolchain_tool(tc, "cxx", cxx), id = cat("cuda-host:", to_string(strlen(tc)), ":", tc).
+req_cuda_host_check(id, nvcc, tc, cxx) :- domain_cuda_host_check(id, nvcc, tc, cxx).
+.decl res_cuda_host_check(req:symbol, tc:symbol, status:symbol, message:symbol)
+.decl cuda_host_refused(tc:symbol, message:symbol)
+cuda_host_refused(tc, m) :- res_cuda_host_check(req, tc, "refused", m), req_cuda_host_check(req, _, tc, _).
+error_at("CUDA host compiler not supported by toolkit",
+  cat(tc, " with CUDA ", v, " (", root, "): ", m, " [pin another C++ toolchain for CUDA with cuda_host_pin, or use another toolkit]"), t, c) :-
+  cuda_target(t, c), cuda_host(c, tc), cuda_host_refused(tc, m), cuda_toolkit(v, root, _, _).
+
+// ==== GPU architectures ====
+// A named set of codes: sm_80 is SASS for compute capability 8.0 (it runs
+// on 8.x devices with a minor at least 0), compute_80 is PTX, which the
+// driver compiles for any device of 8.0 or newer. An `a` or `f` suffix
+// (sm_90a, sm_100f) is architecture-specific or family-specific.
+.decl gpu_arch_set_code(set:symbol, code:symbol)
+.decl gpu_code_parts(code:symbol, kind:symbol, n:number, suffix:symbol)
+gpu_code_parts(c, "sm", to_number(substr(c, 3, strlen(c) - 3)), "") :- gpu_arch_set_code(_, c),
+  match("sm_[0-9]+", c).
+gpu_code_parts(c, "sm", to_number(substr(c, 3, strlen(c) - 4)), substr(c, strlen(c) - 1, 1)) :-
+  gpu_arch_set_code(_, c), match("sm_[0-9]+[af]", c).
+gpu_code_parts(c, "compute", to_number(substr(c, 8, strlen(c) - 8)), "") :- gpu_arch_set_code(_, c),
+  match("compute_[0-9]+", c).
+gpu_code_parts(c, "compute", to_number(substr(c, 8, strlen(c) - 9)), substr(c, strlen(c) - 1, 1)) :-
+  gpu_arch_set_code(_, c), match("compute_[0-9]+[af]", c).
+error("not a GPU code (sm_NN, compute_NN, with an optional a or f)", cat(s, ": ", c)) :-
+  gpu_arch_set_code(s, c), !gpu_code_parts(c, _, _, _).
+error("a GPU architecture set may not be called none", "none") :- gpu_arch_set_code("none", _).
+// The number with its suffix (the part after the underscore).
+.decl gpu_code_virtual(code:symbol, kind:symbol, v:symbol)
+gpu_code_virtual(c, "sm", substr(c, 3, strlen(c) - 3)) :- gpu_code_parts(c, "sm", _, _).
+gpu_code_virtual(c, "compute", substr(c, 8, strlen(c) - 8)) :- gpu_code_parts(c, "compute", _, _).
+
+// The setting: one named set per configuration. "none" is for a
+// configuration with no CUDA, and it is the exec configuration's: a CUDA
+// program is not built for the build machine's GPU.
+setting_key("cuda.arch", 3).
+setting_value("cuda.arch", "none").
+setting_value("cuda.arch", s) :- gpu_arch_set_code(s, _).
+setting_default("cuda.arch", "none").
+setting_exec_value("cuda.arch", "none").
+setting_name_elide("cuda.arch", "none").
+
+// gpu_code_serves(y, r): code y, in an object, serves the real code r of a
+// link (it runs on a device r targets). SASS serves a device of the same
+// major and at least its minor; PTX any device from its capability up;
+// an `a` code only its own capability.
+.decl gpu_code_serves(y:symbol, r:symbol)
+gpu_code_serves(y, r) :- gpu_code_parts(y, "sm", n, s), (s = "" ; s = "f"), gpu_code_parts(r, "sm", m, _),
+  m / 10 = n / 10, m % 10 >= n % 10.
+gpu_code_serves(y, r) :- gpu_code_parts(y, "sm", n, "a"), gpu_code_parts(r, "sm", n, _).
+gpu_code_serves(y, r) :- gpu_code_parts(y, "compute", n, ""), gpu_code_parts(r, "sm", m, _), m >= n.
+gpu_code_serves(y, r) :- gpu_code_parts(y, "compute", n, s), s != "", gpu_code_parts(r, "sm", n, _).
+// A set serves the real code r (some code of it does).
+.decl gpu_set_serves(s:symbol, r:symbol)
+gpu_set_serves(s, r) :- gpu_arch_set_code(s, y), gpu_code_serves(y, r).
+
+// nvcc's spelling of a set: one --generate-code per virtual architecture,
+// naming the codes made from it, as CMake does.
+.decl cuda_set_has(s:symbol, kind:symbol, v:symbol)
+cuda_set_has(s, k, v) :- gpu_arch_set_code(s, c), gpu_code_virtual(c, k, v).
+.decl cuda_gencode(s:symbol, spelling:symbol)
+cuda_gencode(s, cat("arch=compute_", v, ",code=[compute_", v, ",sm_", v, "]")) :-
+  cuda_set_has(s, "sm", v), cuda_set_has(s, "compute", v).
+cuda_gencode(s, cat("arch=compute_", v, ",code=sm_", v)) :- cuda_set_has(s, "sm", v),
+  !cuda_set_has(s, "compute", v).
+cuda_gencode(s, cat("arch=compute_", v, ",code=compute_", v)) :- cuda_set_has(s, "compute", v),
+  !cuda_set_has(s, "sm", v).
+
+// The set a target's objects (and its device link) are built for: the
+// configuration's, or the target's own (cuda_arch_of).
+.decl cuda_arch_of(t:symbol, set:symbol)
+.decl has_cuda_arch_of(t:symbol)
+has_cuda_arch_of(t) :- cuda_arch_of(t, _).
+.decl cuda_arch_target(t:symbol, c:Cfg)
+cuda_arch_target(t, c) :- cuda_target(t, c).
+.decl cuda_arch_set(t:symbol, c:Cfg, set:symbol)
+cuda_arch_set(t, c, s) :- cuda_arch_target(t, c), cuda_arch_of(t, s), config_setting(c, "cuda.arch", d), d != "none".
+cuda_arch_set(t, c, s) :- cuda_arch_target(t, c), !has_cuda_arch_of(t), config_setting(c, "cuda.arch", s), s != "none".
+error("cuda_arch_of names an architecture set that is not declared", cat(t, ": ", s)) :-
+  cuda_arch_of(t, s), !gpu_arch_set_code(s, _).
+
+// A configuration with CUDA sources and no set is an open decision (CMake's
+// CMP0104 asks the same). In the exec configuration the none is policy: a
+// tool is built for the build machine, whose GPU nothing here knows.
+.decl cuda_exec_only(c:Cfg)
+cuda_exec_only(c) :- exec_config(c0, c), c0 != c, !decl_cfg(_, c).
+error_at("CUDA sources in a configuration with no GPU architecture set",
+  cat(n, " has cuda.arch=none: declare a named set (config_decl_setting cuda.arch) for this configuration"), t, c) :-
+  cuda_target(t, c), config_setting(c, "cuda.arch", "none"), !cuda_exec_only(c), cfg_name(c, n).
+error_at("CUDA sources built in the exec configuration",
+  cat(n, ": ", t, " is built as a build-machine tool, where cuda.arch is none by policy; it cannot be built for a GPU it does not know"), t, c) :-
+  cuda_target(t, c), cuda_exec_only(c), cfg_name(c, n).
+
+// What the toolkit lists (nvcc --list-gpu-code and --list-gpu-arch) is what
+// it accepts; a set naming more is an error here, the toolkit's own error
+// being a build away. (13.4 does not list sm_70.)
+.decl gpu_code_base(code:symbol, base:symbol)
+gpu_code_base(c, b) :- gpu_code_parts(c, k, n, _), b = cat(k, "_", to_string(n)).
+error_at("GPU architecture not supported by the CUDA toolkit",
+  cat(c, " in set ", s, " of ", t, " (CUDA ", v, " lists ", b, " nowhere)"), t, k) :-
+  cuda_arch_set(t, k, s), gpu_arch_set_code(s, c), gpu_code_base(c, b), cuda_toolkit(v, _, _, _),
+  !cuda_toolkit_code(b).
+
+// ==== the toolkit's packages ====
+// The toolkit ships no package config (CMake's FindCUDAToolkit is a find
+// module), so the plugin states its libraries itself, from what the probe
+// found: cuda::cudart (shared), cuda::cudart_static (+ the system libraries
+// it needs), cuda::cudadevrt, cuda::cublas and so on, and cuda::toolkit for
+// the headers alone. Each puts the toolkit's headers on its users'
+// include path as a system directory, as CMake's CUDA:: targets do.
+.decl cuda_lib_has_shared(n:symbol)
+cuda_lib_has_shared(n) :- cuda_toolkit_lib(n, "shared", _).
+.decl cuda_lib_package(name:symbol, kind:symbol, pkg:symbol)
+cuda_lib_package(n, "shared", cat("cuda::", n)) :- cuda_toolkit_lib(n, "shared", _).
+cuda_lib_package(n, "static", cat("cuda::", n, "_static")) :- cuda_toolkit_lib(n, "static", _), cuda_lib_has_shared(n).
+cuda_lib_package(n, "static", cat("cuda::", n)) :- cuda_toolkit_lib(n, "static", _), !cuda_lib_has_shared(n).
+
+imported(pkg), imported_kind(pkg, "library"), import_artifact(pkg, path, "", 1),
+prop(pkg, "cc.system_include_dir", inc, "interface") :- cuda_lib_package(n, k, pkg), cuda_toolkit_lib(n, k, path),
+  cuda_toolkit(_, _, _, inc).
+imported("cuda::toolkit"), imported_kind("cuda::toolkit", "interface"),
+prop("cuda::toolkit", "cc.system_include_dir", inc, "interface") :- cuda_toolkit(_, _, _, inc).
+
+// Thrust and CUB (the toolkit's cccl directory), before the toolkit's own
+// include directory, as CMake's thrust find module orders them.
+imported("cuda::thrust"), imported_kind("cuda::thrust", "interface"),
+prop("cuda::thrust", "cc.system_include_dir", d, "interface") :- cuda_toolkit_lib("thrust", "headers", d).
+dep("cuda::thrust", "cuda::toolkit", "public") :- cuda_toolkit_lib("thrust", "headers", _).
+
+// The toolkit's libraries are built for the platform its target directory serves.
+artifact_covers(path, p) :- cuda_toolkit_lib(_, _, path), cuda_toolkit(_, _, p, _).
+
+// A shared library is found at run time where it is linked from.
+path_want(path) :- cuda_toolkit_lib(_, "shared", path).
+prop(pkg, "native.link_flag", cat("-Wl,-rpath,", dir), "interface") :- cuda_lib_package(n, "shared", pkg),
+  cuda_toolkit_lib(n, "shared", path), path_dirname(path, dir), cuda_linux().
+.decl cuda_linux()
+cuda_linux() :- cuda_toolkit(_, _, p, _), match(".*-linux", p).
+// The static runtime needs the threads, dynamic loading and realtime libraries
+// of the system (CMake's CUDA::cudart_static_deps), after it on the link line.
+imported("cuda::cudart_static_deps"), imported_kind("cuda::cudart_static_deps", "interface"),
+prop("cuda::cudart_static_deps", "native.link_flag", "-ldl", "interface"),
+prop("cuda::cudart_static_deps", "native.link_flag", "-lpthread", "interface"),
+prop("cuda::cudart_static_deps", "native.link_flag", "-lrt", "interface") :- cuda_linux().
+dep("cuda::cudart_static", "cuda::cudart_static_deps", "public") :- cuda_lib_package("cudart", "static", "cuda::cudart_static"),
+  cuda_linux().
+
+// Thrust's directory comes first (CMake's order); the include classes are
+// otherwise lexical, which would put the toolkit's own directory ahead.
+cc_include_before(d, inc) :- cuda_toolkit_lib("thrust", "headers", d), cuda_toolkit(_, _, _, inc).

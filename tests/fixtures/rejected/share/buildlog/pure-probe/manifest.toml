@@ -1,0 +1,13 @@
+# Rejected: a rule package found on a search path (tier 2) must be pure
+# Datalog; only registered Python plugins may declare probes.
+name = "pure-probe"
+version = "0.1.0"
+rank = 5
+layers = ["pure_probe.dl"]
+
+[[probe]]
+kind = "sneaky"
+request = "req_sneaky"
+domain = "domain_sneaky"
+result = "res_sneaky"
+entry = "probes.py:sneaky"

@@ -1,0 +1,143 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# zlib-ng's architecture-specific sources as ISA source sets (isa.dl): which
+# ISA extensions each needs, which option, probe and prerequisite sets
+# enable it, and which definitions announce it to the dispatcher
+# (functable.c). The CMakeLists.txt (lines ~736-1185) says the same with
+# if(BASEARCH_*_FOUND), cmake_dependent_option() chains, per-source
+# COMPILE_FLAGS and add_definitions(). Here each set is an ISA scope of
+# buildlog-cpp (step 4, design input §2): its platform fit and its flags
+# follow from buildlog-cpp's knowledge (isa_ext, isa_baseline and the clang
+# spellings), and a set whose extensions its configuration's cpu lacks is
+# not built there. universal2 builds every set per slice.
+
+# Kernels are reached only through the runtime dispatcher, never inlined into
+# baseline code: they are compiled apart from LTO (NOLTOFLAG), where the
+# toolchain has -fno-lto.
+isa_isolation = [["-fno-lto", "cc.check.FNO_LTO_AVAILABLE"]]
+
+# The AVX-512 sets (AVX512FLAG), tuned for the machine HAVE_CASCADE_LAKE finds.
+isa_avx512_tuned = ["avx512", "avx512vnni", "vpclmulqdq"]
+
+# Definitions a probe refines.
+dir_prop_when = [
+  ["cc.define", "ARM_CRC32_INTRIN", "isa.armv8 == on & cc.check.HAVE_ARMV8_INTRIN"],
+  ["cc.define", "ARM_NEON_HASLD4", "isa.neon == on & cc.check.NEON_HAS_LD4"],
+  ["cc.define", "X86_HAVE_XSAVE_INTRIN", "isa.x86_features == on & cc.check.HAVE_XSAVE_INTRIN"],
+]
+
+# Every set is the library's.
+[defaults.source_set]
+lib = "zlib-ng"
+
+# ---- arm64 (arch/arm) ----
+[source_set.arm_features]
+source_set_source = "arch/arm/arm_features.c"
+source_set_when = "WITH_OPTIM & WITH_RUNTIME_CPU_DETECTION"
+isa_requires = "arm64"
+
+[source_set.armv8]
+source_set_source = "arch/arm/crc32_armv8.c"
+source_set_when = "WITH_OPTIM & WITH_ARMV8 & (cc.check.HAVE_ARMV8_INLINE_ASM | cc.check.HAVE_ARMV8_INTRIN)"
+isa_requires = "crc"
+isa_role = "kernel"
+isa_define = "ARM_CRC32"
+
+[source_set.neon]
+source_set_source = [
+  "arch/arm/adler32_neon.c",
+  "arch/arm/chunkset_neon.c",
+  "arch/arm/compare256_neon.c",
+  "arch/arm/slide_hash_neon.c",
+]
+source_set_when = "WITH_OPTIM & WITH_NEON & cc.check.NEON_AVAILABLE"
+isa_requires = "neon"
+isa_role = "kernel"
+isa_define = "ARM_NEON"
+
+# ---- x86_64 (arch/x86) ----
+# The feature detector reads XCR0 with _xgetbv where the toolchain has it.
+[source_set.x86_features]
+source_set_source = "arch/x86/x86_features.c"
+source_set_when = "WITH_OPTIM & WITH_RUNTIME_CPU_DETECTION"
+isa_requires = "x86_64"
+isa_requires_when = [["xsave", "cc.check.HAVE_XSAVE_INTRIN"]]
+
+[source_set.sse2]
+source_set_source = [
+  "arch/x86/chunkset_sse2.c",
+  "arch/x86/chorba_sse2.c",
+  "arch/x86/compare256_sse2.c",
+  "arch/x86/slide_hash_sse2.c",
+]
+source_set_when = "WITH_OPTIM & WITH_SSE2 & cc.check.HAVE_SSE2_INTRIN"
+isa_requires = "sse2"
+isa_role = "kernel"
+isa_define = "X86_SSE2"
+
+[source_set.ssse3]
+source_set_source = ["arch/x86/adler32_ssse3.c", "arch/x86/chunkset_ssse3.c"]
+source_set_when = "WITH_SSSE3 & cc.check.HAVE_SSSE3_INTRIN & isa.sse2 == on"
+isa_requires = "ssse3"
+isa_role = "kernel"
+isa_define = "X86_SSSE3"
+
+[source_set.sse41]
+source_set_source = "arch/x86/chorba_sse41.c"
+source_set_when = "WITH_SSE41 & cc.check.HAVE_SSE41_INTRIN & isa.ssse3 == on"
+isa_requires = "sse4.1"
+isa_role = "kernel"
+isa_define = "X86_SSE41"
+
+[source_set.sse42]
+source_set_source = "arch/x86/adler32_sse42.c"
+source_set_when = "WITH_SSE42 & cc.check.HAVE_SSE42_INTRIN & isa.sse41 == on"
+isa_requires = "sse4.2"
+isa_role = "kernel"
+isa_define = "X86_SSE42"
+
+[source_set.pclmulqdq]
+source_set_source = "arch/x86/crc32_pclmulqdq.c"
+source_set_when = "WITH_PCLMULQDQ & cc.check.HAVE_PCLMULQDQ_INTRIN & isa.sse42 == on"
+isa_requires = ["sse4.2", "pclmul"]
+isa_role = "kernel"
+isa_define = "X86_PCLMULQDQ_CRC"
+
+[source_set.avx2]
+source_set_source = [
+  "arch/x86/slide_hash_avx2.c",
+  "arch/x86/chunkset_avx2.c",
+  "arch/x86/compare256_avx2.c",
+  "arch/x86/adler32_avx2.c",
+]
+source_set_when = "WITH_AVX2 & cc.check.HAVE_AVX2_INTRIN & isa.sse42 == on"
+isa_requires = ["avx2", "bmi2"]
+isa_role = "kernel"
+isa_define = "X86_AVX2"
+
+[source_set.avx512]
+source_set_source = [
+  "arch/x86/adler32_avx512.c",
+  "arch/x86/chunkset_avx512.c",
+  "arch/x86/compare256_avx512.c",
+]
+source_set_when = "WITH_AVX512 & cc.check.HAVE_AVX512_INTRIN & isa.avx2 == on"
+isa_requires = ["avx512f", "avx512dq", "avx512bw", "avx512vl", "bmi2"]
+isa_role = "kernel"
+isa_define = "X86_AVX512"
+
+[source_set.avx512vnni]
+source_set_source = "arch/x86/adler32_avx512_vnni.c"
+source_set_when = "WITH_AVX512VNNI & WITH_AVX512 & cc.check.HAVE_AVX512VNNI_INTRIN & isa.avx2 == on"
+isa_requires = ["avx512f", "avx512dq", "avx512bw", "avx512vl", "avx512vnni", "bmi2"]
+isa_role = "kernel"
+isa_define = "X86_AVX512VNNI"
+
+# PCLMULFLAG VPCLMULFLAG AVX512FLAG.
+[source_set.vpclmulqdq]
+source_set_source = "arch/x86/crc32_vpclmulqdq.c"
+source_set_when = "WITH_VPCLMULQDQ & cc.check.HAVE_VPCLMULQDQ_INTRIN & isa.pclmulqdq == on & isa.avx512 == on"
+isa_requires = ["pclmul", "vpclmulqdq", "avx512f", "avx512dq", "avx512bw", "avx512vl", "bmi2"]
+isa_role = "kernel"
+isa_define = "X86_VPCLMULQDQ_CRC"

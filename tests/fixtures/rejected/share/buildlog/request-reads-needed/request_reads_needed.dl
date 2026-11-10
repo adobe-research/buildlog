@@ -1,0 +1,1 @@
+request(t, "x") :- needed(t, _).

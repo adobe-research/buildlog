@@ -1,0 +1,25 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Toolchain-family plugin: Emscripten (em++/emcc/emar, a clang driver that
+// targets wasm32 by itself, so no --target and no SDK). Its settings are
+// clang's. wasm-ld, which it links with, searches archives to a fixpoint, so
+// a cycle among them needs no group.
+
+toolchain_tool(tc, "link", p) :- toolchain(tc, "emscripten", _), toolchain_tool(tc, "cxx", p).
+family_setting_arg("emscripten", ph, k, v, a) :- family_setting_arg("clang", ph, k, v, a).
+// emcc optimizes at link time (binaryen's wasm-opt runs there), so a release
+// build also states -O3 on the link, as an upstream project spells by hand.
+family_setting_arg("emscripten", "link", "native.opt", "release", "-O3").
+// WebAssembly's atomics (the threads proposal), which a link with shared
+// memory needs: Threads::Threads adds nothing on Emscripten (no -pthread).
+family_setting_arg("emscripten", "link", "emscripten.threads", "threads", "-matomics").
+family_pic_arg("emscripten", "-fPIC").
+family_cxx_off_arg("emscripten", "cxx.rtti", "-fno-rtti").
+family_cxx_off_arg("emscripten", "cxx.exceptions", "-fno-exceptions").
+family_werror_arg("emscripten", "-Werror").
+linker_cycle_policy(tc, p, "none") :- toolchain(tc, "emscripten", _), platform_constraint(p, "os", "emscripten").
+
+// A program links to <name>.js, and the link also writes <name>.wasm beside
+// it, the code the .js loads.
+platform_executable_suffix(p, ".js"), platform_link_side_file(p, ".wasm") :- platform_constraint(p, "os", "emscripten").

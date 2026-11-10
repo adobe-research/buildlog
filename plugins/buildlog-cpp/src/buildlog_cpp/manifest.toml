@@ -1,0 +1,388 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# buildlog-cpp: the C-family plugin. The macOS (clang) and Linux (GCC,
+# clang) inventory (L2), the clang and GCC families' spellings and ELF
+# linking (F) and L4 (C++, and C sources), plus the discovery probes and
+# four package providers (pkg-config, CPS, CMake export files and buildlog's
+# own Datalog export) for core package discovery. It extends the core's open platform, toolchain and native
+# relations from its probes; toolchain selection, native code and package
+# discovery (which names, where, selection, relay) are core.
+name = "buildlog-cpp"
+version = "0.1.0"
+rank = 2
+layers = [
+  "layers/L2_toolchains.dl",
+  "layers/L2_cross.dl",
+  "layers/F_clang.dl",
+  "layers/F_gcc.dl",
+  "layers/L4_cxx.dl",
+  "layers/L4_modules.dl",
+  "layers/L4_checks.dl",
+  "layers/L4_install.dl",
+]
+requires = { buildlog = ">=0.1" }
+extends = [
+  "source_claimed",
+  "package_data_root",
+  # core's target templates: expand a template's sources
+  "tmpl_want",
+  # L4 ISA scopes: a scope's -march join
+  "join_part",
+  "join_sep",
+  "host_platform",
+  "platform",
+  "platform_slice",
+  "platform_constraint",
+  "attr_value",
+  "platform_tool",
+  "toolchain",
+  "toolchain_tool",
+  "toolchain_runs_on",
+  "toolchain_can_target",
+  "toolchain_supports",
+  "tc_required",
+  "action_tc_tool",
+  "family_setting_arg",
+  "tc_platform_arg",
+  "tc_link_arg",
+  "platform_sysroot",
+  "linker_cycle_policy",
+  "linker_group_delims",
+  "whole_archive_prefix",
+  "whole_archive_suffix",
+  "shared_link_spelling",
+  "module_link_spelling",
+  "rpath_origin_prefix",
+  "action_out",
+  "setting_key",
+  "setting_value",
+  "setting_default",
+  "setting_exec_value",
+  "set_key",
+  "lattice_rank",
+  "action",
+  "action_arg",
+  "action_in",
+  "action_seq",
+  "action_seq_before",
+  "action_seq_same_group",
+  "action_seq_group_delims",
+  "action_depfile",
+  "action_arg_set",
+  "action_arg_join",
+  "action_arg_part",
+  "action_stdout",
+  "action_builtin",
+  "action_restat",
+  "action_dyndep",
+  "action_seq_spelled_suffix",
+  "action_seq",
+  "action_seq_before",
+  "action_seq_spelled",
+  "default_output",
+  "error",
+  "error_at",
+  "action_error",
+  "action_arg_basis",
+  "action_toolchain",
+  "target_action",
+  "native_object",
+  "link_role",
+  "import_prop_rename",
+  "config_attr",
+  "attr_value",
+  "attr_discovered",
+  "version_attr",
+  "iface",
+  "condition",
+  "prop_when",
+  "prop_in",
+  # L4 install: the GNU layout, and the export formats' files and spellings
+  "install_dir_default",
+  "install_pkg_dir_default",
+  "native_artifact_dir",
+  "export_format_file",
+  "export_format_components",
+  "export_format_of",
+  "export_spelling",
+  "export_value_spelling",
+  "export_unspelled",
+  "export_path_key",
+  "export_internal_key",
+]
+
+accepts = [
+  "cxx_source",
+  # L4 modules: declared module interface units (name from scanning)
+  "cxx_module_interface",
+  "cxx_import_std",
+  "c_source",
+  # L4: source groups, a target's sources with their own condition and
+  # compile properties
+  "source_group",
+  "group_source",
+  "group_when",
+  "group_prop",
+  "group_prop_when",
+  # L4: a property of one generated source
+  "generated_source_prop",
+  # L4: ISA scopes, the extensions a scope's TUs need, and the source
+  # groups that compile with them
+  "isa_requires",
+  "isa_requires_when",
+  "isa_excludes",
+  "isa_group",
+  "isa_target",
+  # L4 checks: what a project asks of its toolchain
+  "cc_check",
+  "cc_check_headers",
+  "cc_check_args",
+  "cc_check_args_family",
+  # L4 checks, compact tables by kind
+  "cc_check_lang",
+  "cc_check_include",
+  "cc_check_function",
+  "cc_check_type",
+  "cc_check_symbol",
+  "cc_check_flag",
+  "cc_check_compiles",
+  # L4: a configured file (core's configure_file) that is a header
+  "cc_configured_header",
+  "cc_check_configure",
+  # L4: include-dir priority (a known header collision, settled)
+  "cc_include_before",
+  # L4 install: a platform's distribution family, for the libdir default
+  # (a Linux platform plugin states it)
+  "platform_distro",
+  # L2 cross: the OS release (Android API level) a platform is built for
+  "platform_os_level",
+]
+
+user = [
+  # L4: consume a package provider's include dirs as system include dirs
+  "package_system_includes",
+  # L4 checks: an answer the user states instead of a probe (CMake's -C cache)
+  "cc_check_known",
+  # L4: warnings as errors, for the configurations and targets named
+  "cc_werror",
+  "cc_werror_exec",
+  # L4: position-independent code for a target's objects, whatever its kind
+  "cc_pic",
+  # L2 cross: a Linux platform built from another OS with a clang and a sysroot
+  "cross_sysroot",
+  "cross_linker",
+]
+
+# Vocabulary this package declares (property keys, an ordering's ranks, the
+# names a check may have): `buildlog why` hides these leaves by default.
+structural = ["set_key", "lattice_rank", "cc_check_kind", "cxx_abi_key"]
+
+# Open-relation registry: what higher layers may add clauses to.
+open = [
+  # L2: a layer may ask whether a toolchain compiles a language for a
+  # platform (the domain stays owned here)
+  "req_cc_capability",
+  # L4: C++ sources of DSL-introduced tools, and
+  # sources an action generates
+  "cxx_source",
+  "cxx_generated_source",
+  "cxx_generated_module_interface",
+  "c_source",
+  # L4: source groups (a project's library abstraction derives them)
+  "source_group",
+  "group_source",
+  "group_when",
+  "group_prop",
+  "group_prop_when",
+  "generated_source_prop",
+  # L4: ISA scopes (a project's abstraction derives them)
+  "isa_requires",
+  "isa_requires_when",
+  "isa_excludes",
+  "isa_group",
+  "isa_target",
+  # L2: what an architecture has (a platform plugin adds its cpus)
+  "isa_ext",
+  "isa_baseline",
+  # F: C-family spellings
+  "family_isa_flag",
+  "family_isa_march_ext",
+  "family_isa_march_off",
+  "family_isa_march_version",
+  "family_isa_ext_version",
+  "family_pic_arg",
+  "family_cxx_off_arg",
+  "family_werror_arg",
+  "family_scan_style",
+  "family_bmi_flag",
+  "family_bmi_only_arg",
+  "family_bmi_only_input",
+  "family_bmi_only_output",
+  "family_modmap_arg",
+  "family_modules_arg",
+  "family_module_object_arg",
+  "family_scan_deps",
+  # L4 checks: a toolchain-knowledge package states answers
+  "cc_check_known",
+  # L4: include-dir priority, derivable by rules (e.g. from a configured
+  # header's dir, cc_configured_header_dir)
+  "cc_include_before",
+  # L4: a toolchain whose implicit include dirs are probed although no
+  # configuration compiles with it directly (nvcc's host compiler)
+  "cc_implicit_include_for",
+  # L4 install: a platform's distribution family, for the libdir default
+  # (a Linux platform plugin states it)
+  "platform_distro",
+  # L2 cross: the platforms a cross toolchain (an SDK's plugin) targets, and
+  # the platforms whose linking is ELF's
+  "cross_target",
+  "config_cpu_feature",
+  "elf_driver",
+  # L2: the values a platform attribute may have (a plugin adds its OS and cpus)
+  "platform_vocabulary",
+  # L2: the threads flag and dl library an OS needs (libc facts)
+  "platform_os_threads_arg",
+  "platform_os_dl_lib",
+]
+
+# Readable by higher layers, not extendable.
+exports = [
+  # L2: a platform's SDK (the sysroot clang takes as -isysroot; a built
+  # compiler may bake it in, case-studies/tcc)
+  "platform_sdk",
+  # L4: which source groups, and so which sources, a configuration compiles
+  "group_on",
+  "platform_leveled",
+  "src_on",
+  # L4: an ISA scope's fit and flags, for a project's gates
+  "isa_compatible",
+  "isa_scope_flag",
+  "domain_cc_capability",
+  "res_cc_capability",
+  "cc_check_result",
+  "cc_check_type_size",
+  "cc_configured_header_dir",
+  # L4: a compile's include dirs, their classes and priority order, and the
+  # compiler's implicit dirs (for a plugin whose compile takes the same -I)
+  "cc_include",
+  "cc_include_class",
+  "cc_include_cand",
+  "cc_include_precedes",
+  "cc_implicit_include",
+]
+
+[[probe]]
+kind = "inventory"
+request = "req_inventory"
+domain = "domain_inventory"
+result = [
+  "res_host_platform",
+  "res_platform",
+  "res_platform_sdk",
+  "res_platform_slice",
+  "res_platform_constraint",
+  "res_platform_tool",
+  "res_toolchain",
+  "res_toolchain_tool",
+  "res_toolchain_runs_on",
+  "res_platform_distro",
+]
+entry = "buildlog_cpp.probes:inventory"
+fingerprint = "buildlog_cpp.probes:inventory_fingerprint"
+
+[[probe]]
+kind = "cc_capability"
+request = "req_cc_capability"
+domain = "domain_cc_capability"
+result = "res_cc_capability"
+entry = "buildlog_cpp.probes:cc_capability"
+fingerprint = "buildlog_cpp.probes:toolchain_fingerprint"
+fingerprint_params = { toolchain_arg = 0 }
+
+[[probe]]
+kind = "cxx_std"
+request = "req_cxx_std"
+domain = "domain_cxx_std"
+result = "res_cxx_std"
+entry = "buildlog_cpp.probes:cxx_std"
+fingerprint = "buildlog_cpp.probes:toolchain_fingerprint"
+fingerprint_params = { toolchain_arg = 0 }
+
+# C++ modules (L4_modules.dl): can the toolchain scan and build named modules?
+[[probe]]
+kind = "cxx_modules"
+request = "req_cxx_modules"
+domain = "domain_cxx_modules"
+result = "res_cxx_modules"
+entry = "buildlog_cpp.probes:cxx_modules"
+fingerprint = "buildlog_cpp.probes:toolchain_fingerprint"
+fingerprint_params = { toolchain_arg = 0 }
+
+# The standard library's std module source (L4_modules.dl)
+[[probe]]
+kind = "cxx_std_module"
+request = "req_cxx_std_module"
+domain = "domain_cxx_std_module"
+result = "res_cxx_std_module"
+entry = "buildlog_cpp.probes:cxx_std_module"
+fingerprint = "buildlog_cpp.probes:toolchain_fingerprint"
+fingerprint_params = { toolchain_arg = 0 }
+
+# Default warnings (L4_cxx.dl): does the toolchain accept a warning flag
+# for a language? Keyed by the toolchain's tools.
+[[probe]]
+kind = "cc_warning"
+request = "req_cc_warning"
+domain = "domain_cc_warning"
+result = "res_cc_warning"
+entry = "buildlog_cpp.probes:cc_warning"
+fingerprint = "buildlog_cpp.probes:toolchain_fingerprint"
+fingerprint_params = { toolchain_arg = 0 }
+
+# Which include dirs does the toolchain search by itself for a language?
+[[probe]]
+kind = "cc_implicit_include"
+request = "req_cc_implicit_include"
+domain = "domain_cc_implicit_include"
+result = "res_cc_implicit_include"
+entry = "buildlog_cpp.probes:cc_implicit_include"
+fingerprint = "buildlog_cpp.probes:toolchain_fingerprint"
+fingerprint_params = { toolchain_arg = 0 }
+
+# Configure checks (L4_checks.dl): build one small program with the
+# toolchain for a platform; keyed by the request's content and the
+# toolchain's identity (cc_check_fingerprint).
+[[probe]]
+kind = "cc_check"
+request = "req_cc_check"
+domain = "domain_cc_check"
+result = ["res_cc_check", "res_cc_check_size"]
+entry = "buildlog_cpp.probes:cc_check"
+fingerprint = "buildlog_cpp.probes:cc_check_fingerprint"
+
+# C++ modules (L4_modules.dl, strata/modules.dl): the build-time collator, run by
+# a Ninja action (`buildlog -E collate buildlog-cpp:modules`).
+[[stratum]]
+name = "modules"
+program = "strata/modules.dl"
+entry = "buildlog_cpp.collate:main"
+
+# Package providers for core discovery (L3_discovery.dl, buildlog.providers;
+# buildlog_cpp.importers): each owns its format's spellings, its layout under
+# an install prefix and its reader, and answers with neutral rows.
+[[provider]]
+name = "pc"
+entry = "buildlog_cpp.importers:PC"
+
+[[provider]]
+name = "cps"
+entry = "buildlog_cpp.importers:CPS"
+
+[[provider]]
+name = "cmake"
+entry = "buildlog_cpp.importers:CMAKE"
+
+[[provider]]
+name = "buildlog"
+entry = "buildlog_cpp.importers:BUILDLOG"

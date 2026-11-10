@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# HelloWasm (apps/HelloWasm): the generators for the host and the app for
+# WebAssembly in one graph. Configure with the case study's packages on the
+# path, an installed Halide, and Emscripten (EMSDK):
+#   uv run --frozen buildlog configure case-studies/halide/apps/hellowasm -C BUILD \
+#     --package-path case-studies/halide/packages -D HALIDE_PREFIX=$HALIDE_PREFIX \
+#     --user case-studies/halide/apps/hellowasm/presets/homebrew-arm64.toml
+uses = ["buildlog-cpp", "buildlog-emsdk", "halide-build"]
+source_root = "${HALIDE_SRC}/apps/HelloWasm"
+spec = ["spec.toml"]
+
+[vars]
+HALIDE_SRC = "${REPO_ROOT}/case-studies/halide/upstream"
+HOMEBREW = "/opt/homebrew"

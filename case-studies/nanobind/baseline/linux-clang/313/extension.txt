@@ -1,0 +1,122 @@
+===== nm -gD --defined-only nanobind_example_ext.abi3.so
+0000000000004518 T PyInit_nanobind_example_ext
+0000000000004894 W _ZN8nanobind4abi112python_errorC2Ev
+00000000000048e4 W _ZN8nanobind4abi112python_errorD0Ev
+00000000000048b0 W _ZN8nanobind4abi112python_errorD2Ev
+000000000000e0e8 W _ZN8nanobind4abi117builtin_exceptionD0Ev
+0000000000004920 W _ZNK8nanobind4abi112python_error4whatEv
+000000000000fd6c V _ZSt19piecewise_construct
+000000000002fb40 V _ZTIN8nanobind4abi112python_errorE
+000000000002fbc8 V _ZTIN8nanobind4abi117builtin_exceptionE
+000000000000fc8b V _ZTSN8nanobind4abi112python_errorE
+000000000000fd48 V _ZTSN8nanobind4abi117builtin_exceptionE
+000000000002fb58 V _ZTVN8nanobind4abi112python_errorE
+000000000002fca0 V _ZTVN8nanobind4abi117builtin_exceptionE
+===== undefined Python symbols (nm -D -u | grep Py)
+PyCapsule_GetPointer
+PyCapsule_New
+PyDict_GetItem
+PyDict_GetItemWithError
+PyDict_New
+PyDict_SetItem
+PyErr_Clear
+PyErr_ExceptionMatches
+PyErr_Format
+PyErr_FormatV
+PyErr_GetRaisedException
+PyErr_NoMemory
+PyErr_Occurred
+PyErr_SetRaisedException
+PyErr_SetString
+PyEval_EvalCode
+PyExc_AttributeError
+PyExc_BufferError
+PyExc_ImportError
+PyExc_IndexError
+PyExc_KeyError
+PyExc_MemoryError
+PyExc_OverflowError
+PyExc_RuntimeError
+PyExc_StopIteration
+PyExc_SystemError
+PyExc_TypeError
+PyExc_ValueError
+PyException_GetTraceback
+PyException_SetCause
+PyException_SetContext
+PyGILState_Ensure
+PyGILState_Release
+PyImport_ImportModule
+PyIndex_Check
+PyInterpreterState_Get
+PyInterpreterState_GetDict
+PyList_Append
+PyList_New
+PyLong_AsLongLongAndOverflow
+PyLong_FromLong
+PyLong_FromUnsignedLongLong
+PyLong_Type
+PyMem_Calloc
+PyMem_Free
+PyMem_Malloc
+PyModuleDef_Init
+PyModule_GetDef
+PyModule_GetDict
+PyModule_GetState
+PyModule_NewObject
+PyModule_Type
+PyNumber_Add
+PyNumber_Index
+PyObject_CallMethod
+PyObject_Free
+PyObject_GC_Del
+PyObject_GC_Track
+PyObject_GC_UnTrack
+PyObject_GenericGetAttr
+PyObject_GenericGetDict
+PyObject_GetAttr
+PyObject_GetAttrString
+PyObject_GetItem
+PyObject_GetTypeData
+PyObject_HasAttr
+PyObject_Repr
+PyObject_SetAttr
+PyObject_Vectorcall
+PyProperty_Type
+PySequence_GetItem
+PySequence_Size
+PyTuple_GetItem
+PyTuple_New
+PyTuple_Pack
+PyTuple_SetItem
+PyTuple_Size
+PyType_FromMetaclass
+PyType_FromSpec
+PyType_GenericAlloc
+PyType_GenericNew
+PyType_GetFlags
+PyType_GetName
+PyType_GetSlot
+PyType_IsSubtype
+PyType_Type
+PyUnicode_AsUTF8AndSize
+PyUnicode_FromFormat
+PyUnicode_FromString
+PyUnicode_InternFromString
+PyUnicode_InternInPlace
+PyVectorcall_Call
+Py_AtExit
+Py_CompileString
+Py_Version
+_PyObject_GC_New
+_Py_DecRef
+_Py_IncRef
+_Py_NoneStruct
+_Py_NotImplementedStruct
+===== readelf -d NEEDED
+ 0x0000000000000001 (NEEDED)             Shared library: [libstdc++.so.6]
+ 0x0000000000000001 (NEEDED)             Shared library: [libm.so.6]
+ 0x0000000000000001 (NEEDED)             Shared library: [libgcc_s.so.1]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+===== size
+135192

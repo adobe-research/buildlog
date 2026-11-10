@@ -1,0 +1,13 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// One probe request per fixture file; its result names a rule package.
+.decl test_discover_file(path:symbol)
+.decl req_test_discover(id:symbol, file:symbol)
+.decl domain_test_discover(id:symbol, file:symbol)
+.decl res_test_discover(req:symbol, path:symbol)
+// Rule packages (not shipped here) may withdraw a discovered package.
+.decl withdrawn(path:symbol)
+domain_test_discover(cat("discover:", f), f) :- test_discover_file(f).
+req_test_discover(id, f) :- domain_test_discover(id, f).
+discovered_rule_package(req, p) :- res_test_discover(req, p), req_test_discover(req, _), !withdrawn(p).

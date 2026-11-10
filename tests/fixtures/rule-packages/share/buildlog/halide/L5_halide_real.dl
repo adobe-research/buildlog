@@ -1,0 +1,191 @@
+// Real Halide rule package, pure Datalog. It extends only open
+// relations of the core (L0/L1) and buildlog-cpp (L2-L4).
+// Package facts describe the installed Halide and requested app generators/libraries.
+
+.decl halide_generator(g:symbol)
+.decl halide_generator_source(g:symbol, src:symbol)
+.decl halide_generator_include(g:symbol, dir:symbol, rank:number)
+.decl halide_stub(stub:symbol, gen:symbol, generator_name:symbol)
+.decl halide_generator_uses_stub(g:symbol, stub:symbol)
+.decl halide_library(lib:symbol, app:symbol, generator:symbol, generator_name:symbol)
+.decl halide_library_output(lib:symbol, kind:symbol)
+.decl halide_library_param(lib:symbol, rank:number, param:symbol)
+.decl halide_library_feature(lib:symbol, feature:symbol)
+.decl halide_library_autoscheduler(lib:symbol, name:symbol, plugin:symbol)
+.decl halide_runtime_strip_feature(feature:symbol)
+.decl halide_feature_order(feature:symbol, pos:number)
+.decl halide_incompatible_feature(a:symbol, b:symbol)
+.decl halide_feature_framework(feature:symbol, framework:symbol)
+.decl halide_target_arch(cpu:symbol, arch:symbol)
+.decl halide_target_os(os:symbol, osname:symbol)
+.decl halide_output_kind(kind:symbol, pos:number, ext:symbol)
+
+// Generators are ordinary C++ executables; running one in an action puts it in the exec configuration.
+target(g) :- halide_generator(g).
+native_kind(g, "executable") :- halide_generator(g).
+cxx_source(g, s) :- halide_generator_source(g, s).
+dep(g, "Halide::Generator", "private") :- halide_generator(g).
+prop(g, "cxx.std", "17", "private") :- halide_generator(g).
+prop(g, "cc.include_dir", d, "private") :- halide_generator_include(g, d, _).
+dep(g, st, "private") :- halide_generator_uses_stub(g, st).
+prop(g, "cc.generated_header", h, "private") :- halide_generator_uses_stub(g, st), halide_stub_header(st, h).
+prop(g, "cc.include_dir", d, "private") :- halide_generator_uses_stub(g, st), halide_stub_dir(st, d).
+
+// Stubs are generated headers from running an exec-config generator. A composite generator consumes them.
+.decl halide_stub_dir(stub:symbol, dir:symbol)
+halide_stub_dir(st, cat("out:gen/stubs/", st)) :- halide_stub(st, _, _).
+.decl halide_stub_header(stub:symbol, header:symbol)
+halide_stub_header(st, cat(cat(d, "/"), cat(name, ".stub.h"))) :- halide_stub(st, _, name), halide_stub_dir(st, d).
+.decl halide_stub_action(stub:symbol, action:symbol)
+halide_stub_action(st, h) :- halide_stub_header(st, h).
+action(a, "HALIDE_STUB") :- halide_stub_action(_, a).
+target_action(st, c, a) :- halide_stub_action(st, a), needed(st, c).
+action_out(a, h) :- halide_stub_action(st, a), halide_stub_header(st, h), a != h.
+// The generator is named by reference: core builds it for the exec
+// configuration and fills in its path (no tool_dep, no exec annotation).
+action_run(a, 0, "", g, "run") :- halide_stub_action(st, a), halide_stub(st, g, _).
+action_arg(a, 1, "-g ", gen) :- halide_stub_action(st, a), halide_stub(st, _, gen).
+action_arg(a, 2, "-n ", gen) :- halide_stub_action(st, a), halide_stub(st, _, gen).
+action_arg(a, 3, "-e ", "cpp_stub") :- halide_stub_action(_, a).
+action_arg(a, 4, "-o ", dir) :- halide_stub_action(st, a), halide_stub_dir(st, dir).
+target(st) :- halide_stub(st, _, _).
+iface(st, c, "cc.generated_header", h) :- needed(st, c), halide_stub_header(st, h).
+iface(st, c, "cc.include_dir", d) :- needed(st, c), halide_stub_dir(st, d).
+
+// Halide AOT libraries lower into native static libraries and expose normal native facts.
+target(l) :- halide_library(l, _, _, _).
+native_kind(l, "library"), linkage_require(l, "static", "the generator emits one object, archived into a static library") :-
+  halide_library(l, _, _, _).
+tc_required("c", c) :- needed(l, c), halide_library(l, _, _, _).
+
+.decl halide_platform_parts(p:symbol, arch:symbol, bits:symbol, os:symbol)
+halide_platform_parts(p, a, "64", os) :- platform_constraint(p, "cpu", cpu), platform_constraint(p, "os", os0), halide_target_arch(cpu, a), halide_target_os(os0, os).
+.decl halide_triple(c:Cfg, triple:symbol)
+halide_triple(c, cat(cat(cat(a, "-"), bits), cat("-", os))) :- config_platform(c, p), halide_platform_parts(p, a, bits, os).
+
+.decl halide_lib_dir(lib:symbol, c:Cfg, dir:symbol)
+halide_lib_dir(l, c, cat(cat("out:halide/", n), cat("/", l))) :- needed(l, c), cfg_name(c, n), halide_library(l, _, _, _).
+.decl halide_object(lib:symbol, c:Cfg, obj:symbol)
+halide_object(l, c, cat(cat(d, "/"), cat(l, ".o"))) :- halide_lib_dir(l, c, d).
+native_object(l, c, o) :- halide_object(l, c, o).
+iface(l, c, "cc.include_dir", d) :- halide_lib_dir(l, c, d).
+iface(l, c, "cc.generated_header", cat(cat(d, "/"), cat(l, ".h"))) :- halide_lib_dir(l, c, d).
+
+// Deterministic output-kind linearization: a fact-declared order, folded by
+// core's generic ordered join (one group per library).
+.decl halide_emit_kind(lib:symbol, kind:symbol, pos:number)
+halide_emit_kind(l, "c_header", 0) :- halide_library(l, _, _, _).
+halide_emit_kind(l, "object", 1) :- halide_library(l, _, _, _).
+halide_emit_kind(l, k, o) :- halide_library_output(l, k), halide_output_kind(k, o, _).
+.decl halide_emit_group(lib:symbol, g:symbol)
+halide_emit_group(l, cat("halide_emit:", l)) :- halide_library(l, _, _, _).
+join_item(g, k), join_rank(g, k, o) :- halide_emit_group(l, g), halide_emit_kind(l, k, o).
+join_sep(g, ",") :- halide_emit_group(_, g).
+.decl halide_emit_list(lib:symbol, text:symbol)
+halide_emit_list(l, text) :- halide_emit_group(l, g), joined(g, text).
+
+// Extra generated outputs are L0 outputs of the generator action.
+action(o, "HALIDE_GEN") :- halide_object(_, _, o).
+target_action(l, c, o) :- halide_object(l, c, o).
+action_out(o, cat(cat(d, "/"), cat(l, ".h"))) :- halide_object(l, c, o), halide_lib_dir(l, c, d).
+action_out(o, cat(cat(d, "/"), cat(l, ext))) :- halide_object(l, c, o), halide_lib_dir(l, c, d), halide_library_output(l, k), halide_output_kind(k, _, ext).
+action_in(o, p, "implicit") :- halide_object(l, _, o), halide_library_autoscheduler(l, _, p).
+action_run(o, 0, "", g, "run") :- halide_object(l, _, o), halide_library(l, _, g, _).
+action_arg(o, 1, "-n ", l) :- halide_object(l, _, o).
+action_arg(o, 2, "-d ", "0") :- halide_object(_, _, o).
+action_arg(o, 3, "-g ", gen) :- halide_object(l, _, o), halide_library(l, _, _, gen).
+action_arg(o, 4, "-f ", l) :- halide_object(l, _, o).
+action_arg(o, 5, "-e ", list) :- halide_object(l, _, o), halide_emit_list(l, list).
+action_arg(o, 6, "-p ", p) :- halide_object(l, _, o), halide_library_autoscheduler(l, _, p).
+action_arg(o, 7, "-o ", d) :- halide_object(l, c, o), halide_lib_dir(l, c, d).
+action_arg(o, 8, "target=", cat(t, "-no_runtime")) :- halide_object(_, c, o), halide_triple(c, t).
+action_arg(o, 9, "autoscheduler=", name) :- halide_object(l, _, o), halide_library_autoscheduler(l, name, _).
+action_arg(o, 100 + r, "", p) :- halide_object(l, _, o), halide_library_param(l, r, p).
+
+// Autoscheduler plugins are loaded by the generator, so they must cover the
+// exec platform (core artifact coverage; halide.facts.toml states what the
+// installed plugin covers).
+coverage_need(l, e, plugin) :- halide_library_autoscheduler(l, _, plugin), needed(l, c), exec_config(c, e).
+
+// Runtime aggregate: union semantics, deterministic feature order. Incompatibility is explicit pair facts.
+.decl halide_runtime_feature(lib:symbol, feature:symbol)
+halide_runtime_feature(l, f) :- halide_library_feature(l, f), !halide_runtime_strip_feature(f).
+.decl halide_linked_lib(exe:symbol, c:Cfg, lib:symbol)
+halide_linked_lib(exe, c, l) :- executable(exe, c, _), link_closure(exe, c, l), halide_library(l, _, _, _).
+.decl halide_runtime_member(exe:symbol, c:Cfg, feature:symbol)
+halide_runtime_member(exe, c, f) :- halide_linked_lib(exe, c, l), halide_runtime_feature(l, f).
+.decl halide_runtime_piece(exe:symbol, c:Cfg, feature:symbol, pos:number)
+halide_runtime_piece(exe, c, f, o) :- halide_runtime_member(exe, c, f), halide_feature_order(f, o).
+.decl halide_runtime_conflict(exe:symbol, c:Cfg, detail:symbol)
+halide_runtime_conflict(exe, c, cat(a, cat(" conflicts with ", b))) :- halide_runtime_member(exe, c, a), halide_runtime_member(exe, c, b), halide_incompatible_feature(a, b).
+error_at("halide runtime feature conflict", d, exe, c) :- halide_runtime_conflict(exe, c, d).
+.decl halide_runtime_dir(exe:symbol, c:Cfg, dir:symbol)
+halide_runtime_dir(exe, c, cat("out:halide_runtime/", n)) :- executable(exe, c, _), cfg_name(c, n), halide_linked_lib(exe, c, _).
+.decl halide_runtime_name(exe:symbol, c:Cfg, name:symbol)
+halide_runtime_name(exe, c, cat(exe, ".runtime")) :- halide_runtime_dir(exe, c, _).
+// Union of runtime features, linearized by the package-declared total order
+// through core's ordered join (one group per executable and configuration).
+// A feature without a declared order, or two at one position, is a core
+// "ordered join" error.
+.decl halide_runtime_group(exe:symbol, c:Cfg, g:symbol)
+halide_runtime_group(exe, c, cat("halide_runtime:", exe, ":", n)) :- halide_runtime_dir(exe, c, _), cfg_name(c, n).
+join_item(g, f) :- halide_runtime_group(exe, c, g), halide_runtime_member(exe, c, f).
+join_rank(g, f, o) :- halide_runtime_group(exe, c, g), halide_runtime_piece(exe, c, f, o).
+join_sep(g, "-") :- halide_runtime_group(_, _, g).
+.decl halide_runtime_has_feature(exe:symbol, c:Cfg)
+halide_runtime_has_feature(exe, c) :- halide_runtime_member(exe, c, _).
+.decl halide_runtime_target(exe:symbol, c:Cfg, target:symbol)
+halide_runtime_target(exe, c, t) :- halide_triple(c, t), halide_runtime_dir(exe, c, _), !halide_runtime_has_feature(exe, c).
+halide_runtime_target(exe, c, cat(t, cat("-", s))) :- halide_triple(c, t), halide_runtime_group(exe, c, g), joined(g, s).
+
+.decl halide_runtime_obj(exe:symbol, c:Cfg, obj:symbol)
+halide_runtime_obj(exe, c, cat(cat(d, "/"), cat(name, ".o"))) :- halide_runtime_dir(exe, c, d), halide_runtime_name(exe, c, name).
+.decl halide_runtime_archive(exe:symbol, c:Cfg, ar:symbol)
+halide_runtime_archive(exe, c, cat(cat(d, "/lib"), cat(name, ".a"))) :- halide_runtime_dir(exe, c, d), halide_runtime_name(exe, c, name).
+link_file(l, c, ar) :- halide_linked_lib(exe, c, l), halide_runtime_archive(exe, c, ar).
+artifact_covers(ar, p) :- halide_runtime_archive(_, c, ar), config_platform(c, p).
+
+action(o, "HALIDE_RUNTIME") :- halide_runtime_obj(_, _, o).
+target_action(exe, c, o) :- halide_runtime_obj(exe, c, o).
+action_in(o, gengen, "explicit") :- halide_runtime_obj(_, _, o), halide_imported_tool("Halide::gengen", gengen).
+action_arg(o, 0, "", gengen) :- halide_runtime_obj(_, _, o), halide_imported_tool("Halide::gengen", gengen).
+action_arg(o, 1, "-r ", name) :- halide_runtime_obj(exe, c, o), halide_runtime_name(exe, c, name).
+action_arg(o, 2, "-e ", "object") :- halide_runtime_obj(_, _, o).
+action_arg(o, 3, "-o ", d) :- halide_runtime_obj(exe, c, o), halide_runtime_dir(exe, c, d).
+action_arg(o, 4, "target=", t) :- halide_runtime_obj(exe, c, o), halide_runtime_target(exe, c, t).
+action(a, "AR") :- halide_runtime_archive(_, _, a).
+target_action(exe, c, a) :- halide_runtime_archive(exe, c, a).
+action_arg(a, 0, "", ar) :- halide_runtime_archive(_, c, a), tc_for("native-link", c, tc), toolchain_tool(tc, "ar", ar).
+action_arg(a, 1, "", "rcs") :- halide_runtime_archive(_, _, a).
+action_arg(a, 2, "", a) :- halide_runtime_archive(_, _, a).
+action_arg(a, 3, "", o) :- halide_runtime_archive(exe, c, a), halide_runtime_obj(exe, c, o).
+action_arg_set(a, 3) :- halide_runtime_archive(_, _, a).  // members
+action_in(a, o, "explicit") :- halide_runtime_archive(exe, c, a), halide_runtime_obj(exe, c, o).
+
+// Feature-conditioned usage requirements.
+iface(l, c, "native.link_flag", cat("-framework ", fw)) :- halide_library_feature(l, feat), halide_feature_framework(feat, fw), needed(l, c).
+
+// Optional dependencies are entailments: ImageIO
+// links libpng/libjpeg when the package universe defines them, like CMake's
+// $<TARGET_NAME_IF_EXISTS:PNG::PNG>. zlib is a plain dep (halide.facts.toml).
+dep("Halide::ImageIO", "libpng", "public") :- defined("libpng").
+dep("Halide::ImageIO", "libjpeg", "public") :- defined("libjpeg").
+
+// Tools imported by a Halide package.
+.decl halide_include_dir(path:symbol)
+iface(l, c, "cc.include_dir", inc) :- halide_library(l, _, _, _), needed(l, c), halide_include_dir(inc).
+.decl halide_imported_tool(t:symbol, path:symbol)
+
+// Fat runtime archives: per-slice runtime plus lipo, no dummy source.
+.decl halide_fat_runtime_archive(exe:symbol, u:Cfg, ar:symbol)
+halide_fat_runtime_archive(exe, u, cat("out:halide_runtime/", cat(n, cat("/lib", cat(exe, ".runtime.a"))))) :- split_request(exe, u), cfg_name(u, n), halide_linked_lib(exe, _, _).
+action(a, "LIPO") :- halide_fat_runtime_archive(_, _, a).
+target_action(exe, u, a) :- halide_fat_runtime_archive(exe, u, a).
+artifact_covers(a, p) :- halide_fat_runtime_archive(_, u, a), coverage_platform(u, p).
+action_arg(a, 0, "", lipo) :- halide_fat_runtime_archive(_, u, a), mconfig_platform(u, p), platform_tool(p, "lipo", lipo).
+action_arg(a, 1, "", "-create") :- halide_fat_runtime_archive(_, _, a).
+action_arg(a, 2, "-output ", a) :- halide_fat_runtime_archive(_, _, a).
+action_arg(a, 3, "", s) :- halide_fat_runtime_archive(exe, u, a), config_slice(u, c), halide_runtime_archive(exe, c, s).
+action_arg_set(a, 3) :- halide_fat_runtime_archive(_, _, a).  // slices
+action_in(a, s, "explicit") :- halide_fat_runtime_archive(exe, u, a), config_slice(u, c), halide_runtime_archive(exe, c, s).
+

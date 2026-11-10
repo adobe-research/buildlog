@@ -1,0 +1,64 @@
+===== lipo -archs
+libz-ng.2.3.3.dylib: arm64
+libz-ng.a: arm64
+example: arm64
+minigzip: arm64
+===== links
+libz-ng.2.dylib -> libz-ng.2.3.3.dylib
+libz-ng.dylib -> libz-ng.2.dylib
+===== otool -L libz-ng.2.3.3.dylib
+	@rpath/libz-ng.2.dylib (compatibility version 2.0.0, current version 2.3.3)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== otool -L example
+	@rpath/libz-ng.2.dylib (compatibility version 2.0.0, current version 2.3.3)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== otool -L minigzip
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== otool -L minideflate
+	@rpath/libz-ng.2.dylib (compatibility version 2.0.0, current version 2.3.3)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== otool -L infcover
+	@rpath/libz-ng.2.dylib (compatibility version 2.0.0, current version 2.3.3)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== ar -t libz-ng.a
+--- arm64
+__.SYMDEF SORTED
+adler32_c.c.o
+adler32_fold_c.c.o
+adler32_neon.c.o
+adler32.c.o
+arm_features.c.o
+chunkset_c.c.o
+chunkset_neon.c.o
+compare256_c.c.o
+compare256_neon.c.o
+compress.c.o
+cpu_features.c.o
+crc32_armv8.c.o
+crc32_braid_c.c.o
+crc32_braid_comb.c.o
+crc32_chorba_c.c.o
+crc32_fold_c.c.o
+crc32.c.o
+deflate_fast.c.o
+deflate_huff.c.o
+deflate_medium.c.o
+deflate_quick.c.o
+deflate_rle.c.o
+deflate_slow.c.o
+deflate_stored.c.o
+deflate.c.o
+functable.c.o
+gzlib.c.o
+gzread.c.o
+gzwrite.c.o
+infback.c.o
+inflate.c.o
+inftrees.c.o
+insert_string_roll.c.o
+insert_string.c.o
+slide_hash_c.c.o
+slide_hash_neon.c.o
+trees.c.o
+uncompr.c.o
+zutil.c.o

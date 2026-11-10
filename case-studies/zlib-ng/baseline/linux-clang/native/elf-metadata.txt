@@ -1,0 +1,60 @@
+===== links
+libz-ng.so.2 -> libz-ng.so.2.3.3
+libz-ng.so -> libz-ng.so.2
+===== readelf -d libz-ng.so.2.3.3
+(NEEDED) Shared library: [libc.so.6]
+(SONAME) Library soname: [libz-ng.so.2]
+===== readelf -d example
+(NEEDED) Shared library: [libz-ng.so.2]
+(NEEDED) Shared library: [libc.so.6]
+(RUNPATH) Library runpath: [$BUILD]
+===== readelf -d minigzip
+(NEEDED) Shared library: [libc.so.6]
+===== readelf -d minideflate
+(NEEDED) Shared library: [libz-ng.so.2]
+(NEEDED) Shared library: [libc.so.6]
+(RUNPATH) Library runpath: [$BUILD]
+===== readelf -d infcover
+(NEEDED) Shared library: [libz-ng.so.2]
+(NEEDED) Shared library: [libc.so.6]
+(RUNPATH) Library runpath: [$BUILD]
+===== ar -t libz-ng.a
+adler32.c.o
+adler32_c.c.o
+adler32_fold_c.c.o
+adler32_neon.c.o
+arm_features.c.o
+chunkset_c.c.o
+chunkset_neon.c.o
+compare256_c.c.o
+compare256_neon.c.o
+compress.c.o
+cpu_features.c.o
+crc32.c.o
+crc32_armv8.c.o
+crc32_braid_c.c.o
+crc32_braid_comb.c.o
+crc32_chorba_c.c.o
+crc32_fold_c.c.o
+deflate.c.o
+deflate_fast.c.o
+deflate_huff.c.o
+deflate_medium.c.o
+deflate_quick.c.o
+deflate_rle.c.o
+deflate_slow.c.o
+deflate_stored.c.o
+functable.c.o
+gzlib.c.o
+gzread.c.o
+gzwrite.c.o
+infback.c.o
+inflate.c.o
+inftrees.c.o
+insert_string.c.o
+insert_string_roll.c.o
+slide_hash_c.c.o
+slide_hash_neon.c.o
+trees.c.o
+uncompr.c.o
+zutil.c.o

@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+name = "Clang"
+version = "22.1.8"
+rank = 4
+namespace = "clang"
+layers = ["Clang.dl"]
+facts = ["facts.toml"]
+requires = { buildlog-cpp = ">=0.1", LLVM = "==22.1.8" }
+extends = [
+  "package_version",
+]
+accepts = [
+  "clang_version",
+]

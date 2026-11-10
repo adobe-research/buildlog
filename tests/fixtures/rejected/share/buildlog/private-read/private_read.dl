@@ -1,0 +1,10 @@
+// nkeys is a core helper; tc_candidate a core L2 helper; tc_select is a
+// core output (unqualified for the driver) but not exported; cxx_object a
+// buildlog-cpp helper; buildlog__nkeys spells the core helper's qualified
+// name; Settings is a private core type.
+.decl private_read_cfg(s:Settings)
+action("out:x", "X") :- nkeys(_), tc_candidate(_, _, _, _).
+action("out:y", "Y") :- tc_select(_, _, _, _), cxx_object(_, _, _, _).
+action("out:z", "Z") :- buildlog__nkeys(_).
+// domain_cc_capability is exported by buildlog-cpp: readable, not a clause head.
+domain_cc_capability("mine", "tc", "c", "p").

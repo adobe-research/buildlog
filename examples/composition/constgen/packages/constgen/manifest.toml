@@ -1,0 +1,15 @@
+name = "constgen"
+version = "1.0.0"
+rank = 5
+namespace = "constgen"
+layers = ["generator.dl"]
+requires = { buildlog-cpp = ">=0.1" }
+extends = [
+  "source_claimed",
+  "path_want",
+  "cxx_generated_source",
+  "action",
+  "action_arg",
+  "action_in",
+  "target_action",
+]

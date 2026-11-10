@@ -1,0 +1,4 @@
+# A consumer of minidsl (tests/test_export_buildlog.py): minidsl's install
+# carries its generator rule, which translates tables.dsl.
+uses = ["buildlog-cpp"]
+spec = ["spec.toml"]

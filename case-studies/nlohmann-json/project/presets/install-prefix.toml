@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The install prefix from the command line: -D INSTALL_PREFIX=/abs/path.
+# There is no default; without -D this file does not load (an unresolved
+# variable), and without any install_prefix the install target fails.
+install_prefix = "${INSTALL_PREFIX}"

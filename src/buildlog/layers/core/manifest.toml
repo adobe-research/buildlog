@@ -1,0 +1,727 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The buildlog core: L0 (actions), L1 (targets, platforms, configurations,
+# conditions, property propagation), L2 (toolchains and their selection) and
+# L3 (native code: objects, archives, shared libraries, executables, link
+# order, fat artifacts, imported artifacts) and package discovery (which
+# names are wanted, where to look, selection and the relay of provider
+# results; the formats are plugins' providers). Language- and format-neutral. It is the root
+# package (rank 0) and is qualified like every other package: only the names
+# listed below are visible to higher layers.
+name = "buildlog"
+version = "0.1.0"
+rank = 0
+layers = [
+  "types.dl",
+  "L0_actions.dl",
+  "L1_targets.dl",
+  "L1_configure_file.dl",
+  "L2_toolchains.dl",
+  "L3_native.dl",
+  "L3_discovery.dl",
+  "L1_options.dl",
+  "L3_install.dl",
+  "V_vocabulary.dl",
+  "V_generators.dl",
+]
+
+# Relations that accept spec/package facts. The loader generates their
+# `.input` directives; layer files never contain IO.
+accepts = [
+  "target",
+  "imported",
+  "dep",
+  "dep_when",
+  # L1: needed at run time, not linked (a dlopen'd module), and where
+  "runtime_dep",
+  "runtime_dep_when",
+  "runtime_dep_optional",
+  "runtime_dep_optional_when",
+  # L1: target templates, their instances and the instances' parameters
+  "target_template",
+  "target_template_param",
+  "instance_of",
+  "instance_param",
+  "prop",
+  "prop_when",
+  "request",
+  "config_decl",
+  "config_decl_setting",
+  "condition",
+  "artifact_covers",
+  "request_all",
+  # L2/L3: what a target is, its prebuilt files, and
+  # shared libraries' versions, exported symbols and prebuilt objects
+  "native_kind",
+  "import_file",
+  # L3: linkage of a library of kind "library": the author's default, its
+  # requirement and a dependent's pin on its edge (each with a reason), and
+  # properties only one linkage has
+  "default_linkage",
+  "linkage_require",
+  "dep_linkage",
+  "linkage_prop",
+  # L3: one linkage's artifact name (SPIRV-Tools' SPIRV-Tools-shared)
+  "linkage_output_name",
+  "native_version",
+  "native_output_name",
+  "native_exported_symbols",
+  "native_version_script",
+  "native_export_list_optional",
+  "native_external_object",
+  "whole_archive",
+  # L1: configured files (templates with substituted variables)
+  "configure_file",
+  "configure_file_at_only",
+  "configure_file_lines",
+  "configure_file_text",
+  # L1: an owner's targets share its configured files (a library's variants)
+  "owner_member",
+  # L3: two imported targets must come from one package instance
+  "import_same_package",
+  # L3 discovery: opt in to searching a name; package authors may state
+  # abstract wants, but locations and pins are user decisions.
+  "package_want",
+  "package_namespace",
+  # L1: tests (run after the build by `buildlog test`)
+  "test",
+  "test_arg",
+  "test_arg_ref",
+  "test_env",
+  "test_cwd",
+  "test_label",
+  "test_regex",
+  "test_serial",
+  "test_when",
+  # L1: a project's options (option() in CMake) and their defaults
+  "option_decl",
+  "option",
+  "option_default",
+  "option_help",
+  "option_type",
+  "option_choice",
+  "option_requires",
+  "option_conflicts",
+  "request_when",
+  "target_kind_when",
+  # L3: what is installable, and the package interface an install exports
+  "install_map",
+  "install_file",
+  "install_file_when",
+  "install_target",
+  "install_configured",
+  "export_package",
+  "export_version",
+  "export_compat",
+  "export_description",
+  "export_component",
+  "export_rules",
+  "export_rules_file",
+  # L3: the linkage of a component of a library built both ways
+  "export_component_linkage",
+  # L3: the package's interface is not encodable in an export format
+  "export_format_omit",
+  # L3: a requirement on an imported package: its name and minimum version
+  "export_requires_name",
+  "export_requires_version",
+  # L3: format-neutral package names (pkg:comp) for a project's own targets
+  "package_component",
+  # The authoring vocabulary (V_vocabulary.dl): [target.X], [owner.X] and
+  # [export.P] tables' short keys
+  "target_kind",
+  "target_private",
+  "target_public",
+  "target_interface",
+  "target_when",
+  "target_deps",
+  "target_deps_when",
+  "target_install_when",
+  "target_test",
+  "target_sources",
+  "owner",
+  "export",
+  "join_part",
+  "generator",
+  "generator_owner",
+  "generator_label",
+  "generator_run",
+  "generator_output",
+  "generator_input",
+  "generator_stdout",
+  "generator_stdin",
+  "generator_params",
+  "generate",
+  "word_list",
+  "package_data",
+  "gen_word",
+  "gen_file",
+  "gen_primary",
+  "target_gen_include",
+  "gen_user",
+  # L2: a target built with a toolchain the build makes ([target.X] toolchain)
+  "target_toolchain",
+]
+
+# Relations that record invoker/environment decisions. Author specs may not
+# supply them unless buildlog.toml has an audited [author_decides] reason.
+user = [
+  "alias",
+  "config_default",
+  "platform_runs_on",
+  "exec_setting",
+  "package_config_map",
+  "toolchain_pin",
+  "package_prefix",
+  "package_search_dir",
+  "package_file",
+  "package_pin",
+  "package_linkage",
+  "package_prefix_on",
+  "package_search_dir_on",
+  "package_file_on",
+  "package_file_install",
+  "package_pin_on",
+  "package_linkage_on",
+  # L3: a library's linkage in this build (above the global native.linkage)
+  "library_linkage",
+  # L1: an option's value for this build
+  "option_value",
+  # L3: where to install (no default) and layout overrides
+  "install_prefix",
+  "install_dir",
+  # L3: do not write or install an export format of a package
+  "export_format_skip",
+  # L3 discovery: build a dependency in-tree from its spec (the driver loads it)
+  "source_project",
+]
+
+# Inputs only the driver writes (spec and package facts may not): what a
+# regeneration depends on and how to rerun it, and where facts came from.
+# The registered package providers ([[provider]] of the loaded plugins).
+driver = [
+  "configure_input",
+  "configure_arg",
+  "builtin_argv",
+  "fact_key",
+  "target_qualifier",
+  "package_provider",
+  "config_select",
+  "author_decision",
+  "source_target_input",
+  "source_imported_input",
+  "source_alias_input",
+  "module_manifest",
+  "module_root",
+  "module_requires",
+  "module_import",
+  "module_fact_key",
+  "av_pkg_bundle",
+  "av_pkg_root",
+  "av_pkg_spelling",
+  "av_pkg_offer",
+  "av_pkg_same",
+  "av_pkg_invalid",
+  "av_pkg_import",
+  "av_pkg_alias",
+  "av_pkg_error",
+  "av_pkg_target",
+  "av_pkg_target_error",
+  "av_pkg_condition",
+  "av_pkg_dep",
+  "av_pkg_runtime_dep",
+  "av_pkg_prop",
+  "av_pkg_location",
+  "av_pkg_link",
+  "av_pkg_whole_archive",
+  "av_pkg_rule_package",
+  "av_pkg_bare_dep",
+  "av_pkg_export",
+  "av_pkg_file",
+  "av_pkg_version",
+  "av_pkg_package",
+  "av_pkg_attr",
+  "av_pkg_build_prop",
+  "av_pkg_linkage_dep",
+  "av_pkg_expression",
+  "av_pkg_platform",
+  # the spec loader's warnings (TOML placement traps)
+  "spec_warning",
+]
+
+# Relations `buildlog why` hides by default (docs/proof-protocol.md, "Structural
+# leaves"): counts that only check the layers' own registries, and the cores the
+# cycle checks restrict their reachability to (a filter that never rejects a
+# node of a cycle: the cause is the cycle's edges). Ground facts stated in the
+# core layers are hidden without being listed.
+structural = ["nkeys", "action_core", "dep_core"]
+
+# Relations that record why a target is built in a configuration
+# (docs/proof-protocol.md, "Existence and attributes"): beneath an action's
+# attribute they say why the action exists, not why it has the attribute.
+demand = ["needed"]
+
+# Configuration construction (L1_targets.dl), shaped by `why` unless --full
+# (docs/proof-protocol.md, "Shaping"): a row of a `fold` relation is one
+# line without its subproof (`fold_origins`: with the spec and user facts
+# under it, for a proof about one declaration); an `elide` row (true of
+# every configuration by its name) is dropped; a `flatten` row's recursion
+# over a settings list is spliced into one node.
+fold = [
+  "decl_value",
+  "decl_suffix",
+  "config",
+  "mconfig",
+  "config_slice",
+  "config_setting",
+  "exec_config",
+]
+fold_origins = ["decl_cfg"]
+elide = [
+  # a library not built both ways in this configuration: its edges go to the
+  # library itself (L3's linkage twins), not a reason a proof should show
+  "library_both",
+  "linkage_split",
+  "decl_has",
+  "config_platform",
+  "settings_suffix",
+  "cfg_suffix",
+  "settings_name",
+  "cfg_name",
+  "cond_sub",
+  # the path helpers (V_vocabulary.dl): functions of the path, computed
+  "path_slash",
+  "path_last_slash",
+  "path_basename",
+  "path_dirname",
+  "path_dot",
+  "path_stem",
+  "path_ext",
+]
+flatten = ["exec_settings"]
+
+# Derived relations written for inspection and tests (the loader also
+# outputs every probe request/domain and the relations the emitter reads).
+outputs = [
+  "action_arg_basis",
+  "library_linkage_by",
+  "action_program_user_chosen",
+  "action_program_fixed",
+  "import_origin",
+  "cfg_name",
+  "decl_cfg",
+  "config_setting",
+  "config_slice",
+  "exec_config",
+  "cond_holds",
+  "needed",
+  "split_request",
+  "tool_dep",
+  "use",
+  "use_join",
+  "discovered_rule_package",
+  "target_action",
+  "target_broken",
+  "probe_pending",
+  "target_origin",
+  "dep_resolves",
+  "tc_instance",
+  "tc_select",
+  "tc_of",
+  "link_closure",
+  "link_scc",
+  "package_version",
+  "package_of",
+  "package_attr",
+  "package_linkage_selected",
+  "config_active",
+  "build_platform",
+  "import_select",
+  "import_req_on",
+  "import_want",
+  "option_eff",
+  "install_layout_dir",
+  "installed",
+  "install_path",
+  "export_fact",
+  "export_requires",
+  "export_requires_package",
+  "export_requires_version_from",
+  "export_file",
+  "export_lossy",
+  "export_runtime_lossy",
+  "export_module",
+  "export_module_at",
+  "export_runtime_edge",
+  "export_rules_lossy",
+  "export_native",
+  "export_compat_derived",
+  "export_compat_in",
+  "export_compat_looser",
+  "native_abi_compat",
+]
+
+# Open-relation registry: relations a higher layer may
+# read and add clauses to via `extends`. Exact, no wildcards.
+open = [
+  # Generated files: a rule may state a target's configure_file and its text
+  # (a generated source or linker script per generated target)
+  "configure_file",
+  "configure_file_text",
+  # Generators: a rule may derive package_data rows (a package's file layout)
+  "package_data",
+  # Install: a rule may name the built targets to install
+  "install_target",
+  # The vocabulary: a language plugin claims target_sources by suffix; a
+  # rule asks for a path's parts
+  "source_claimed",
+  "path_want",
+  # L3: a per-configuration artifact file name (a plugin's host decides it)
+  "native_file_named",
+  "native_file_name",
+  # L3: a platform's program suffix and the files its link writes beside it
+  "platform_executable_suffix",
+  "platform_link_side_file",
+  "tc_link_arg",
+  # Discovery: where a target platform's files live on this machine
+  "platform_sysroot",
+  # L0: contribute build steps
+  "action",
+  "action_out",
+  "action_in",
+  "action_depfile",
+  "action_arg",
+  "action_seq",
+  "action_seq_before",
+  "action_seq_spelled",
+  "action_seq_spelled_suffix",
+  "action_seq_same_group",
+  "action_seq_group_delims",
+  "action_arg_set",
+  "action_arg_basis",
+  "default_output",
+  # L0: a command's standard streams (typed, not shell words)
+  "action_stdin",
+  "action_stdout",
+  # L0: one argv word of several paths, joined (typed parts, not a string)
+  "action_arg_join",
+  "action_arg_part",
+  # L0: where a command runs, whether its outputs are restat, and buildlog's
+  # portable builtin commands (`buildlog -E`)
+  "action_cwd",
+  "action_restat",
+  "action_dyndep",
+  "action_builtin",
+  # L1: a command runs or loads a target, named by reference (never a path);
+  # the exec configuration follows from it (tool_dep is derived). L3 and
+  # language layers say which file runs. A list of references in one argv
+  # word (-p a.so,b.so): action_run_list and its action_run_items.
+  "action_run",
+  "action_run_list",
+  "action_run_item",
+  "run_artifact",
+  # L1: tests, typed (program and file arguments are target references that
+  # resolve in the test's configuration); layers may add per-configuration
+  # environment
+  "test",
+  "test_arg",
+  "test_arg_ref",
+  "test_env",
+  "test_config_env",
+  "test_env_path",
+  "test_config_env_path",
+  "test_config_need",
+  "test_cwd",
+  "test_label",
+  "test_regex",
+  "test_serial",
+  "test_when",
+  # L1: targets, edges, usage requirements (binding sources such as
+  # buildlog-cpp's importers also add imported targets and conditional
+  # edges/properties with their named conditions)
+  "target",
+  "imported",
+  "dep",
+  "dep_when",
+  "runtime_dep",
+  "runtime_dep_when",
+  "runtime_dep_optional",
+  "runtime_dep_optional_when",
+  "instance_of",
+  "instance_param",
+  "tmpl_want",
+  "ptmpl_want",
+  "prop",
+  "prop_when",
+  "prop_in",
+  "condition",
+  "iface",
+  # L1: an owner's targets share its configured files
+  "owner_member",
+  # L3: two imported targets must come from one package instance
+  "import_same_package",
+  # L1: higher layers may derive requests; cycles through needed are rejected
+  # by the composed-program stratification check with a readable error.
+  "request",
+  "request_all",
+  # L1: names (binding sources and importers alias names to target ids)
+  "alias",
+  # L1: platforms, contributed by a platform plugin
+  "host_platform",
+  "platform",
+  "platform_slice",
+  "platform_constraint",
+  # L1: configuration dimensions and property-key algebras
+  "setting_key",
+  "setting_value",
+  "setting_default",
+  "setting_exec_inherit",
+  "setting_exec_value",
+  "setting_name_elide",
+  "set_key",
+  "lattice_rank",
+  # L1: configuration attributes a layer answers (a discovered attribute,
+  # such as a configure check's result, and its finite domain)
+  "config_attr",
+  "attr_value",
+  "attr_discovered",
+  "version_attr",
+  # L1: generic ordered join (instantiated per group; read `joined`)
+  "join_item",
+  "join_rank",
+  "join_sep",
+  "join_part",
+  # L1: artifact coverage (producers state it, consumers need it)
+  "artifact_covers",
+  "coverage_need",
+  # L2: toolchains, contributed by a toolchain plugin's inventory; a layer
+  # needs a toolchain for a language
+  "toolchain",
+  "toolchain_tool",
+  "toolchain_runs_on",
+  "toolchain_can_target",
+  "toolchain_supports",
+  "tc_required",
+  # L2: an action's program is a selected toolchain's tool
+  "action_toolchain",
+  # L2: built toolchains: a role's program is a target, a role's leading
+  # words, a toolchain's runtime library, a target's own (built)
+  # toolchain, and an action that runs a toolchain's tool
+  "toolchain_tool_target",
+  "toolchain_tool_arg",
+  "toolchain_runtime",
+  "target_toolchain",
+  "action_tc_tool",
+  # F: spell settings and targets for a toolchain family
+  "family_setting_arg",
+  "tc_setting_arg",
+  "config_flag_wiped",
+  "tc_platform_arg",
+  "linker_group_delims",
+  "linker_cycle_policy",
+  "whole_archive_prefix",
+  "whole_archive_suffix",
+  "shared_link_spelling",
+  "module_link_spelling",
+  "rpath_origin_prefix",
+  # L3: objects, link inputs, and new build tools;
+  # a platform's merge tool (lipo)
+  "native_object",
+  "link_item",
+  "link_file",
+  "native_kind",
+  "platform_tool",
+  "default_linkage",
+  "linkage_require",
+  "dep_linkage",
+  "linkage_prop",
+  # L3: a rule may derive a shared library's versions and an artifact's name;
+  # a language layer names the tool that drives a target's link
+  "native_version",
+  "native_output_name",
+  "link_role",
+  # L3: imported targets' files, kinds and whole-archive edges (binding sources)
+  "import_file",
+  "import_artifact",
+  "imported_kind",
+  "imported_whole_archive",
+  # L3: whole-archive edges of built targets (a spec's $<LINK_LIBRARY:WHOLE_ARCHIVE,...>)
+  "whole_archive",
+  # L3 discovery: a discovery package selects files and their namespace, or
+  # asks for a name nothing states (package_want); a language layer
+  # consumes a key of some imports as another (import_prop_rename)
+  "package_file",
+  "package_namespace",
+  "package_want",
+  "import_prop_rename",
+  # L3 discovery: a package that imports files (a tier-2 package) states the
+  # facts a provider would: its version, attributes and linkage choices
+  "package_version",
+  "package_attr",
+  "import_linkage_dep",
+  # L3 install: a platform/format plugin's conventions (the default layout,
+  # per-package defaults, export files and how formats spell keys)
+  "install_dir_default",
+  "install_pkg_dir_default",
+  "export_format_file",
+  "export_format_components",
+  "export_format_of",
+  "export_spelling",
+  "export_value_spelling",
+  "export_unspelled",
+  "export_path_key",
+  "export_internal_key",
+  # L3 install: where a native component's artifact type installs (libdir)
+  "native_artifact_dir",
+  # outer loop: plugin probes report rule packages they discover
+  "discovered_rule_package",
+  # all layers: diagnostics, attributed to what they break (partial emission)
+  "error",
+  "warning",
+  "error_at",
+  "action_error",
+  "target_action",
+  "package_data_root",
+]
+
+# Readable by higher layers, not extendable. `Cfg` is the configuration
+# record type; `Cond` is exported so its constructors ($Eq, $Not, $And, $Or)
+# keep their names in spec facts.
+exports = [
+  "module_library",
+  "module_spell",
+  "target_sources",
+  "option_effective",
+  "path_basename",
+  "path_dirname",
+  "path_stem",
+  "path_ext",
+  "gen_dir",
+  "Cfg",
+  "Cond",
+  "request",
+  "config_decl",
+  "config_decl_setting",
+  "config",
+  "mconfig",
+  "config_slice",
+  "config_platform",
+  "config_setting",
+  "decl_cfg",
+  "exec_config",
+  "cfg_name",
+  "split_request",
+  "needed",
+  "config_active",
+  "build_platform",
+  "eff_dep",
+  "eff_prop",
+  "use",
+  "use_join",
+  "configured_file",
+  "configure_member",
+  "cond_holds",
+  "defined",
+  "target_id",
+  "name_candidate",
+  "tool_dep",
+  "joined",
+  "coverage_platform",
+  "target_broken",
+  "dep_resolves",
+  "action_failed",
+  "global_error",
+  "action_generator",
+  "tc_for",
+  "tc_of",
+  "toolchain_built",
+  "action_program_user_chosen",
+  "action_program_fixed",
+  "import_origin",
+  "import_same_holds",
+  "executable",
+  "archive",
+  # L1/L3: run-time dependencies as resolved, and their closure
+  "eff_runtime_dep",
+  "eff_runtime_edge",
+  "runtime_reach",
+  "runtime_required",
+  # L1: target templates and placeholder expansion
+  "target_template",
+  "tmpl_value",
+  "ptmpl_value",
+  "shared_library",
+  "link_closure",
+  "mconfig_platform",
+  "imported_location",
+  # L3: a target's kind per configuration (a library's is its linkage's),
+  # and which precedence level chose a library's linkage
+  "native_kind_in",
+  # L3: a library's build instances (a linkage twin where it is built both ways)
+  "linkage_twin",
+  "library_of",
+  "library_both",
+  "inst_linkage",
+  "native_name_in",
+  "library_linkage_in",
+  "library_linkage_by",
+  # L0: test cases per configuration, as `buildlog test` runs them
+  "test_case",
+  "test_case_arg",
+  "test_case_cwd",
+  "test_case_env",
+  "test_case_env_path",
+  "test_case_label",
+  "test_case_regex",
+  "test_case_serial",
+  "test_case_needs",
+  "test_case_skip",
+  "test_case_launcher",
+  # L3 discovery: the provider that read an import request; what packages
+  # state besides targets (versions, attributes, the selected linkage)
+  "import_req_provider",
+  "package_of",
+  "package_linkage_selected",
+  # ... the targets a binding (and each namespace's import) defined, per platform
+  "import_target_on",
+  "import_ns_target",
+  # ... per platform: the condition that holds exactly on a
+  # platform, for rules that derive per-platform facts from a binding's
+  "platform_condition",
+  # L0: an [author_decides] bypass, for checks of author facts outside the
+  # user relation itself (buildlog-cpp's -Werror check)
+  "author_decision",
+  # L3 install: the layout and the packages, for format plugins' conventions
+  # (a platform's layout may depend on the prefix: GNUInstallDirs' multiarch)
+  "install_prefix",
+  "install_layout_dir",
+  "export_package",
+  "export_version",
+  "export_arch_dependent",
+  "export_prop",
+  "export_file",
+  "export_native",
+  "export_compat_in",
+  "package_file_want",
+  "gen_output",
+  "target_gen_include",
+  "gen_user",
+]
+
+# Which platforms a prebuilt file of a needed import covers (L3_native.dl,
+# buildlog.objfile): its object headers, read in-process, cached by stat.
+[[probe]]
+kind = "file_archs"
+request = "req_file_archs"
+domain = "domain_file_archs"
+result = ["res_file_format", "res_file_arch"]
+entry = "buildlog.objfile:file_archs"
+fingerprint = "buildlog.objfile:file_fingerprint"
+
+[[probe]]
+kind = "metadata_path"
+request = "req_metadata_path"
+domain = "domain_metadata_path"
+result = ["res_metadata_path"]
+entry = "buildlog.providers:metadata_path"
+fingerprint = "buildlog.providers:metadata_path_fingerprint"

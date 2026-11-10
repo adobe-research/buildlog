@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# A plugin whose probe "discovers" a rule package (outer loop, mechanism A):
+# it reads a rule-package path from a fixture file named in the spec.
+name = "test-discover"
+version = "0.1.0"
+rank = 3
+layers = ["discover.dl"]
+accepts = ["test_discover_file"]
+extends = ["discovered_rule_package"]
+
+open = ["withdrawn"]
+exports = ["req_test_discover", "res_test_discover"]
+
+[[probe]]
+kind = "test_discover"
+request = "req_test_discover"
+domain = "domain_test_discover"
+result = "res_test_discover"
+entry = "buildlog_testplugins.probes:discover"
+fingerprint = "buildlog_testplugins.probes:discover_fingerprint"

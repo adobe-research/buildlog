@@ -1,0 +1,67 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Qt6Core's consumer-side build rules, shipped by Qt (manifest.toml). CMake
+// builds this into its core (AUTOMOC/AUTORCC: cmQtAutoGen*, 8,510 lines of
+// C++, notes/qt-bespoke-research.md); qbs ships it as a module that a
+// product's Depends { name: "Qt.core" } activates. Here it is a rule over
+// the dependency graph: whoever compiles against QtCore has its headers
+// run through moc, and the generated sources compiled into it.
+//
+// Which headers: every header the target lists, at build time, minus the
+// author's qt_moc_exclude facts. moc is the scanner: a header without
+// Q_OBJECT, Q_GADGET or Q_NAMESPACE gives an empty moc_*.cpp. Not a
+// declared list (a second statement of what the header already says, and
+// a choice to get wrong), not a configure-time content probe (probes ask
+// about the environment; the project's own sources are the build's job, at
+// most a build-time dyndep). See README.md.
+
+// QtCore's usage requirement that Qt6CoreConfigExtras.cmake adds beyond its
+// export: $<$<NOT:$<CONFIG:Debug>>:QT_NO_DEBUG>.
+condition("qt-not-debug", $Not($Eq("native.opt", "debug"))).
+prop_when("Qt6::Core", "cc.define", "QT_NO_DEBUG", "interface", "qt-not-debug").
+
+// ---- activation: t compiles against QtCore's headers ----
+// QtCore itself, or a target that passes it on to its users (a public or
+// interface edge, as Qt6::Widgets does).
+.decl qt_passes(d:symbol, c:Cfg)
+qt_passes(d, c) :- eff_dep(d, c, "Qt6::Core", v), v != "private".
+qt_passes(d, c) :- eff_dep(d, c, x, v), v != "private", qt_passes(x, c).
+.decl qt_user(t:symbol, c:Cfg)
+qt_user(t, c) :- eff_dep(t, c, "Qt6::Core", _).
+qt_user(t, c) :- eff_dep(t, c, x, _), qt_passes(x, c).
+
+// ---- the files Qt's tools take: headers (moc) and resource lists (rcc) ----
+.decl qt_input(t:symbol, f:symbol, tool:symbol, pre:symbol)
+path_want(f) :- target_sources(_, f).
+// An author may exclude a header (qt_moc_exclude, in the target's table):
+// never needed for correctness (moc writes an empty file for a header
+// without Q_OBJECT), only to save its moc run and empty compile.
+.decl qt_moc_exclude(t:symbol, f:symbol)
+qt_input(t, f, "moc", "moc_") :- target_sources(t, f), path_ext(f, e), (e = ".h" ; e = ".hpp" ; e = ".hxx"),
+  !qt_moc_exclude(t, f).
+error("qt_moc_exclude names no source of its target", cat(t, ": ", f)) :- qt_moc_exclude(t, f), !target_sources(t, f).
+qt_input(t, f, "rcc", "qrc_") :- target_sources(t, f), path_ext(f, ".qrc").
+source_claimed(t, f) :- qt_input(t, f, "rcc", _).
+
+// One generated C++ source per input, gen_dir/<dir>/moc_<stem>.cpp (or
+// qrc_), compiled into t like its own sources.
+.decl qt_gen(t:symbol, c:Cfg, f:symbol, tool:symbol, out:symbol)
+.decl qt_sub(f:symbol, sub:symbol)   // the input's directory, as a prefix
+qt_sub(f, "") :- path_dirname(f, "").
+qt_sub(f, cat(d, "/")) :- path_dirname(f, d), d != "".
+qt_gen(t, c, f, k, cat(g, "/", d, x, s, ".cpp")) :- qt_user(t, c), qt_input(t, f, k, x), gen_dir(t, c, g),
+  qt_sub(f, d), path_stem(f, s).
+cxx_generated_source(t, c, o), target_action(t, c, o), action_in(o, cat("src:", f), "explicit"),
+action_depfile(o, cat(o, ".d")), action_arg(o, 1, "", cat("src:", f)), action_arg(o, 2, "", "-o"),
+action_arg(o, 3, "", o) :- qt_gen(t, c, f, _, o).
+
+// moc reads the header as the compiler would: t's defines and include dirs.
+action(o, "MOC"), action_run(o, 0, "", "Qt6::moc", "run"), action_arg(o, 4, "", "--output-dep-file"),
+action_arg(o, 5, "", "--no-notes") :- qt_gen(_, _, _, "moc", o).
+action_arg(o, 20, "-D", v), action_arg_set(o, 20) :- qt_gen(t, c, _, "moc", o), use(t, c, "cc.define", v, _).
+action_arg(o, 30, "-I", v), action_arg_set(o, 30) :- qt_gen(t, c, _, "moc", o), use(t, c, "cc.include_dir", v, _).
+// rcc embeds the files a .qrc lists (the depfile names them); --name keeps
+// two resource lists' initializers apart.
+action(o, "RCC"), action_run(o, 0, "", "Qt6::rcc", "run"), action_arg(o, 4, "--depfile=", cat(o, ".d")),
+action_arg(o, 5, "--name=", s) :- qt_gen(_, _, f, "rcc", o), path_stem(f, s).

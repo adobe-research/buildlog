@@ -1,0 +1,25 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// SPIRV-Tools' build abstractions, stated once (the SPIRV-Tools case study;
+// case-studies/spirv-tools/README.md). Project rules, not a package: they
+// stay here until a second case study wants the same shapes.
+
+// Common target properties and option-gated requests moved to profiles and
+// request_when in the TOML specs.
+
+// SPIRV_BUILD_FUZZER=ON would add spirv-fuzz and its protobuf-generated
+// sources; they are not modeled, so the option is refused rather than ignored.
+error("option not supported by this spec", "SPIRV_BUILD_FUZZER=on (spirv-fuzz is not modeled)") :-
+  config_attr(_, "option.SPIRV_BUILD_FUZZER", "on").
+
+// generators.toml's grammar files: names below SPIRV-Headers' spirv/unified1.
+.decl spv_grammar(key:symbol, file:symbol)
+package_data(k, "SPIRV-Headers::SPIRV-Headers", cat("spirv/unified1/", f)) :- spv_grammar(k, f).
+
+// timer.cpp joins SPIRV-Tools where upstream defines SPIRV_TIMER_ENABLED
+// (spec.toml's spv_timer: Linux).
+source_group("SPIRV-Tools", "timer").
+cxx_source("SPIRV-Tools", "source/util/timer.cpp").
+group_source("SPIRV-Tools", "timer", "source/util/timer.cpp").
+group_when("SPIRV-Tools", "timer", "spv_timer").

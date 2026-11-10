@@ -1,0 +1,5 @@
+# No `halide` in uses: the loader finds it by the namespace of the spec's
+# halide_* relations.
+uses = ["buildlog-cpp"]
+source_root = "${HALIDE_SRC}/apps"
+spec = ["../workspace.toml", "project.toml"]

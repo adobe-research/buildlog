@@ -1,0 +1,111 @@
+===== nm -gU nanobind_example_ext.abi3.so
+0000000000000e70 T _PyInit_nanobind_example_ext
+===== undefined Python symbols (nm -u | grep _Py)
+__Py_DecRef
+__Py_IncRef
+__Py_NoneStruct
+__Py_NotImplementedStruct
+__PyObject_GC_New
+_Py_AtExit
+_Py_CompileString
+_Py_Version
+_PyCapsule_GetPointer
+_PyCapsule_New
+_PyDict_GetItem
+_PyDict_GetItemWithError
+_PyDict_New
+_PyDict_SetItem
+_PyErr_Clear
+_PyErr_ExceptionMatches
+_PyErr_Format
+_PyErr_FormatV
+_PyErr_GetRaisedException
+_PyErr_NoMemory
+_PyErr_Occurred
+_PyErr_SetRaisedException
+_PyErr_SetString
+_PyEval_EvalCode
+_PyExc_AttributeError
+_PyExc_BufferError
+_PyExc_ImportError
+_PyExc_IndexError
+_PyExc_KeyError
+_PyExc_MemoryError
+_PyExc_OverflowError
+_PyExc_RuntimeError
+_PyExc_StopIteration
+_PyExc_SystemError
+_PyExc_TypeError
+_PyExc_ValueError
+_PyException_GetTraceback
+_PyException_SetCause
+_PyException_SetContext
+_PyGILState_Ensure
+_PyGILState_Release
+_PyImport_ImportModule
+_PyIndex_Check
+_PyInterpreterState_Get
+_PyInterpreterState_GetDict
+_PyList_Append
+_PyList_New
+_PyLong_AsLongLongAndOverflow
+_PyLong_FromLong
+_PyLong_FromUnsignedLongLong
+_PyLong_Type
+_PyMem_Calloc
+_PyMem_Free
+_PyMem_Malloc
+_PyModule_GetDef
+_PyModule_GetDict
+_PyModule_GetState
+_PyModule_NewObject
+_PyModule_Type
+_PyModuleDef_Init
+_PyNumber_Add
+_PyNumber_Index
+_PyObject_CallMethod
+_PyObject_Free
+_PyObject_GC_Del
+_PyObject_GC_Track
+_PyObject_GC_UnTrack
+_PyObject_GenericGetAttr
+_PyObject_GenericGetDict
+_PyObject_GetAttr
+_PyObject_GetAttrString
+_PyObject_GetItem
+_PyObject_GetTypeData
+_PyObject_HasAttr
+_PyObject_Repr
+_PyObject_SetAttr
+_PyObject_Vectorcall
+_PyProperty_Type
+_PySequence_GetItem
+_PySequence_Size
+_PyTuple_GetItem
+_PyTuple_New
+_PyTuple_Pack
+_PyTuple_SetItem
+_PyTuple_Size
+_PyType_FromMetaclass
+_PyType_FromSpec
+_PyType_GenericAlloc
+_PyType_GenericNew
+_PyType_GetFlags
+_PyType_GetName
+_PyType_GetSlot
+_PyType_IsSubtype
+_PyType_Type
+_PyUnicode_AsUTF8AndSize
+_PyUnicode_FromFormat
+_PyUnicode_FromString
+_PyUnicode_InternFromString
+_PyUnicode_InternInPlace
+_PyVectorcall_Call
+===== otool -L
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== LC_BUILD_VERSION
+    minos 26.0
+      sdk 26.5
+===== size
+110496

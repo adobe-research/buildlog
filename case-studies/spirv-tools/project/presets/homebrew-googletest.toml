@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# googletest from Homebrew (1.18.0; SPIRV-Tools' DEPS pins googletest
+# 8240fa7d, which upstream builds from external/googletest). Its CMake
+# export (lib/cmake/GTest/) defines GTest::gtest, gmock and gmock_main.
+package_prefix = [["/opt/homebrew/opt/googletest"]]

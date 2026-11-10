@@ -1,0 +1,59 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// LLVM's build logic for buildlog consumers, as LLVM would ship it next to
+// lib/cmake/llvm (see README.md). The targets are LLVMExports.cmake's, imported
+// by the manifest; the facts are LLVMConfig.cmake's variables (the per-version
+// facts file); this layer derives the rest, about LLVM's own targets only.
+.decl llvm_version(major:symbol, minor:symbol, patch:symbol)
+.decl llvm_define(d:symbol)            // LLVM_DEFINITIONS, one -D each
+.decl llvm_include_dir(d:symbol)       // LLVM_INCLUDE_DIRS
+.decl llvm_enable_rtti(v:symbol)       // LLVM_ENABLE_RTTI, on or off
+.decl llvm_enable_eh(v:symbol)         // LLVM_ENABLE_EH
+.decl llvm_target(t:symbol)            // LLVM_TARGETS_TO_BUILD
+// The same facts for one platform's installation, when one package serves
+// several (a build for another OS: its LLVM beside the build machine's).
+.decl llvm_define_on(p:symbol, d:symbol)
+.decl llvm_include_dir_on(p:symbol, d:symbol)
+.decl llvm_target_on(p:symbol, t:symbol)
+
+// The package's facts, per platform it is bound on.
+.decl llvm_on(p:symbol)
+llvm_on(p) :- import_target_on("LLVM::LLVM", p).
+package_version("LLVM", p, a, b, c) :- llvm_on(p), llvm_version(a, b, c).
+package_attr("LLVM", p, "llvm.define", d) :- llvm_on(p), llvm_define(d).
+package_attr("LLVM", p, "llvm.system_include_dir", d) :- llvm_on(p), llvm_include_dir(d).
+package_attr("LLVM", p, "llvm.built_target", t) :- llvm_on(p), llvm_target(t).
+llvm_target(t) :- llvm_target_on(_, t).
+package_attr("LLVM", p, "llvm.define", d) :- llvm_on(p), llvm_define_on(p, d).
+package_attr("LLVM", p, "llvm.system_include_dir", d) :- llvm_on(p), llvm_include_dir_on(p, d).
+package_attr("LLVM", p, "llvm.built_target", t) :- llvm_on(p), llvm_target_on(p, t).
+
+// What LLVM's CMake leaves to its consumers (LLVM_DEFINITIONS and
+// LLVM_INCLUDE_DIRS), as the usage requirements of an interface target.
+imported("LLVM:Config").
+imported_kind("LLVM:Config", "interface").
+prop("LLVM:Config", "cc.define", d, "interface") :- llvm_define(d).
+prop("LLVM:Config", "cc.system_include_dir", d, "interface") :- llvm_include_dir(d).
+
+// How the libraries were built, for the C++ ABI relation.
+prop(t, "cxx.rtti", v, "private") :- import_ns_target("LLVM", t), imported_kind(t, "library"), llvm_enable_rtti(v).
+prop(t, "cxx.exceptions", v, "private") :- import_ns_target("LLVM", t), imported_kind(t, "library"), llvm_enable_eh(v).
+
+// llvm_map_components_to_libnames: a backend T is LLVM<T>{CodeGen,...} and a
+// component C is LLVM<C>; linked as libLLVM (shared) or its libraries (static).
+.decl llvm_target_part(s:symbol)
+llvm_target_part("CodeGen"). llvm_target_part("AsmParser"). llvm_target_part("AsmPrinter").
+llvm_target_part("Desc"). llvm_target_part("Disassembler"). llvm_target_part("Info").
+llvm_target_part("Utils"). llvm_target_part("").
+.decl llvm_component(c:symbol, lib:symbol)
+llvm_component(b, lib) :- llvm_target(b), llvm_target_part(s), lib = cat("LLVM::LLVM", b, s),
+  import_ns_target("LLVM", lib).
+llvm_component(c, lib) :- import_ns_target("LLVM", lib), imported_kind(lib, "library"),
+  substr(lib, 0, 10) = "LLVM::LLVM", c = substr(lib, 10, 100), c != "", !llvm_target(c).
+imported(cat("LLVM:", c)), imported_kind(cat("LLVM:", c), "interface") :- llvm_component(c, _).
+import_linkage_dep("LLVM", p, cat("LLVM:", c), "shared", "LLVM::LLVM") :- llvm_on(p), llvm_component(c, _).
+import_linkage_dep("LLVM", p, cat("LLVM:", c), "static", lib) :- llvm_on(p), llvm_component(c, lib).
+// libLLVM stays wanted once the components are rule-defined (a defined name
+// is never searched for).
+package_want("LLVM::LLVM").

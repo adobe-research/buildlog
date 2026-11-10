@@ -1,0 +1,1 @@
+case-studies/ggml/baseline/run-cmake.sh: line 190: bin/test-backend-ops: No such file or directory

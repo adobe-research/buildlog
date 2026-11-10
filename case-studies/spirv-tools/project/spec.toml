@@ -1,0 +1,76 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# SPIRV-Tools v2026.3 (CMakeLists.txt, source/CMakeLists.txt, source/opt,
+# tools/, test/) in the Release configuration its baseline builds
+# (CMAKE_BUILD_TYPE=Release), against SPIRV-Headers imported as an installed
+# package. The source lists are sources.toml's; the abstractions (library
+# variants, default compile options, Python generators, package data files,
+# the option-gated build set) are rules.dl's; the tests are tests.toml's.
+config_decl = [["release", "arm64-macos"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+
+# CMakeLists.txt's option()s that change what is built or how, with
+# upstream's defaults; the user states other values (option_value, e.g.
+# presets/skip-executables.toml). Not options here:
+# - SPIRV_WERROR (upstream ON): -Werror is the user's decision (cc_werror,
+#   presets/werror.toml), never the author's;
+# - SPIRV_BUILD_FUZZER is declared so that turning it on is an error rather
+#   than silently ignored: spirv-fuzz and its protobuf are out of scope.
+condition = [
+  ["build_tests", "!SPIRV_SKIP_EXECUTABLES & !SPIRV_SKIP_TESTS"],
+  ["spv_timer", "platform.os == linux & SPIRV_ALLOW_TIMERS"],
+]
+
+# spvtools_default_compile_options, for clang, plus the directory-wide
+# settings every SPIRV-Tools target sees: CMAKE_CXX_STANDARD 17,
+# CMAKE_POSITION_INDEPENDENT_CODE ON, include_directories(${CMAKE_SOURCE_DIR}),
+# add_compile_options(-Wextra-semi) (clang), -fno-exceptions, and
+# -fno-rtti unless ENABLE_RTTI (upstream's add_compile_options(-fno-rtti)
+# reaches only the targets a directory defines after its first call; here
+# the option's intent holds for every target, see the README's ledger).
+[profile.spvtools-common]
+private = { "cxx.compile_flag" = [
+  "-Wall",
+  "-Wextra",
+  "-Wnon-virtual-dtor",
+  "-Wno-missing-field-initializers",
+  "-Wno-long-long",
+  "-Wconversion",
+  "-Wno-sign-conversion",
+], "cxx.std" = "17", "cc.pic" = "on", "cxx.exceptions" = "off", "cc.include_dir" = "src:" }
+# The clang-only ones: the Clang branches of upstream's if(CMAKE_CXX_COMPILER_ID).
+when."cxx.family == clang".private."cxx.compile_flag" = [
+  "-Wno-self-assign",
+  "-ftemplate-depth=1024",
+  "-Wextra-semi",
+]
+# set(SPIRV_TIMER_ENABLED) on Linux (and Android), and timer.cpp with it.
+when.spv_timer.private."cc.define" = "SPIRV_TIMER_ENABLED"
+when.SPIRV_COLOR_TERMINAL.private."cc.define" = "SPIRV_COLOR_TERMINAL"
+when.SPIRV_LOG_DEBUG.private."cc.define" = "SPIRV_LOG_DEBUG"
+when."!ENABLE_RTTI".private."cxx.rtti" = "off"
+
+# The production targets add -Wshadow and -Wundef; the test targets do not.
+[profile.spvtools]
+profile = "spvtools-common"
+private = { "cxx.compile_flag" = ["-Wshadow", "-Wundef"] }
+
+[profile.spvtools-test]
+profile = "spvtools-common"
+
+[option.SPIRV_SKIP_EXECUTABLES]
+
+[option.SPIRV_SKIP_TESTS]
+
+[option.SPIRV_ALLOW_TIMERS]
+default = "on"
+
+[option.SPIRV_COLOR_TERMINAL]
+default = "on"
+
+[option.SPIRV_LOG_DEBUG]
+
+[option.ENABLE_RTTI]
+
+[option.SPIRV_BUILD_FUZZER]

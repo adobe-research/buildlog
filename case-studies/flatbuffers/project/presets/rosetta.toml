@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# User decision for this Mac (step 4, design input §6): it runs x86_64-macos
+# programs through Rosetta, so `buildlog test` runs the x86_64 configuration's
+# tests and universal2's x86_64 slice's, instead of listing them "not run".
+# Stated, never inferred; build actions still may not run x86_64 programs.
+platform_runs_on = [["x86_64-macos", "arm64-macos", ""]]

@@ -1,0 +1,9 @@
+test_linux_platform = [["x86_64-linux", "x86_64-unknown-linux-gnu", "x86_64"]]
+config_decl = [["release", "x86_64-linux"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = [["h"]]
+
+[target.h]
+prop = [["cc.include_dir", "src:include", "interface"]]
+install_map = [["src:include", "includedir", ""], ["src:lib", "libdir", "h"]]
+install_file = ["src:include/h.h", "src:lib/h.txt"]

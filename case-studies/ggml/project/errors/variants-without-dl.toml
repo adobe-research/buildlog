@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Error demo: CMake's -DGGML_CPU_ALL_VARIANTS=ON -DGGML_NATIVE=OFF without
+# -DGGML_BACKEND_DL=ON.
+option_value = [["GGML_CPU_ALL_VARIANTS", "on"], ["GGML_NATIVE", "off"]]

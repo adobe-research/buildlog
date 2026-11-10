@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+name = "test-runaway"
+version = "0.1.0"
+rank = 9
+layers = ["runaway.dl"]
+
+[[probe]]
+kind = "runaway"
+request = "req_runaway"
+domain = "domain_runaway"
+result = "res_runaway"
+entry = "buildlog_testplugins.probes:runaway"

@@ -1,0 +1,7 @@
+config_decl = { release = "arm64-macos" }
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = ["hello"]
+
+[target.hello]
+kind = "executable"
+sources = ["hello.c"]

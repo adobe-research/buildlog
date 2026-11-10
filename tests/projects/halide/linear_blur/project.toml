@@ -1,0 +1,52 @@
+target = [["linear_blur_process"]]
+native_kind = [["linear_blur_process", "executable"]]
+cxx_source = [["linear_blur_process", "linear_blur/run_linear_blur.cpp"]]
+prop = [["linear_blur_process", "cxx.std", "17", "private"]]
+dep = [
+  ["linear_blur_process", "linear_blur", "private"],
+  ["linear_blur_process", "simple_blur", "private"],
+  ["linear_blur_process", "Halide::ImageIO", "private"]
+]
+request = [
+  ["linear_blur_process", "native-release"],
+  ["simple_blur", "universal2-release"],
+  ["linear_blur", "universal2-release"]
+]
+halide_generator = [
+  ["srgb_to_linear.generator"],
+  ["simple_blur.generator"],
+  ["linear_to_srgb.generator"],
+  ["linear_blur.generator"]
+]
+halide_generator_source = [
+  ["srgb_to_linear.generator", "linear_blur/srgb_to_linear_generator.cpp"],
+  ["simple_blur.generator", "linear_blur/simple_blur_generator.cpp"],
+  ["linear_to_srgb.generator", "linear_blur/linear_to_srgb_generator.cpp"],
+  ["linear_blur.generator", "linear_blur/linear_blur_generator.cpp"],
+  ["linear_blur.generator", "linear_blur/srgb_to_linear_generator.cpp"],
+  ["linear_blur.generator", "linear_blur/simple_blur_generator.cpp"],
+  ["linear_blur.generator", "linear_blur/linear_to_srgb_generator.cpp"],
+]
+halide_stub = [
+  ["srgb_to_linear.stub", "srgb_to_linear.generator", "srgb_to_linear"],
+  ["simple_blur.stub", "simple_blur.generator", "simple_blur"],
+  ["linear_to_srgb.stub", "linear_to_srgb.generator", "linear_to_srgb"]
+]
+halide_generator_uses_stub = [
+  ["linear_blur.generator", "srgb_to_linear.stub"],
+  ["linear_blur.generator", "simple_blur.stub"],
+  ["linear_blur.generator", "linear_to_srgb.stub"]
+]
+halide_library = [
+  ["simple_blur", "linear_blur", "simple_blur.generator", "simple_blur"],
+  ["linear_blur", "linear_blur", "linear_blur.generator", "linear_blur"]
+]
+halide_library_param = [
+  ["simple_blur", 0, "input.type=float32"],
+  ["simple_blur", 1, "input.dim=3"],
+  ["simple_blur", 2, "output.type=float32"],
+  ["simple_blur", 3, "output.dim=3"]
+]
+halide_library_autoscheduler = [
+  ["linear_blur", "Mullapudi2016", "${HALIDE_PREFIX}/lib/libautoschedule_mullapudi2016.so"]
+]

@@ -1,0 +1,6 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Qt's FindWrapAtomic target: no -latomic where the compiler needs none.
+imported("WrapAtomic::WrapAtomic").
+imported_kind("WrapAtomic::WrapAtomic", "interface").

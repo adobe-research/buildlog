@@ -1,0 +1,32 @@
+# Miniature scope map for the normalizer tests (same rule language as ../../../scope.toml).
+[tests]
+correctness = []
+generator = []
+
+[[rule]]
+dir = "python_bindings*"
+exclude = "python bindings (out of scope)"
+
+[[rule]]
+kind = "meta"
+exclude = "CMake housekeeping"
+
+[[rule]]
+target = "edit_cache"
+exclude = "CMake housekeeping"
+
+[[rule]]
+kind = "regen"
+exclude = "regeneration edge"
+
+[[rule]]
+target = "{Halide_initmod}"
+phase = 3
+
+[[rule]]
+target = "binary2cpp"
+phase = 2
+
+[[rule]]
+target = "Halide"
+phase = 1

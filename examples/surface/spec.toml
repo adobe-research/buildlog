@@ -1,0 +1,26 @@
+config_decl = [["debug", "arm64-macos"]]  # the configurations the author supports
+request_all = [["libfribidi"]]  # built in every configuration
+
+[option.TOOLS]  # an option: default off
+help = "build the command-line tools"
+
+[target.libfribidi]
+kind = "library"  # linkage is chosen, not fixed by the author
+sources = ["lib/fribidi.c", "lib/fribidi-bidi.c"]
+public = { "cc.include_dir" = "src:lib" }
+gen_include = { private = [""] }  # its generated files are on its own path
+
+[target.gen-bidi-type-tab]  # a program; nothing says where it runs
+kind = "executable"
+sources = "gen.tab/gen-bidi-type-tab.c"
+
+[target.fribidi-cli]
+kind = "executable"
+sources = "bin/fribidi-main.c"
+deps = { private = ["libfribidi"] }
+request_when = "TOOLS"  # decides what is built; may test only options
+
+[generator.bidi_type]  # runs the program, captures its output
+owner = "libfribidi"  # "2" below: fribidi's table compression depth
+run = ["gen-bidi-type-tab", "2", "${src:gen.tab/unidata/UnicodeData.txt}"]
+stdout = "${out:bidi-type.tab.i}"

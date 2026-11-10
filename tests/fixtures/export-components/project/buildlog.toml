@@ -1,0 +1,4 @@
+# A two-component header-only package (tests/test_nlohmann_install.py): pkgx
+# offers a and b, and a depends on b, so the export states the edge.
+uses = ["buildlog-cpp"]
+spec = ["spec.toml"]

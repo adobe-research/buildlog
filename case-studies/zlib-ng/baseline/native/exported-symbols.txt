@@ -1,0 +1,334 @@
+===== libz-ng.2.3.3.dylib
+000000000000f18c T _zlibng_version
+0000000000002e88 T _zng_adler32
+0000000000002e98 T _zng_adler32_combine
+0000000000002e7c T _zng_adler32_z
+000000000000303c T _zng_compress
+0000000000002f50 T _zng_compress2
+0000000000003128 T _zng_compressBound
+000000000000316c T _zng_crc32
+0000000000003188 T _zng_crc32_combine
+000000000000324c T _zng_crc32_combine_gen
+00000000000032dc T _zng_crc32_combine_op
+0000000000003154 T _zng_crc32_z
+0000000000004204 T _zng_deflate
+0000000000019a00 S _zng_deflate_copyright
+0000000000004ff4 T _zng_deflateBound
+0000000000005298 T _zng_deflateCopy
+000000000000520c T _zng_deflateEnd
+0000000000003cc0 T _zng_deflateGetDictionary
+000000000000570c T _zng_deflateGetParams
+000000000000379c T _zng_deflateInit
+00000000000037b0 T _zng_deflateInit_
+0000000000003424 T _zng_deflateInit2
+00000000000037e4 T _zng_deflateInit2_
+000000000000402c T _zng_deflateParams
+0000000000003ec0 T _zng_deflatePending
+0000000000003f28 T _zng_deflatePrime
+0000000000003618 T _zng_deflateReset
+0000000000003d7c T _zng_deflateResetKeep
+0000000000003808 T _zng_deflateSetDictionary
+0000000000003e60 T _zng_deflateSetHeader
+0000000000005494 T _zng_deflateSetParams
+0000000000004f9c T _zng_deflateTune
+0000000000003148 T _zng_get_crc_table
+0000000000013e7c T _zng_gzbuffer
+000000000001426c T _zng_gzclearerr
+0000000000013e58 T _zng_gzclose
+0000000000014c34 T _zng_gzclose_r
+00000000000159cc T _zng_gzclose_w
+0000000000014be8 T _zng_gzdirect
+0000000000013dcc T _zng_gzdopen
+00000000000141ec T _zng_gzeof
+0000000000014210 T _zng_gzerror
+0000000000015828 T _zng_gzflush
+0000000000014540 T _zng_gzfread
+0000000000015168 T _zng_gzfwrite
+00000000000145d0 T _zng_gzgetc
+0000000000014928 T _zng_gzgets
+0000000000014174 T _zng_gzoffset
+0000000000013af4 T _zng_gzopen
+0000000000015800 T _zng_gzprintf
+00000000000151f0 T _zng_gzputc
+00000000000153cc T _zng_gzputs
+00000000000142d4 T _zng_gzread
+0000000000013ecc T _zng_gzrewind
+0000000000013f94 T _zng_gzseek
+00000000000158b8 T _zng_gzsetparams
+0000000000014130 T _zng_gztell
+0000000000014654 T _zng_gzungetc
+0000000000015460 T _zng_gzvprintf
+0000000000014fa0 T _zng_gzwrite
+0000000000009e30 T _zng_inflate
+000000000001a44a S _zng_inflate_copyright
+0000000000008708 T _zng_inflateBack
+0000000000009894 T _zng_inflateBackEnd
+0000000000008574 T _zng_inflateBackInit
+0000000000008634 T _zng_inflateBackInit_
+000000000000c900 T _zng_inflateCodesUsed
+000000000000c644 T _zng_inflateCopy
+000000000000c0c8 T _zng_inflateEnd
+000000000000c148 T _zng_inflateGetDictionary
+000000000000c314 T _zng_inflateGetHeader
+0000000000009d08 T _zng_inflateInit
+0000000000009d10 T _zng_inflateInit_
+0000000000009bcc T _zng_inflateInit2
+0000000000009d38 T _zng_inflateInit2_
+000000000000c86c T _zng_inflateMark
+0000000000009d5c T _zng_inflatePrime
+0000000000009974 T _zng_inflateReset
+0000000000009a28 T _zng_inflateReset2
+00000000000098c8 T _zng_inflateResetKeep
+000000000000c214 T _zng_inflateSetDictionary
+000000000000c378 T _zng_inflateSync
+000000000000c5d4 T _zng_inflateSyncPoint
+000000000000c7f0 T _zng_inflateUndermine
+000000000000c7f8 T _zng_inflateValidate
+000000000000f168 T _zng_uncompress
+000000000000f00c T _zng_uncompress2
+000000000001afaf S _zng_vstring
+000000000001c1b0 S _zng_z_errmsg
+000000000000f1a0 T _zng_zError
+000000000000f198 T _zng_zlibCompileFlags
+===== libz-ng.a
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+adler32_c.c.o:
+adler32_fold_c.c.o:
+adler32_neon.c.o:
+adler32.c.o:
+arm_features.c.o:
+chunkset_c.c.o:
+chunkset_neon.c.o:
+compare256_c.c.o:
+compare256_neon.c.o:
+compress.c.o:
+cpu_features.c.o:
+crc32_armv8.c.o:
+crc32_braid_c.c.o:
+crc32_braid_comb.c.o:
+crc32_chorba_c.c.o:
+crc32_fold_c.c.o:
+crc32.c.o:
+deflate_fast.c.o:
+deflate_huff.c.o:
+deflate_medium.c.o:
+deflate_quick.c.o:
+deflate_rle.c.o:
+deflate_slow.c.o:
+deflate_stored.c.o:
+deflate.c.o:
+functable.c.o:
+gzlib.c.o:
+gzread.c.o:
+gzwrite.c.o:
+infback.c.o:
+inflate.c.o:
+inftrees.c.o:
+insert_string_roll.c.o:
+insert_string.c.o:
+slide_hash_c.c.o:
+slide_hash_neon.c.o:
+trees.c.o:
+uncompr.c.o:
+zutil.c.o:
+0000000000000000 T _adler32_c
+0000000000000000 T _adler32_fold_copy_c
+000000000000035c T _adler32_fold_copy_neon
+0000000000000000 T _adler32_neon
+0000000000000000 T _alloc_deflate
+0000000000000254 T _alloc_inflate
+0000000000000000 T _arm_check_features
+0000000000002704 S _base_dist
+0000000000002690 S _base_length
+0000000000000000 T _chunkmemset_safe_c
+0000000000000000 T _chunkmemset_safe_neon
+0000000000000000 T _compare256_c
+0000000000000000 T _compare256_neon
+0000000000000000 T _cpu_check_features
+0000000000000000 T _crc32_armv8
+00000000000007dc T _crc32_braid
+0000000000000000 T _crc32_braid_internal
+0000000000001cb4 T _crc32_chorba
+0000000000000000 T _crc32_chorba_118960_nondestructive
+0000000000001110 T _crc32_chorba_32768_nondestructive
+0000000000001480 T _crc32_chorba_small_nondestructive
+00000000000001a4 T _crc32_fold_armv8
+0000000000000064 T _crc32_fold_c
+00000000000000b8 T _crc32_fold_copy_armv8
+000000000000000c T _crc32_fold_copy_c
+0000000000000094 T _crc32_fold_final_c
+0000000000000000 T _crc32_fold_reset_c
+0000000000000000 T _deflate_fast
+0000000000000000 T _deflate_huff
+0000000000000000 T _deflate_medium
+0000000000000000 T _deflate_quick
+0000000000000000 T _deflate_rle
+0000000000000000 T _deflate_slow
+0000000000000000 T _deflate_stored
+00000000000002c8 T _free_inflate
+0000000000001718 D _functable
+0000000000000154 T _gen_codes
+0000000000000004 T _gz_buffer_alloc
+00000000000000e8 T _gz_buffer_free
+0000000000000000 T _gz_state_free
+00000000000002c4 T _inflate_fast_c
+00000000000001b8 T _inflate_fast_neon
+0000000000000058 T _insert_string
+0000000000000058 T _insert_string_roll
+000000000000003c T _longest_match_c
+000000000000005c T _longest_match_neon
+000000000000028c T _longest_match_slow_c
+00000000000002c4 T _longest_match_slow_neon
+0000000000000014 T _quick_insert_string
+0000000000000010 T _quick_insert_string_roll
+0000000000000000 T _slide_hash_c
+0000000000000000 T _slide_hash_neon
+0000000000002318 S _static_dtree
+0000000000001e98 S _static_ltree
+0000000000000000 T _update_hash
+0000000000000000 T _update_hash_roll
+0000000000000000 T _zlibng_version
+000000000000000c T _zng_adler32
+000000000000001c T _zng_adler32_combine
+0000000000000000 T _zng_adler32_z
+000000000000004c T _zng_alloc_aligned
+00000000000000ec T _zng_compress
+0000000000000000 T _zng_compress2
+00000000000001d8 T _zng_compressBound
+0000000000000024 T _zng_crc32
+0000000000000000 T _zng_crc32_combine
+00000000000000c4 T _zng_crc32_combine_gen
+0000000000000154 T _zng_crc32_combine_op
+000000000000000c T _zng_crc32_z
+0000000000000ee0 T _zng_deflate
+0000000000002550 S _zng_deflate_copyright
+0000000000001cd0 T _zng_deflateBound
+0000000000001f74 T _zng_deflateCopy
+0000000000001ee8 T _zng_deflateEnd
+000000000000099c T _zng_deflateGetDictionary
+00000000000023e8 T _zng_deflateGetParams
+0000000000000478 T _zng_deflateInit
+000000000000048c T _zng_deflateInit_
+0000000000000100 T _zng_deflateInit2
+00000000000004c0 T _zng_deflateInit2_
+0000000000000d08 T _zng_deflateParams
+0000000000000b9c T _zng_deflatePending
+0000000000000c04 T _zng_deflatePrime
+00000000000002f4 T _zng_deflateReset
+0000000000000a58 T _zng_deflateResetKeep
+00000000000004e4 T _zng_deflateSetDictionary
+0000000000000b3c T _zng_deflateSetHeader
+0000000000002170 T _zng_deflateSetParams
+0000000000001c78 T _zng_deflateTune
+0000000000002390 S _zng_dist_code
+00000000000006d8 T _zng_fill_window
+0000000000000540 T _zng_fixedtables
+0000000000001e4c T _zng_flush_pending
+00000000000000a4 T _zng_free_aligned
+0000000000000000 T _zng_get_crc_table
+0000000000000118 T _zng_gz_error
+000000000000058c T _zng_gzbuffer
+000000000000097c T _zng_gzclearerr
+0000000000000568 T _zng_gzclose
+0000000000000960 T _zng_gzclose_r
+0000000000000a2c T _zng_gzclose_w
+0000000000000914 T _zng_gzdirect
+00000000000004dc T _zng_gzdopen
+00000000000008fc T _zng_gzeof
+0000000000000920 T _zng_gzerror
+0000000000000888 T _zng_gzflush
+000000000000026c T _zng_gzfread
+00000000000001c8 T _zng_gzfwrite
+00000000000002fc T _zng_gzgetc
+0000000000000654 T _zng_gzgets
+0000000000000884 T _zng_gzoffset
+0000000000000204 T _zng_gzopen
+0000000000000860 T _zng_gzprintf
+0000000000000250 T _zng_gzputc
+000000000000042c T _zng_gzputs
+0000000000000000 T _zng_gzread
+00000000000005dc T _zng_gzrewind
+00000000000006a4 T _zng_gzseek
+0000000000000918 T _zng_gzsetparams
+0000000000000840 T _zng_gztell
+0000000000000380 T _zng_gzungetc
+00000000000004c0 T _zng_gzvprintf
+0000000000000000 T _zng_gzwrite
+0000000000000568 T _zng_inflate
+0000000000000770 S _zng_inflate_copyright
+0000000000000000 T _zng_inflate_table
+0000000000000194 T _zng_inflateBack
+0000000000001320 T _zng_inflateBackEnd
+0000000000000000 T _zng_inflateBackInit
+00000000000000c0 T _zng_inflateBackInit_
+0000000000003038 T _zng_inflateCodesUsed
+0000000000002d7c T _zng_inflateCopy
+0000000000002800 T _zng_inflateEnd
+0000000000002880 T _zng_inflateGetDictionary
+0000000000002a4c T _zng_inflateGetHeader
+0000000000000440 T _zng_inflateInit
+0000000000000448 T _zng_inflateInit_
+0000000000000304 T _zng_inflateInit2
+0000000000000470 T _zng_inflateInit2_
+0000000000002fa4 T _zng_inflateMark
+0000000000000494 T _zng_inflatePrime
+00000000000000ac T _zng_inflateReset
+0000000000000160 T _zng_inflateReset2
+0000000000000000 T _zng_inflateResetKeep
+000000000000294c T _zng_inflateSetDictionary
+0000000000002ab0 T _zng_inflateSync
+0000000000002d0c T _zng_inflateSyncPoint
+0000000000002f28 T _zng_inflateUndermine
+0000000000002f30 T _zng_inflateValidate
+0000000000002590 S _zng_length_code
+000000000000067c T _zng_tr_align
+0000000000000748 T _zng_tr_flush_bits
+0000000000000860 T _zng_tr_flush_block
+0000000000000000 T _zng_tr_init
+00000000000004ac T _zng_tr_stored_block
+000000000000015c T _zng_uncompress
+0000000000000000 T _zng_uncompress2
+0000000000000180 S _zng_vstring
+0000000000000130 S _zng_z_errmsg
+000000000000003c T _zng_zcalloc
+0000000000000044 T _zng_zcfree
+0000000000000014 T _zng_zError
+000000000000000c T _zng_zlibCompileFlags

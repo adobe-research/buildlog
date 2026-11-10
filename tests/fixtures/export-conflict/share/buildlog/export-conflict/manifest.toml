@@ -1,0 +1,8 @@
+# Test fixture: a format extension that states one key both spelled and
+# unspelled; the core reports each overlap as an error.
+name = "export-conflict"
+version = "0.1.0"
+rank = 5
+layers = ["conflict.dl"]
+requires = { buildlog-cpp = ">=0.1" }
+extends = ["export_unspelled"]

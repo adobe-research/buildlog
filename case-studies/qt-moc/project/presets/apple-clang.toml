@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# User decisions for this Mac: Apple clang compiles and links everything.
+# Tools run on arm64-macos; the products target it or x86_64-macos.
+# Nothing here says moc is a tool: it runs on the build machine because an
+# action runs it (Qt's L5_qt.dl).
+toolchain_pin = [
+  ["cxx", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["cxx", "arm64-macos", "x86_64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "x86_64-macos", "apple-clang"],
+]
+# Which Qt packages bind: one manifest each, as upstream has one
+# Qt6<Module>Config.cmake each (QT_PREFIX holds Qt's share/buildlog).
+package_file = [
+  ["buildlog", "${QT_PREFIX}/share/buildlog/Qt6/manifest.toml"],
+  ["buildlog", "${QT_PREFIX}/share/buildlog/Qt6Core/manifest.toml"],
+  ["buildlog", "${QT_PREFIX}/share/buildlog/Qt6CoreTools/manifest.toml"],
+  ["buildlog", "${QT_PREFIX}/share/buildlog/Qt6Gui/manifest.toml"],
+  ["buildlog", "${QT_PREFIX}/share/buildlog/Qt6Widgets/manifest.toml"],
+  ["buildlog", "${QT_PREFIX}/share/buildlog/Threads/manifest.toml"],
+  ["buildlog", "${QT_PREFIX}/share/buildlog/WrapAtomic/manifest.toml"],
+  ["buildlog", "${QT_PREFIX}/share/buildlog/WrapOpenGL/manifest.toml"],
+]

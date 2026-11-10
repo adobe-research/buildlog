@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+config_decl = [["rel", "arm64-macos"]]
+config_decl_setting = [["rel", "native.opt", "release"]]
+target = [["app"], ["fmt"]]
+native_kind = [["app", "executable"], ["fmt", "library"]]
+cxx_source = [["app", "main.cc"]]
+cxx_module_interface = [["fmt", "fmt/src/fmt.cc", "public"]]
+dep = [["app", "fmt", "private"]]
+prop = [["fmt", "cxx.std", "20", "public"], ["fmt", "cc.include_dir", "src:fmt/include", "public"]]
+request = [["app", "rel"]]

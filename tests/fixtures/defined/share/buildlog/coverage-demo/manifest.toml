@@ -1,0 +1,9 @@
+# Consumers for core artifact coverage tests: t consumes a path in every
+# configuration it is needed in, and in the multi-platform it is split from.
+name = "coverage-demo"
+version = "0.1.0"
+rank = 1
+namespace = "coveragedemo"
+layers = ["coverage_demo.dl"]
+extends = ["coverage_need"]
+accepts = ["coveragedemo_consumes"]

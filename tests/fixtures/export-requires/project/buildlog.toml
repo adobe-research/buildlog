@@ -1,0 +1,7 @@
+# A header-only package that requires an imported one
+# (tests/test_export_requires.py): pkgy's component y depends on pkgx:b,
+# bound from an install of tests/fixtures/export-components. The export
+# requires pkgx by its origin's name, at the version found (>= found) unless
+# the author states one.
+uses = ["buildlog-cpp"]
+spec = ["spec.toml"]

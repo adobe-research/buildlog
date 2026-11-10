@@ -1,0 +1,4 @@
+# PERF-STUDY: the smallest project, one C executable, the zlib study's toolchain pin.
+uses = ["buildlog-cpp"]
+source_root = "${REPO_ROOT}/tests/projects/trivial"
+spec = ["spec.toml"]

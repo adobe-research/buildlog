@@ -1,0 +1,6 @@
+.decl bns_item(n:symbol)
+.decl item(n:symbol)
+.decl helper(n:symbol)
+helper(n) :- item(n).
+// action is an extended open relation: exempt from the namespace rule.
+action(cat("out:bns/", n), "BNS") :- bns_item(n), helper(n).

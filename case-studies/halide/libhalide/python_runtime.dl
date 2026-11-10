@@ -1,0 +1,73 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// The standalone halide.runtime tests: add_runtime_test_kernel builds an AOT
+// library <mod>_aot of generator <gen>_gen and wraps it into a loadable module
+// <mod> (aot_module_stub.c with the whole archive forced, no "lib" prefix);
+// (an interface target <mod>_whole carries the whole-archive edge, as
+// Halide_Generator does for Halide_GenGen); the test script is given the module files.
+.decl halide_py_rt_generator(g:symbol, src:symbol)
+.decl halide_py_rt_kernel(mod:symbol, g:symbol)
+.decl halide_py_rt_kernel_param(mod:symbol, p:symbol)
+.decl halide_py_rt_test_module(stem:symbol, i:number, mod:symbol)
+target(cat(g, "_gen")), native_kind(cat(g, "_gen"), "executable"),
+cxx_source(cat(g, "_gen"), cat("python_bindings/halide-runtime/test/", src)),
+dep(cat(g, "_gen"), "Halide_Generator", "private"), dep(cat(g, "_gen"), "halide_generator_options", "private") :-
+  halide_py_rt_generator(g, src), halide_py_fixtures().
+halide_build_library(cat(m, "_aot"), cat(g, "_gen"), g, m, "") :- halide_py_rt_kernel(m, g), halide_py_fixtures().
+halide_build_library_param_set(cat(m, "_aot"), m) :- halide_py_rt_kernel_param(m, _).
+halide_build_params(m, j, p) :- halide_py_rt_kernel_param(m, p), j = count : { halide_py_rt_kernel_param(m, q), q < p }.
+target(cat(m, "_module")), native_kind(cat(m, "_module"), "module_library"), request_all(cat(m, "_module")),
+native_file_named(cat(m, "_module")),
+c_source(cat(m, "_module"), "python_bindings/halide-runtime/test/aot_module_stub.c"),
+dep(cat(m, "_module"), cat(m, "_whole"), "private"), target(cat(m, "_whole")),
+dep(cat(m, "_whole"), cat(m, "_aot"), "interface"), whole_archive(cat(m, "_whole"), cat(m, "_aot")) :-
+  halide_py_rt_kernel(m, _), halide_py_fixtures().
+test_arg_ref(cat("python_runtime_", s), i, cat(m, "_module")) :- halide_py_rt_test_module(s, i, m).
+// PREFIX "" with CMake's module suffix (.so on macOS and Linux alike).
+native_file_name(cat(m, "_module"), c, cat(m, ".so")) :- halide_py_rt_kernel(m, _), needed(cat(m, "_module"), c).
+
+// The two symbol-table tests CMake writes as a shell line and a `cmake -P`
+// script (nm / otool): the interpreter runs the same inspection over the
+// module (argv[2]) given as an inline program, so no checker file is needed.
+// export_single_symbol: exactly one global text symbol, PyInit_<module>.
+// no_libhalide: the runtime module's dependency list names no libHalide.
+.decl halide_py_symbol_test(n:symbol, module:symbol, program:symbol)
+halide_py_symbol_test("test_export_single_symbol", "pyext_multi_method_module",
+  "import subprocess, sys\nt = [l for l in subprocess.run(['nm', sys.argv[1]], capture_output=True, text=True, check=True).stdout.splitlines() if ' T ' in l]\nsys.exit(0 if len(t) == 1 and t[0].endswith('PyInit_multi_method_module') else 1)") :- halide_py_fixtures().
+halide_py_symbol_test("python_runtime_no_libhalide", "Halide_PythonRuntime",
+  "import subprocess, sys\ncmd = ['otool', '-L'] if sys.platform == 'darwin' else ['objdump', '-p']\nd = subprocess.run(cmd + [sys.argv[1]], capture_output=True, text=True, check=True).stdout\nsys.exit(1 if 'libHalide' in d else 0)") :- halide_py_fixtures().
+test_when(n, "halide.python"),
+halide_build_test(n, "Python::Interpreter"), halide_build_test_exit_code_only(n),
+halide_build_test_group(n, "python"),
+test_arg(n, 0, "-c"), test_arg(n, 1, p), test_arg_ref(n, 2, m) :- halide_py_symbol_test(n, m, p).
+test_label(n, "python_runtime") :- halide_py_symbol_test(n, _, _), n = "python_runtime_no_libhalide".
+
+// test/autoschedulers/li2018: the Python test applies the Li2018 plugin
+// (its path is argv[2]) to a pipeline.
+test_when("li2018_gradient_autoscheduler_test_py", "halide.python"),
+halide_build_test("li2018_gradient_autoscheduler_test_py", "Python::Interpreter"),
+halide_build_test_exit_code_only("li2018_gradient_autoscheduler_test_py"),
+halide_build_test_group("li2018_gradient_autoscheduler_test_py", "li2018"),
+halide_build_test_group("li2018_gradient_autoscheduler_test_py", "autoschedulers_cpu"),
+halide_build_test_group("li2018_gradient_autoscheduler_test_py", "autoschedulers_gpu"),
+test_arg("li2018_gradient_autoscheduler_test_py", 0, "src:test/autoschedulers/li2018/test.py"),
+test_arg_ref("li2018_gradient_autoscheduler_test_py", 1, "autoschedule_li2018") :- halide_py_fixtures().
+test_config_env_path("li2018_gradient_autoscheduler_test_py", c, "PYTHONPATH", 0, root) :- halide_py_fixtures(), python_tree(c, root).
+test_config_need("li2018_gradient_autoscheduler_test_py", c, o) :- halide_py_fixtures(), python_staged(c, _, o).
+
+// The libraries and modules whose generators are Python scripts are built
+// only where an interpreter is configured: the aggregate target depends on
+// them under halide.python.
+target("halide_py_requests"), request_all("halide_py_requests") :- halide_py_fixtures().
+
+// test/debugger: the Natvis file parses as XML (CMake runs it wherever a
+// Python 3 interpreter is found; here, where one is configured). The LLDB and
+// GDB tests are not modelled (README, "Not modelled").
+test_when("debugger_natvis_xml", "halide.python"),
+halide_build_test("debugger_natvis_xml", "Python::Interpreter"),
+halide_build_test_plain("debugger_natvis_xml"),
+test_label("debugger_natvis_xml", "debugger"),
+test_arg("debugger_natvis_xml", 0, "-c"),
+test_arg("debugger_natvis_xml", 1, "import sys, xml.etree.ElementTree as ET; ET.parse(sys.argv[1])"),
+test_arg("debugger_natvis_xml", 2, "src:tools/Halide.natvis") :- halide_py_fixtures().

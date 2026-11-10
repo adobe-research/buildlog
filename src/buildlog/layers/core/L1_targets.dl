@@ -1,0 +1,1099 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L1: targets, platforms, configurations, conditions, and generic property
+// propagation. Knows nothing about any language or toolchain.
+
+// ---- inputs ----
+.decl target(t:symbol)                           // open: DSL layers may add targets
+.decl imported(t:symbol)
+.decl source_target_input(t:symbol)
+.decl source_imported_input(t:symbol)
+.decl source_alias_input(name:symbol, to:symbol)
+.decl source_target(t:symbol)
+.decl source_imported(t:symbol)
+.decl source_alias(name:symbol, to:symbol)
+source_target(t) :- source_target_input(t).
+source_imported(t) :- source_imported_input(t).
+source_alias(n, t) :- source_alias_input(n, t).
+target(t) :- source_target(t).
+imported(t) :- source_imported(t).
+alias(n, t) :- source_alias(n, t).
+.decl dep(t:symbol, d:symbol, vis:symbol)        // vis: public | private | interface
+.decl dep_when(t:symbol, d:symbol, vis:symbol, cond:symbol)
+// runtime_dep(t, m, place): t needs m at run time without linking it (a
+// dlopen'd module, a plugin); place is where m must sit for t's loader to
+// find it (L3_native: "beside_loader" | "beside_executables"). It is
+// required: t cannot work without m, so installing t installs m (L3_install)
+// and t's export requires it. runtime_dep_optional(t, m, place) is the same
+// placement for a module t only uses if it is there (a backend t checks
+// for): built and placed, but installed only if the author installs m, and
+// never required of t's users.
+.decl runtime_dep(t:symbol, m:symbol, place:symbol)
+.decl runtime_dep_when(t:symbol, m:symbol, place:symbol, cond:symbol)
+.decl runtime_dep_optional(t:symbol, m:symbol, place:symbol)
+.decl runtime_dep_optional_when(t:symbol, m:symbol, place:symbol, cond:symbol)
+.decl tool_dep(t:symbol, c:Cfg, tool:symbol)     // derived: t in c *runs* tool during the build (end of file)
+.decl prop(t:symbol, key:symbol, value:symbol, vis:symbol)   // vis: public | private | interface
+.decl prop_when(t:symbol, key:symbol, value:symbol, vis:symbol, cond:symbol)
+.decl request(t:symbol, decl:symbol)
+.decl config_decl(decl:symbol, p:symbol)         // p may be a multi-platform
+.decl config_decl_setting(decl:symbol, key:symbol, value:symbol)
+// Platforms are open: a platform plugin (e.g. buildlog-cpp's inventory
+// probe) contributes them. L1 only needs their names, triples, the slices of
+// multi-platforms, and "platform.<key>" constraint attributes.
+.decl host_platform(p:symbol)
+.decl platform(p:symbol, triple:symbol)
+.decl platform_slice(u:symbol, p:symbol)
+.decl platform_constraint(p:symbol, key:symbol, value:symbol)
+
+// Outer-loop hook: a plugin probe that
+// discovers a Datalog rule package (a directory holding manifest.toml) adds
+// discovered_rule_package(req, path), where req is the id of the probe
+// request that found it. When the discovery fixpoint ends with a path that is
+// not loaded, the driver loads it as a pure rule package and restarts from a
+// fresh program. Producers: package metadata that names its own rules
+// (res_pkg_rule_package of a package provider) and a provider's own rule
+// package, loaded when a find first reaches it (L3_discovery.dl).
+.decl discovered_rule_package(req:symbol, path:symbol)
+
+target(t) :- imported(t).
+
+// ==== settings: declared by the layers that own them ====
+// setting_key(k, pos): pos is k's priority in the canonical settings list.
+// Keys are ordered by (pos, key name), so two plugins that pick the same pos
+// compose in an order no load order can change; each key's index is derived
+// (setting_rank), never declared, so there are no slots to collide on.
+// Every key has a finite domain, a default, and an exec policy that is
+// either "inherit" or a fixed value (setting_exec_value). Both are
+// idempotent, so the exec transition is too; the check below verifies this.
+.decl setting_key(key:symbol, pos:number)
+.decl setting_value(key:symbol, value:symbol)
+.decl setting_default(key:symbol, value:symbol)
+.decl setting_exec_inherit(key:symbol)
+.decl setting_exec_value(key:symbol, value:symbol)
+
+.decl nkeys(n:number)
+nkeys(n) :- n = count : { setting_key(_, _) }.
+.decl setting_before(a:symbol, b:symbol)
+setting_before(a, b) :- setting_key(a, i), setting_key(b, j), i < j.
+setting_before(a, b) :- setting_key(a, i), setting_key(b, i), a < b.
+error("setting key declared at two positions", k) :- setting_key(k, i), setting_key(k, j), i < j.
+.decl setting_rank(key:symbol, rank:number)
+setting_rank(k, r) :- setting_key(k, _), r = count : { setting_before(x, k) }.
+error("setting key without default", k) :- setting_key(k, _), !setting_default(k, _).
+.decl has_exec_policy(key:symbol)
+has_exec_policy(k) :- setting_exec_inherit(k).
+has_exec_policy(k) :- setting_exec_value(k, _).
+error("setting key without exec policy", k) :- setting_key(k, _), !has_exec_policy(k).
+error("setting key with two exec policies", k) :- setting_exec_inherit(k), setting_exec_value(k, _).
+error("setting key with two exec policies", k) :- setting_exec_value(k, a), setting_exec_value(k, b), a < b.
+error("setting default outside domain", k) :- setting_default(k, v), !setting_value(k, v).
+error("elided setting value is not the default", cat(k, "=", v)) :- setting_name_elide(k, v),
+  !setting_default(k, v).
+
+// ==== configurations as record values ====
+// A configuration is the record [platform, settings], where settings is a
+// list with one entry per key, in key-position order. Soufflé interns
+// records structurally, so two configurations with equal contents are the
+// same value. No rule mentions sharing, and no ids are built by hand.
+
+// user declarations (defaults fill unspecified keys)
+.decl decl_has(decl:symbol, key:symbol)
+decl_has(n, k) :- config_decl_setting(n, k, _).
+.decl decl_value(decl:symbol, key:symbol, value:symbol)
+decl_value(n, k, v) :- config_decl_setting(n, k, v), setting_value(k, v).   // invalid: reported, not built
+decl_value(n, k, v) :- config_decl(n, _), setting_default(k, v), !decl_has(n, k).
+error("unknown setting key", cat(n, ": ", k)) :- config_decl_setting(n, k, _), !setting_key(k, _).
+error("setting value outside domain", cat(n, ": ", k, "=", v)) :-
+  config_decl_setting(n, k, v), setting_key(k, _), !setting_value(k, v).
+error("setting given twice", cat(n, ": ", k)) :- config_decl_setting(n, k, a), config_decl_setting(n, k, b), a < b.
+// A configuration not selected may name a platform this machine's inventory
+// lacks (a universal2 configuration on Linux): a warning, as it builds
+// nothing; a selected one is an error.
+error("unknown platform", cat(n, ": ", p)) :- config_decl(n, p), config_active(n), !platform(p, _),
+  !platform_slice(p, _).
+warning("unselected configuration's platform is unknown here", cat(n, ": ", p)) :- config_decl(n, p),
+  !config_active(n), !platform(p, _), !platform_slice(p, _).
+
+// Build the list from the last key position down, so the head is key 0.
+// This is still a positional fold (records have no "insert sorted"), but
+// its result is a value rather than a string.
+.decl decl_suffix(decl:symbol, i:number, s:Settings)
+decl_suffix(n, i, nil) :- config_decl(n, _), nkeys(i).
+// The key at a position and a declaration's value for a key are chosen by
+// min over their ordinals (one key per position, one value per key unless a
+// declaration is wrong, which the errors above report), so each step of the
+// fold is a function of (n, i) and the suffix it extends.
+.decl setting_at(i:number, key:symbol)
+setting_at(i, k) :- setting_rank(_, i), m = min ord(k0) : { setting_rank(k0, i) }, setting_rank(k, i), ord(k) = m.
+.decl decl_value1(decl:symbol, key:symbol, value:symbol)
+decl_value1(n, k, v) :- decl_value(n, k, _), m = min ord(v0) : { decl_value(n, k, v0) }, decl_value(n, k, v), ord(v) = m.
+decl_suffix(n, i, [[k, v], s]) :- setting_at(i, k), j = i + 1, decl_suffix(n, j, s), decl_value1(n, k, v).
+.decl decl_cfg(decl:symbol, c:Cfg)             // concrete or multi-platform
+decl_cfg(n, [p, s]) :- config_decl(n, p), decl_suffix(n, 0, s).
+
+.decl config(c:Cfg)                              // concrete: single platform
+.decl mconfig(u:Cfg)                             // multi-platform
+.decl config_slice(u:Cfg, c:Cfg)
+config([p, s]) :- decl_cfg(_, [p, s]), platform(p, _).
+mconfig([u, s]) :- decl_cfg(_, [u, s]), platform_slice(u, _).
+// A slice is the same settings on a slice platform: no id plumbing needed.
+config_slice([u, s], [p, s]) :- mconfig([u, s]), platform_slice(u, p).
+config(c) :- config_slice(_, c).
+
+.decl config_platform(c:Cfg, p:symbol)
+config_platform([p, s], p) :- config([p, s]).
+
+// Every suffix of every configuration's settings list: the finite domain
+// that structural recursion (lookup, exec, naming) runs over.
+.decl settings_suffix(s:Settings)
+settings_suffix(s) :- config([_, s]).
+settings_suffix(s) :- mconfig([_, s]).
+settings_suffix(t) :- settings_suffix([_, t]).
+.decl config_setting(c:Cfg, key:symbol, value:symbol)
+.decl cfg_suffix(c:Cfg, s:Settings)
+cfg_suffix([p, s], s) :- config([p, s]).
+cfg_suffix(c, t) :- cfg_suffix(c, [_, t]).
+config_setting(c, k, v) :- cfg_suffix(c, [[k, v], _]).
+
+// ---- exec transition: a structural map over the settings list. The key
+// order is preserved, so the result is canonical without re-sorting.
+// The layer that owns a key states its default exec policy; the invoker may
+// replace it for a build (exec_setting(key, "inherit" | value), a spec fact):
+// one policy per key either way, so exec stays a function. CMake builds its
+// tools in the one tree it has, so its Debug and ASan tools are Debug and
+// ASan too; a spec that is compared against it says so.
+.decl exec_setting(key:symbol, policy:symbol)
+.decl exec_overridden(key:symbol)
+exec_overridden(k) :- exec_setting(k, _).
+error("exec setting for an unknown key", k) :- exec_setting(k, _), !setting_key(k, _).
+error("exec setting outside domain", cat(k, "=", v)) :- exec_setting(k, v), setting_key(k, _),
+  v != "inherit", !setting_value(k, v).
+// "inherit" names a policy, so it cannot also be a value: an override could
+// not say which it meant.
+error("setting value is reserved", cat(k, "=inherit")) :- setting_value(k, "inherit").
+error("exec setting given twice", cat(k, ": ", a, " and ", b)) :- exec_setting(k, a), exec_setting(k, b), a < b.
+// A key with two exec values would make exec a relation and multiply the
+// configurations; its exec map is withheld (the errors above report it).
+.decl exec_bad(key:symbol)
+exec_bad(k) :- setting_exec_inherit(k), setting_exec_value(k, _), !exec_overridden(k).
+exec_bad(k) :- setting_exec_value(k, a), setting_exec_value(k, b), a < b, !exec_overridden(k).
+exec_bad(k) :- exec_setting(k, a), exec_setting(k, b), a < b.
+.decl exec_value(key:symbol, value:symbol, exec:symbol)
+exec_value(k, v, v) :- setting_exec_inherit(k), !exec_overridden(k), !exec_bad(k), setting_value(k, v).
+exec_value(k, v, f) :- setting_exec_value(k, f), !exec_overridden(k), !exec_bad(k), setting_value(k, v).
+exec_value(k, v, v) :- exec_setting(k, "inherit"), !exec_bad(k), setting_value(k, v).
+exec_value(k, v, f) :- exec_setting(k, f), f != "inherit", !exec_bad(k), setting_value(k, f), setting_value(k, v).
+// The exec map is computed over the settings of the declared configurations
+// only (decl_settings), so the recursion never reads its own results. Each
+// key's map sends a value to itself or to a fixed in-domain value; that
+// makes it idempotent, so an exec configuration's exec is itself (below);
+// the idempotence error after the names checks that per key.
+.decl decl_settings(s:Settings)
+decl_settings(s) :- decl_cfg(_, [_, s]).
+decl_settings(t) :- decl_settings([_, t]).
+.decl base_config(c:Cfg)                         // config, before exec adds more
+base_config([p, s]) :- decl_cfg(_, [p, s]), platform(p, _).
+base_config(c) :- config_slice(_, c).
+.decl exec_settings(s:Settings, e:Settings)
+exec_settings(nil, nil).
+exec_settings([[k, v], t], [[k, x], e]) :- decl_settings([[k, v], t]), exec_settings(t, e),
+  mx = min ord(x0) : { exec_value(k, v, x0) }, exec_value(k, v, x), ord(x) = mx.
+.decl exec_config(c:Cfg, e:Cfg)
+exec_config([p, s], [h, e]) :- base_config([p, s]), host_platform(h), exec_settings(s, e).
+exec_config(e, e) :- exec_config(_, e).
+config(e) :- exec_config(_, e).
+// Termination: exec_value stays inside finite setting domains and keeps list
+// length, so the configuration space is finite.
+
+// ---- names: the only place a configuration becomes a string (for paths
+// and diagnostics). L0 and the translator never see records.
+// A key may leave its default out of the name (setting_name_elide), so
+// adding a key does not rename the configurations that do not use it.
+.decl setting_name_elide(key:symbol, value:symbol)
+.decl settings_name(s:Settings, name:symbol)
+settings_name(nil, "").
+// The piece of a name a setting adds: nothing when elided, else ".value".
+.decl name_piece(key:symbol, value:symbol, piece:symbol)
+name_piece(k, v, "") :- setting_name_elide(k, v).
+name_piece(k, v, cat(".", v)) :- settings_suffix([[k, v], _]), !setting_name_elide(k, v).
+settings_name([[k, v], t], cat(p, r)) :- settings_suffix([[k, v], t]), settings_name(t, r),
+  mp = min ord(p0) : { name_piece(k, v, p0) }, name_piece(k, v, p), ord(p) = mp.
+.decl cfg_name(c:Cfg, name:symbol)
+cfg_name([p, s], cat(p, r)) :- config([p, s]), settings_name(s, r).
+cfg_name([u, s], cat(u, r)) :- mconfig([u, s]), settings_name(s, r).
+error("two configurations share a name", n) :- cfg_name(a, n), cfg_name(b, n), a != b.
+
+error("exec transition not a function", cat(n, " -> ", na, " | ", nb)) :-
+  exec_config(c, a), exec_config(c, b), cfg_name(c, n), cfg_name(a, na), cfg_name(b, nb), na < nb.
+error("exec transition not idempotent", cat(k, ": ", v, " -> ", x)) :-
+  exec_value(k, v, x), !exec_value(k, x, x).
+
+// ==== conditions: boolean expressions over configuration attributes ====
+// Attributes are settings plus "platform.<key>" constraints. Every attribute
+// is a total function of the configuration over a finite domain, so a
+// condition can be evaluated *two-valued without negation*: holds and fails
+// are computed together, and Not swaps them. That gives complements
+// ("anything but x86_64") without a default branch or precedence.
+.decl config_attr(c:Cfg, key:symbol, value:symbol)
+config_attr(c, k, v) :- config_setting(c, k, v).
+config_attr(c, cat("platform.", k), v) :- config_platform(c, p), platform_constraint(p, k, v).
+// The platform itself: what a per-platform binding is conditioned on
+// (L3_discovery.dl; platform_condition names the condition).
+config_attr(c, "platform", p) :- config_platform(c, p).
+.decl attr_value(key:symbol, value:symbol)       // the finite domain of each attribute
+attr_value(k, v) :- setting_value(k, v).
+attr_value("platform", p) :- platform(p, _).
+attr_value(cat("platform.", k), v) :- platform_constraint(_, k, v).
+.decl attr_key(key:symbol)
+attr_key(k) :- attr_value(k, _).
+error("attribute not a function", cat(n, ": ", k)) :- config_attr(c, k, a), config_attr(c, k, b), a < b,
+  cfg_name(c, n).
+// A discovered attribute (open: a layer's probe answers it, e.g.
+// buildlog-cpp's configure checks) is defined only where the probe can be
+// asked, so it is total only where it is used: a condition that tests it
+// in a configuration something is built in.
+.decl attr_discovered(key:symbol)                 // open
+error("attribute undefined", cat(n, ": ", k)) :- config(c), attr_key(k), !attr_discovered(k),
+  !config_attr(c, k, _), cfg_name(c, n).
+error("discovered attribute undefined where a condition tests it", cat(n, ": ", k)) :- needed(_, c),
+  cond_sub(EQ(k, _)), attr_discovered(k), !config_attr(c, k, _), cfg_name(c, n).
+
+.decl condition(cond:symbol, e:Cond)
+.decl cond_sub(e:Cond)                           // every subexpression of a named condition
+cond_sub(e) :- condition(_, e).
+cond_sub(x) :- cond_sub(NOT(x)).
+cond_sub(x), cond_sub(y) :- cond_sub(AND(x, y)).
+cond_sub(x), cond_sub(y) :- cond_sub(OR(x, y)).
+error("condition tests unknown attribute", k) :- cond_sub(EQ(k, _)), !attr_key(k).
+error("condition value outside attribute domain", cat(k, "=", v)) :-
+  cond_sub(EQ(k, v)), attr_key(k), !attr_value(k, v).
+
+.decl holds(c:Cfg, e:Cond)
+.decl fails(c:Cfg, e:Cond)
+// $Defined(n): the name n denotes at least one target in the loaded package
+// universe: n is a target id (a target or imported) or an alias chain from n
+// leads to one (name_candidate, "target ids" below). An abstract name such as
+// "libpng" is defined exactly when some binding source aliases it. It does
+// not depend on the configuration, so it holds, or fails, for every
+// configuration alike. A name with several candidates is still defined; a
+// dep on it is then an "ambiguous dependency" error, never a choice.
+//
+// Stratification: fails needs !defined, so defined must sit strictly below
+// everything that reads dep or dep_when. defined reads only target, imported,
+// alias and driver facts, and no rule derives those from the needed closure
+// (targets come from spec, package facts and DSL declaration relations). A
+// package rule that did would close a cycle through negation, which Souffle
+// rejects at load time.
+//
+// Monotonicity (why the outer loop is sound): loading more packages only adds
+// target, alias and target_qualifier facts, so defined only grows ("at least
+// one candidate" is monotone; "exactly one" would not be). $Defined(n) can
+// go from fails to holds, never back, and every dep edge a package states as
+// `dep(...) :- defined(...)` stays once it appears. A restart with more
+// packages therefore never retracts a conclusion that caused the restart,
+// and the loop, which only adds packages from a finite set, converges.
+.decl target_id(t:symbol)
+target_id(t) :- imported(t).
+target_id(t) :- target(t).
+.decl defined(n:symbol)
+defined(n) :- name_candidate(n, _).
+holds(c, EQ(k, v)) :- cond_sub(EQ(k, v)), config_attr(c, k, v).
+fails(c, EQ(k, v)) :- cond_sub(EQ(k, v)), config_attr(c, k, w), v != w.
+holds(c, NOT(x)) :- cond_sub(NOT(x)), fails(c, x).
+fails(c, NOT(x)) :- cond_sub(NOT(x)), holds(c, x).
+holds(c, AND(x, y)) :- cond_sub(AND(x, y)), holds(c, x), holds(c, y).
+fails(c, AND(x, y)) :- cond_sub(AND(x, y)), fails(c, x).
+fails(c, AND(x, y)) :- cond_sub(AND(x, y)), fails(c, y).
+holds(c, OR(x, y)) :- cond_sub(OR(x, y)), holds(c, x).
+holds(c, OR(x, y)) :- cond_sub(OR(x, y)), holds(c, y).
+fails(c, OR(x, y)) :- cond_sub(OR(x, y)), fails(c, x), fails(c, y).
+holds(c, DEFINED(t)) :- cond_sub(DEFINED(t)), config(c), defined(t).
+fails(c, DEFINED(t)) :- cond_sub(DEFINED(t)), config(c), !defined(t).
+
+// ==== version comparison: $Ge(k, v) and $Gt(k, v) ====
+// `k >= v` and `k > v` (infix; `<` and `<=` are their negations) compare the
+// version-valued attribute k with the version v. A version is read as dotted
+// numbers: the digits before each "." are one component, compared as
+// numbers ("9" < "10"), and a missing component is 0 ("13" = "13.0.0").
+// Reading stops at the first character that is neither a digit nor a ".", so
+// a suffix ("-rc1", "+git", "a") is ignored: "13.0.0-rc1" compares as 13.0.0.
+// Only the first 8 components count. A version must start with a digit and a
+// component has at most 9 digits; both are errors where a comparison reads
+// them. The attribute is an ordinary discovered attribute (config_attr), so
+// the comparison is guarded as an answer read is: with no value it neither
+// holds nor fails, and a configuration something is built in that lacks one
+// is an error. A condition that decides what is built may not compare
+// (L1_options.dl), so what is requested never depends on a probed version.
+//
+// The comparison is plain Datalog, and monotone with no recursion, because
+// the attribute is derived from answers that depend on what is needed:
+// ver_key(v, key) is the sort key of v, its first 8 components each padded
+// with zeros to 9 digits, so that comparing keys as strings compares
+// versions. A component is found with a regular expression over the prefix
+// (n "digits-then-dot" groups), never by scanning. `why` follows holds to the
+// attribute and so to the probe's version fact.
+.decl version_attr(key:symbol)                    // open: cc.version and cxx.version (buildlog-cpp)
+.decl ver_test(k:symbol, v:symbol)                // the comparisons conditions state
+ver_test(k, v) :- cond_sub(GE(k, v)).
+ver_test(k, v) :- cond_sub(GT(k, v)).
+error("condition compares a non-version attribute", k) :- ver_test(k, _), !version_attr(k),
+  !match("package\\..+\\.version", k).
+error("version undefined where a condition tests it", cat(n, ": ", k)) :- needed(_, c), ver_test(k, _),
+  !config_attr(c, k, _), cfg_name(c, n).
+.decl ver_in(v:symbol)                            // the versions compared
+ver_in(v) :- ver_test(_, v).
+ver_in(a) :- ver_test(k, _), config_attr(_, k, a).
+.decl ver_idx(i:number)
+.decl ver_pos(p:number)
+.decl ver_dig(l:number)
+ver_idx(0). ver_idx(1). ver_idx(2). ver_idx(3). ver_idx(4). ver_idx(5). ver_idx(6). ver_idx(7).
+ver_pos(0). ver_pos(1). ver_pos(2). ver_pos(3). ver_pos(4). ver_pos(5). ver_pos(6). ver_pos(7).
+ver_pos(8). ver_pos(9). ver_pos(10). ver_pos(11). ver_pos(12). ver_pos(13). ver_pos(14). ver_pos(15).
+ver_pos(16). ver_pos(17). ver_pos(18). ver_pos(19). ver_pos(20). ver_pos(21). ver_pos(22). ver_pos(23).
+ver_dig(1). ver_dig(2). ver_dig(3). ver_dig(4). ver_dig(5). ver_dig(6). ver_dig(7). ver_dig(8). ver_dig(9).
+error("not a version: it must start with a digit", v) :- ver_in(v), !match("[0-9].*", v).
+error("version component has more than 9 digits", v) :- ver_in(v), ver_idx(i),
+  match(cat("([0-9]+\\.){", to_string(i), "}[0-9]{10}.*"), v).
+// ver_cp(v, i, c): component i of v, padded to 9 digits. p is where the
+// component starts (after i groups of digits and a dot), l its length, and
+// it ends at a non-digit or at the end.
+.decl ver_cp(v:symbol, i:number, c:symbol)
+ver_cp(v, i, cat(substr("000000000", 0, 9 - l), substr(v, p, l))) :- ver_in(v), ver_idx(i), ver_pos(p), ver_dig(l),
+  p + l = strlen(v), match("[0-9]+", substr(v, p, l)), match(cat("([0-9]+\\.){", to_string(i), "}"), substr(v, 0, p)).
+ver_cp(v, i, cat(substr("000000000", 0, 9 - l), substr(v, p, l))) :- ver_in(v), ver_idx(i), ver_pos(p), ver_dig(l),
+  p + l < strlen(v), match("[0-9]+", substr(v, p, l)), match(cat("([0-9]+\\.){", to_string(i), "}"), substr(v, 0, p)),
+  !match("[0-9]", substr(v, p + l, 1)).
+ver_cp(v, i, "000000000") :- ver_in(v), ver_idx(i), !match(cat("([0-9]+\\.){", to_string(i), "}[0-9].*"), v).
+.decl ver_key(v:symbol, key:symbol)
+ver_key(v, cat(c0, c1, c2, c3, c4, c5, c6, c7)) :- ver_cp(v, 0, c0), ver_cp(v, 1, c1), ver_cp(v, 2, c2),
+  ver_cp(v, 3, c3), ver_cp(v, 4, c4), ver_cp(v, 5, c5), ver_cp(v, 6, c6), ver_cp(v, 7, c7).
+holds(c, GE(k, v)) :- cond_sub(GE(k, v)), config_attr(c, k, a), ver_key(a, x), ver_key(v, y), x >= y.
+fails(c, GE(k, v)) :- cond_sub(GE(k, v)), config_attr(c, k, a), ver_key(a, x), ver_key(v, y), x < y.
+holds(c, GT(k, v)) :- cond_sub(GT(k, v)), config_attr(c, k, a), ver_key(a, x), ver_key(v, y), x > y.
+fails(c, GT(k, v)) :- cond_sub(GT(k, v)), config_attr(c, k, a), ver_key(a, x), ver_key(v, y), x <= y.
+// $Named(n): the named condition n, so an expression can reuse one (the
+// infix syntax's bare names: `WITH_OPTIM & !cc.check.HAVE_FSEEKO`; options
+// and configure checks name their own). Positive both ways, so a condition
+// that reaches itself through names neither holds nor fails: an error.
+holds(c, NAMED(n)) :- cond_sub(NAMED(n)), condition(n, e), holds(c, e).
+fails(c, NAMED(n)) :- cond_sub(NAMED(n)), condition(n, e), fails(c, e).
+.decl cond_uses(a:symbol, b:symbol)
+cond_uses(a, b) :- condition(a, e), cond_names(e, b).
+cond_uses(a, b) :- cond_uses(a, x), cond_uses(x, b).
+.decl cond_names(e:Cond, n:symbol)
+cond_names(e, n) :- condition(_, e), cond_mentions(e, n).
+.decl cond_mentions(e:Cond, n:symbol)
+cond_mentions(NAMED(n), n) :- cond_sub(NAMED(n)).
+cond_mentions(NOT(x), n) :- cond_sub(NOT(x)), cond_mentions(x, n).
+cond_mentions(AND(x, y), n) :- cond_sub(AND(x, y)), cond_mentions(x, n).
+cond_mentions(AND(x, y), n) :- cond_sub(AND(x, y)), cond_mentions(y, n).
+cond_mentions(OR(x, y), n) :- cond_sub(OR(x, y)), cond_mentions(x, n).
+cond_mentions(OR(x, y), n) :- cond_sub(OR(x, y)), cond_mentions(y, n).
+error("condition refers to itself", n) :- cond_uses(n, n).
+
+.decl cond_holds(c:Cfg, cond:symbol)
+cond_holds(c, n) :- condition(n, e), holds(c, e).
+.decl known_cond(cond:symbol)
+known_cond(n) :- condition(n, _).
+error("condition defined twice", n) :- condition(n, a), condition(n, b), a != b.
+error("unknown condition", n) :- dep_when(_, _, _, n), !known_cond(n).
+error("unknown condition", n) :- prop_when(_, _, _, _, n), !known_cond(n).
+error("unknown condition", n) :- runtime_dep_when(_, _, _, n), !known_cond(n).
+error("unknown condition", n) :- runtime_dep_optional_when(_, _, _, n), !known_cond(n).
+error("unknown condition", n) :- cond_sub(NAMED(n)), !known_cond(n).
+
+// ==== which configurations this configure builds ====
+// The spec declares every configuration it has (release, debug, asan,
+// cross ones); the invoker picks (`buildlog configure --config NAME`,
+// repeatable; the driver writes config_select, and a reconfigure keeps the
+// build directory's selection). Without --config, the user's config_default
+// rows are built, and without those every declared
+// configuration. A configuration that is not active is still a value (its
+// settings are checked) but requests nothing: no target is needed in it,
+// so nothing only it needs is discovered or probed.
+.decl config_select(decl:symbol)      // driver: --config
+.decl config_default(decl:symbol)     // user
+.decl config_active(decl:symbol)
+.decl any_config_select()
+any_config_select() :- config_select(_).
+.decl any_config_default()
+any_config_default() :- config_default(_).
+config_active(n) :- config_select(n).
+config_active(n) :- config_default(n), !any_config_select().
+config_active(n) :- config_decl(n, _), !any_config_select(), !any_config_default().
+error("unknown config", cat(n, " (--config)")) :- config_select(n), !declared(n).
+error("unknown config", cat(n, " (config_default)")) :- config_default(n), !declared(n).
+// request_all(t): t in every declared configuration (built in those active),
+// the usual form once a spec declares its variants.
+.decl request_all(t:symbol)
+request(t, n) :- request_all(t), config_decl(n, _).
+
+// The platforms this configure builds for: those of the active
+// configurations (every slice of a multi-platform one) and the exec
+// platform. Discovery binds names per platform (L3_discovery.dl) and only
+// for these; the set reads declarations, never the needed closure.
+.decl build_platform(p:symbol)
+build_platform(p) :- config_active(n), decl_cfg(n, c), config_platform(c, p).
+build_platform(p) :- config_active(n), decl_cfg(n, u), config_slice(u, c), config_platform(c, p).
+build_platform(h) :- config_active(_), host_platform(h).
+
+// ==== target templates (coexisting variants) ====
+// target_template(b): b's rows (sources, props, deps, kind, ...) are stated
+// like a target's but b is not one; each instance t (instance_of(t, b)) is
+// a target with b's rows. An instance may take several templates (a common
+// one and an architecture's, say) and add rows of its own.
+// instance_param(t, k, v): t's values of b's parameter k
+// (target_template_param(b, k)). A placeholder {k} in a row's value (a
+// source path, a property value, a dependency) is replaced by each of t's
+// values of k, so a parameter with
+// several values gives several rows and one with none drops the row before
+// expansion begins (tmpl_ok, below); {name}
+// is t. A key has one value per expanded row: {p}/{p} gives a/a and b/b,
+// never a/b. A row with several distinct keys gives the product of their
+// value counts. Instances and their parameters are facts or rules, e.g. one per ISA
+// level of the configuration's architecture.
+.decl target_template(t:symbol)
+.decl target_template_param(t:symbol, k:symbol)   // [target_template.X] param = [...]
+.decl instance_of(t:symbol, b:symbol)
+.decl instance_param(t:symbol, k:symbol, v:symbol)
+target(t) :- instance_of(t, _).
+source_target(t) :- instance_of(t, _).
+error("instance of an undeclared template", cat(t, " of ", b)) :- instance_of(t, b), !target_template(b).
+error("target template is also a target", b) :- target_template(b), target(b).
+// A template that is itself an instance (directly or down a chain of
+// templates) would expand into its own rows, which are then asked for again:
+// its expansion is gated off. tmpl_bad reads only instance_of, never the
+// expansion, so it sits below it; the error above names the template.
+.decl tmpl_bad(b:symbol)
+tmpl_bad(b) :- target_template(b), instance_of(b, _).
+error("template instantiates itself", cat(b, " via ", c)) :- tmpl_bad(b), instance_of(b, c), target_template(c).
+.decl instance_has_param(t:symbol, k:symbol)
+instance_has_param(t, k) :- instance_param(t, k, _).
+.decl instance_param_known(t:symbol, k:symbol)
+instance_param_known(t, k) :- instance_of(t, b), target_template_param(b, k).
+error("instance parameter of none of its templates", cat(t, ": ", k)) :-
+  instance_has_param(t, k), !instance_param_known(t, k).
+// Placeholder expansion: tmpl_want(b, v) asks for v's expansions in each
+// instance t of b, tmpl_value(t, b, v, out); a layer that copies a template's
+// rows states it (open). tmpl_step(t, b, v, done, rest): done expanded, rest
+// not yet read; a hole is rest's first "{" (none before it) up to the first
+// "}" (asg: the choices made so far, see below). Two copies of the machinery: tmpl_* for what decides the needed
+// closure (edges, sources, names) and ptmpl_* for properties, which may
+// then depend on it (a property's value may come from a configuration's
+// checks; an edge's may not).
+.decl tmpl_bind(t:symbol, k:symbol, v:symbol)
+tmpl_bind(t, k, v) :- instance_param(t, k, v).
+tmpl_bind(t, "name", t) :- instance_of(t, _).
+.decl tmpl_key_known(b:symbol, k:symbol)
+tmpl_key_known(b, k) :- target_template_param(b, k).
+tmpl_key_known(b, "name") :- target_template(b).
+.decl tmpl_want(b:symbol, v:symbol)
+.decl tmpl_step(t:symbol, b:symbol, v:symbol, done:symbol, rest:symbol, asg:symbol)
+.decl tmpl_asg(t:symbol, b:symbol, v:symbol, asg:symbol, k:symbol, x:symbol)
+.decl tmpl_hole(t:symbol, b:symbol, v:symbol, rest:symbol, before:symbol, key:symbol, after:symbol)
+.decl tmpl_value(t:symbol, b:symbol, v:symbol, out:symbol)
+tmpl_step(t, b, v, "", v, "") :- tmpl_ok(t, b, v).
+tmpl_hole(t, b, v, r, substr(r, 0, i), substr(r, i + 1, j), substr(r, i + j + 2, strlen(r) - i - j - 2)) :-
+  tmpl_step(t, b, v, _, r, _), contains("{", r), i = range(0, strlen(r)), substr(r, i, 1) = "{",
+  !contains("{", substr(r, 0, i)), j = range(0, strlen(r) - i - 1), substr(r, i + j + 1, 1) = "}",
+  !contains("}", substr(r, i + 1, j)).
+// k's first hole in the row binds it (one value per expanded row); later
+// holes of k reuse that value from asg, an injective encoding of the choices.
+tmpl_step(t, b, v, cat(d, pre, x), post, asg2) :- tmpl_step(t, b, v, d, r, asg), tmpl_hole(t, b, v, r, pre, k, post),
+  !contains(cat("{", k, "}"), substr(v, 0, strlen(v) - strlen(r))), tmpl_bind(t, k, x), asg2 = cat(asg, to_string(strlen(k)), ":", k, to_string(strlen(x)), ":", x).
+tmpl_asg(t, b, v, asg2, k, x) :- tmpl_step(t, b, v, _, r, asg), tmpl_hole(t, b, v, r, _, k, _),
+  !contains(cat("{", k, "}"), substr(v, 0, strlen(v) - strlen(r))), tmpl_bind(t, k, x), asg2 = cat(asg, to_string(strlen(k)), ":", k, to_string(strlen(x)), ":", x).
+tmpl_asg(t, b, v, asg2, k2, x2) :- tmpl_step(t, b, v, _, r, asg), tmpl_hole(t, b, v, r, _, k, _),
+  !contains(cat("{", k, "}"), substr(v, 0, strlen(v) - strlen(r))), tmpl_bind(t, k, x), asg2 = cat(asg, to_string(strlen(k)), ":", k, to_string(strlen(x)), ":", x), tmpl_asg(t, b, v, asg, k2, x2).
+tmpl_step(t, b, v, cat(d, pre, x), post, asg) :- tmpl_step(t, b, v, d, r, asg), tmpl_hole(t, b, v, r, pre, k, post),
+  contains(cat("{", k, "}"), substr(v, 0, strlen(v) - strlen(r))), tmpl_asg(t, b, v, asg, k, x).
+tmpl_value(t, b, v, cat(d, r)) :- tmpl_step(t, b, v, d, r, _), !contains("{", r).
+.decl ptmpl_want(b:symbol, v:symbol)
+// Completeness gate, below the expansion and silent about a missing value:
+// tmpl_chk(t, b, v, pos) walks the placeholders of a row v wanted of the
+// template b for its instance t (every relation here carries b: an instance
+// of two templates checks and expands each one's row against its own
+// declarations), one occurrence at a time, while each is a known parameter
+// with a value (tmpl_bound); tmpl_ok(t, b, v) holds if the walk reaches the
+// end. It enumerates (instance, row, placeholder) triples only, never
+// combinations of values. A row with a placeholder without a value drops
+// BEFORE expansion begins, with no partial term built (a row of h
+// placeholders with values for all but the last would otherwise build about
+// 2^(h-1)). The walk also reports the other bad placeholders where it stops:
+// an unknown parameter or an unclosed placeholder, so those rows never
+// expand either. It reads no expansion, only the rows wanted.
+.decl tmpl_bound(t:symbol, k:symbol)
+tmpl_bound(t, k) :- tmpl_bind(t, k, _).
+.decl tmpl_chk(t:symbol, b:symbol, v:symbol, pos:number)
+.decl tmpl_ok(t:symbol, b:symbol, v:symbol)
+tmpl_chk(t, b, v, 0) :- tmpl_want(b, v), instance_of(t, b), !tmpl_bad(b).
+tmpl_chk(t, b, v, i + j + 2) :- tmpl_chk(t, b, v, p), i = range(p, strlen(v)), substr(v, i, 1) = "{",
+  !contains("{", substr(v, p, i - p)),
+  j = range(0, strlen(v) - i - 1), substr(v, i + j + 1, 1) = "}",
+  !contains("}", substr(v, i + 1, j)),
+  tmpl_key_known(b, substr(v, i + 1, j)), tmpl_bound(t, substr(v, i + 1, j)).
+tmpl_ok(t, b, v) :- tmpl_chk(t, b, v, p), !contains("{", substr(v, p, strlen(v) - p)).
+error("unknown template parameter", cat(b, ": {", substr(v, i + 1, j), "} in ", v)) :- tmpl_chk(t, b, v, p), i = range(p, strlen(v)), substr(v, i, 1) = "{",
+  !contains("{", substr(v, p, i - p)),
+  j = range(0, strlen(v) - i - 1), substr(v, i + j + 1, 1) = "}",
+  !contains("}", substr(v, i + 1, j)),
+  !tmpl_key_known(b, substr(v, i + 1, j)).
+error("unclosed template placeholder", cat(b, ": ", v)) :- tmpl_chk(t, b, v, p), i = range(p, strlen(v)), substr(v, i, 1) = "{",
+  !contains("{", substr(v, p, i - p)),
+  !contains("}", substr(v, i + 1, strlen(v) - i - 1)).
+.decl ptmpl_chk(t:symbol, b:symbol, v:symbol, pos:number)
+.decl ptmpl_ok(t:symbol, b:symbol, v:symbol)
+ptmpl_chk(t, b, v, 0) :- ptmpl_want(b, v), instance_of(t, b), !tmpl_bad(b).
+ptmpl_chk(t, b, v, i + j + 2) :- ptmpl_chk(t, b, v, p), i = range(p, strlen(v)), substr(v, i, 1) = "{",
+  !contains("{", substr(v, p, i - p)),
+  j = range(0, strlen(v) - i - 1), substr(v, i + j + 1, 1) = "}",
+  !contains("}", substr(v, i + 1, j)),
+  tmpl_key_known(b, substr(v, i + 1, j)), tmpl_bound(t, substr(v, i + 1, j)).
+ptmpl_ok(t, b, v) :- ptmpl_chk(t, b, v, p), !contains("{", substr(v, p, strlen(v) - p)).
+error("unknown template parameter", cat(b, ": {", substr(v, i + 1, j), "} in ", v)) :- ptmpl_chk(t, b, v, p), i = range(p, strlen(v)), substr(v, i, 1) = "{",
+  !contains("{", substr(v, p, i - p)),
+  j = range(0, strlen(v) - i - 1), substr(v, i + j + 1, 1) = "}",
+  !contains("}", substr(v, i + 1, j)),
+  !tmpl_key_known(b, substr(v, i + 1, j)).
+error("unclosed template placeholder", cat(b, ": ", v)) :- ptmpl_chk(t, b, v, p), i = range(p, strlen(v)), substr(v, i, 1) = "{",
+  !contains("{", substr(v, p, i - p)),
+  !contains("}", substr(v, i + 1, strlen(v) - i - 1)).
+.decl ptmpl_step(t:symbol, b:symbol, v:symbol, done:symbol, rest:symbol, asg:symbol)
+.decl ptmpl_asg(t:symbol, b:symbol, v:symbol, asg:symbol, k:symbol, x:symbol)
+.decl ptmpl_hole(t:symbol, b:symbol, v:symbol, rest:symbol, before:symbol, key:symbol, after:symbol)
+.decl ptmpl_value(t:symbol, b:symbol, v:symbol, out:symbol)
+ptmpl_step(t, b, v, "", v, "") :- ptmpl_ok(t, b, v).
+ptmpl_hole(t, b, v, r, substr(r, 0, i), substr(r, i + 1, j), substr(r, i + j + 2, strlen(r) - i - j - 2)) :-
+  ptmpl_step(t, b, v, _, r, _), contains("{", r), i = range(0, strlen(r)), substr(r, i, 1) = "{",
+  !contains("{", substr(r, 0, i)), j = range(0, strlen(r) - i - 1), substr(r, i + j + 1, 1) = "}",
+  !contains("}", substr(r, i + 1, j)).
+// k's first hole in the row binds it (one value per expanded row); later
+// holes of k reuse that value from asg, an injective encoding of the choices.
+ptmpl_step(t, b, v, cat(d, pre, x), post, asg2) :- ptmpl_step(t, b, v, d, r, asg), ptmpl_hole(t, b, v, r, pre, k, post),
+  !contains(cat("{", k, "}"), substr(v, 0, strlen(v) - strlen(r))), tmpl_bind(t, k, x), asg2 = cat(asg, to_string(strlen(k)), ":", k, to_string(strlen(x)), ":", x).
+ptmpl_asg(t, b, v, asg2, k, x) :- ptmpl_step(t, b, v, _, r, asg), ptmpl_hole(t, b, v, r, _, k, _),
+  !contains(cat("{", k, "}"), substr(v, 0, strlen(v) - strlen(r))), tmpl_bind(t, k, x), asg2 = cat(asg, to_string(strlen(k)), ":", k, to_string(strlen(x)), ":", x).
+ptmpl_asg(t, b, v, asg2, k2, x2) :- ptmpl_step(t, b, v, _, r, asg), ptmpl_hole(t, b, v, r, _, k, _),
+  !contains(cat("{", k, "}"), substr(v, 0, strlen(v) - strlen(r))), tmpl_bind(t, k, x), asg2 = cat(asg, to_string(strlen(k)), ":", k, to_string(strlen(x)), ":", x), ptmpl_asg(t, b, v, asg, k2, x2).
+ptmpl_step(t, b, v, cat(d, pre, x), post, asg) :- ptmpl_step(t, b, v, d, r, asg), ptmpl_hole(t, b, v, r, pre, k, post),
+  contains(cat("{", k, "}"), substr(v, 0, strlen(v) - strlen(r))), ptmpl_asg(t, b, v, asg, k, x).
+ptmpl_value(t, b, v, cat(d, r)) :- ptmpl_step(t, b, v, d, r, _), !contains("{", r).
+// Core's rows. A kind, a version and a linkage are copied as stated.
+tmpl_want(b, d) :- target_template(b), dep(b, d, _).
+tmpl_want(b, d) :- target_template(b), dep_when(b, d, _, _).
+ptmpl_want(b, v) :- target_template(b), prop(b, _, v, _).
+ptmpl_want(b, v) :- target_template(b), prop_when(b, _, v, _, _).
+tmpl_want(b, m) :- target_template(b), runtime_dep(b, m, _).
+tmpl_want(b, m) :- target_template(b), runtime_dep_when(b, m, _, _).
+tmpl_want(b, m) :- target_template(b), runtime_dep_optional(b, m, _).
+tmpl_want(b, m) :- target_template(b), runtime_dep_optional_when(b, m, _, _).
+dep(t, x, vis) :- instance_of(t, b), dep(b, d, vis), tmpl_value(t, b, d, x).
+dep_when(t, x, vis, n) :- instance_of(t, b), dep_when(b, d, vis, n), tmpl_value(t, b, d, x).
+prop(t, k, x, vis) :- instance_of(t, b), prop(b, k, v, vis), ptmpl_value(t, b, v, x).
+prop_when(t, k, x, vis, n) :- instance_of(t, b), prop_when(b, k, v, vis, n), ptmpl_value(t, b, v, x).
+runtime_dep(t, x, p) :- instance_of(t, b), runtime_dep(b, m, p), tmpl_value(t, b, m, x).
+runtime_dep_when(t, x, p, n) :- instance_of(t, b), runtime_dep_when(b, m, p, n), tmpl_value(t, b, m, x).
+runtime_dep_optional(t, x, p) :- instance_of(t, b), runtime_dep_optional(b, m, p), tmpl_value(t, b, m, x).
+runtime_dep_optional_when(t, x, p, n) :- instance_of(t, b), runtime_dep_optional_when(b, m, p, n), tmpl_value(t, b, m, x).
+
+// ==== the needed closure (over concrete configurations) ====
+.decl split_request(t:symbol, u:Cfg)
+.decl needed(t:symbol, c:Cfg)
+.decl eff_dep(t:symbol, c:Cfg, d:symbol, vis:symbol)
+needed(t, c) :- request(t, n), config_active(n), decl_cfg(n, c), config(c).
+needed(t, c) :- request(t, n), config_active(n), decl_cfg(n, u), config_slice(u, c).
+split_request(t, u) :- request(t, n), config_active(n), decl_cfg(n, u), mconfig(u).
+// eff_ref: the edges as written; eff_dep: resolved to target ids (below).
+.decl eff_ref(t:symbol, c:Cfg, d:symbol, vis:symbol)
+eff_ref(t, c, d, v) :- needed(t, c), dep(t, d, v).
+eff_ref(t, c, d, v) :- needed(t, c), dep_when(t, d, v, n), cond_holds(c, n).
+eff_dep(t, c, id, v) :- eff_ref(t, c, d, v), dep_resolves(t, d, id), !linkage_split(id, c).
+// A library that c builds both ways has two build instances (L3): the edge
+// goes to the one edge_instance names.
+.decl linkage_split(t:symbol, c:Cfg)                                     // L3
+.decl edge_instance(t:symbol, c:Cfg, ref:symbol, id:symbol, inst:symbol)  // L3
+eff_dep(t, c, i, v) :- eff_ref(t, c, d, v), dep_resolves(t, d, id), linkage_split(id, c), edge_instance(t, c, d, id, i).
+needed(d, c) :- eff_dep(_, c, d, _).
+// A run-time dependency is built in t's configuration (not the exec one,
+// unlike a tool's `load`), and is not an edge: nothing propagates along it.
+// eff_runtime_edge carries the strength ("required" | "optional"); the
+// strength changes what an install and an export do, never the build tree,
+// so eff_runtime_dep is the edge whichever it is.
+.decl eff_runtime_ref(t:symbol, c:Cfg, m:symbol, place:symbol, strength:symbol)
+.decl eff_runtime_edge(t:symbol, c:Cfg, m:symbol, place:symbol, strength:symbol)
+.decl eff_runtime_dep(t:symbol, c:Cfg, m:symbol, place:symbol)
+eff_runtime_ref(t, c, m, p, "required") :- needed(t, c), runtime_dep(t, m, p).
+eff_runtime_ref(t, c, m, p, "required") :- needed(t, c), runtime_dep_when(t, m, p, n), cond_holds(c, n).
+eff_runtime_ref(t, c, m, p, "optional") :- needed(t, c), runtime_dep_optional(t, m, p).
+eff_runtime_ref(t, c, m, p, "optional") :- needed(t, c), runtime_dep_optional_when(t, m, p, n), cond_holds(c, n).
+eff_runtime_edge(t, c, id, p, s) :- eff_runtime_ref(t, c, m, p, s), dep_resolves(t, m, id).
+eff_runtime_dep(t, c, id, p) :- eff_runtime_edge(t, c, id, p, _).
+needed(m, c) :- eff_runtime_dep(_, c, m, _).
+needed(g, e) :- tool_dep(_, c, g), exec_config(c, e).
+// A target whose option gates all fail may not be built as another's
+// dependency either: the user's options conflict with what needs it.
+error("target is needed although its options disable it", t) :-
+  needed(t, _), request_gated(t), !request_open(t), !request(t, _).
+
+.decl declared(n:symbol)
+declared(n) :- config_decl(n, _).
+error("unknown config", n) :- request(_, n), !declared(n).
+// Packages name their dependencies; a binding source (a package manager's
+// facts, an importer, the level above) defines them. A needed name that
+// nothing defines is an error, never a silent omission.
+error("unknown target", t) :- request(t, _), !target(t).
+error_at("unresolved dependency", cat("dependency ", d, " of ", t, " has no definition"), t, c) :-
+  eff_ref(t, c, d, _), !dep_resolved(t, d), !defined(d).
+error_at("ambiguous dependency", cat("dependency ", d, " of ", t, " is ", a, " or ", b, " (qualify it)"), t, c) :-
+  eff_ref(t, c, d, _), !has_own(t, d), name_candidate(d, a), name_candidate(d, b), a < b.
+error_at("unresolved dependency", cat("run-time dependency ", d, " of ", t, " has no definition"), t, c) :-
+  eff_runtime_ref(t, c, d, _, _), !dep_resolved(t, d), !defined(d).
+error_at("ambiguous dependency", cat("run-time dependency ", d, " of ", t, " is ", a, " or ", b, " (qualify it)"), t, c) :-
+  eff_runtime_ref(t, c, d, _, _), !has_own(t, d), name_candidate(d, a), name_candidate(d, b), a < b.
+error_at("unresolved dependency", cat("tool ", r, " of ", t, " has no definition"), t, c) :-
+  tool_ref(t, c, _, r, _), !tool_resolved(t, r), !defined(r).
+
+// ==== target ids and name resolution ====
+// Project (spec) targets have bare ids. A package's targets are always
+// <q>::<name>, where q is the package's target namespace (manifest key
+// target_namespace, default: the package name); there are no bare exports.
+// The driver writes fact_key(origin, rel, key) for the first column of every
+// spec row (origin "(spec)") and package facts row (origin: the package),
+// and target_qualifier(pkg, q) for every loaded package.
+.decl fact_key(origin:symbol, rel:symbol, key:symbol)   // driver
+.decl target_qualifier(pkg:symbol, q:symbol)            // driver
+.decl target_origin(t:symbol, origin:symbol)
+target_origin(t, o) :- fact_key(o, "target", t).
+target_origin(t, o) :- fact_key(o, "imported", t).
+.decl id_scope(t:symbol, q:symbol, name:symbol)        // target id t is q::name
+id_scope(t, q, substr(t, strlen(q) + 2, strlen(t) - strlen(q) - 2)) :-
+  target_id(t), target_qualifier(_, q), strlen(t) > strlen(q) + 2, substr(t, 0, strlen(q) + 2) = cat(q, "::").
+.decl scoped(t:symbol)
+scoped(t) :- id_scope(t, _, _).
+error("package target outside its target namespace", cat(p, " defines ", t, "; name it ", q, "::", t)) :-
+  target_origin(t, p), target_qualifier(p, q), !id_scope(t, q, _).
+error("spec target in a package target namespace", cat(t, " (", q, ":: belongs to ", p, ")")) :-
+  target_origin(t, "(spec)"), id_scope(t, q, _), target_qualifier(p, q).
+error("target defined by two sources", cat(t, ": ", a, " and ", b)) :- target_origin(t, a), target_origin(t, b), a < b.
+
+// alias(from, to): the name `from` stands for the name `to`, e.g. an
+// importer's alias from a format-neutral name to a format's id. Open and accepted, so binding
+// sources state aliases as facts or rules. Every alias must lead to exactly
+// one target; cycles, dangling and ambiguous aliases are errors.
+.decl alias(from:symbol, to:symbol)
+.decl alias_reach(a:symbol, b:symbol)
+alias_reach(a, b) :- alias(a, b).
+alias_reach(a, c) :- alias_reach(a, b), alias(b, c).
+error("alias cycle", a) :- alias_reach(a, a).
+error("alias has no definition", cat(a, " -> ", b)) :- alias(a, b), !defined(b).
+error("ambiguous alias", cat(a, " is ", x, " or ", y)) :- alias(a, _), name_candidate(a, x), name_candidate(a, y), x < y.
+
+// name_candidate(n, id): the name n may denote target id: n itself, or,
+// following aliases, whatever the alias's target denotes. A bare name never
+// matches some package's q::n by suffix: that would be an implicit export,
+// and loading a package could then break a working reference. Bindings are
+// explicit aliases. Context-free; resolution below
+// adds the referencing scope.
+.decl name_candidate(n:symbol, id:symbol)
+name_candidate(t, t) :- target_id(t).
+name_candidate(n, t) :- alias(n, m), name_candidate(m, t).
+
+// A reference d written by target t (dep, dep_when) resolves with no choice.
+// Own names first, as lexical scoping: inside package q, a bare d means q::d
+// when that is a target id; in the project (t unscoped), d means the
+// project's own unscoped target d. This reads only the referencing scope's
+// own definitions, so loading other packages never changes it; it is the
+// load-time qualification a package author would otherwise write by hand
+// (the loader cannot rewrite values: it does not know which columns are
+// target ids). Otherwise d must have exactly one name_candidate (an exact
+// target id, or an explicit alias chain): none is "unresolved dependency",
+// several "ambiguous dependency". request is an exact id; tool references: end of file.
+.decl dep_ref(t:symbol, d:symbol)
+dep_ref(t, d) :- dep(t, d, _).
+dep_ref(t, d) :- dep_when(t, d, _, _).
+dep_ref(t, d) :- runtime_dep(t, d, _).
+dep_ref(t, d) :- runtime_dep_when(t, d, _, _).
+dep_ref(t, d) :- runtime_dep_optional(t, d, _).
+dep_ref(t, d) :- runtime_dep_optional_when(t, d, _, _).
+.decl own_ref(t:symbol, d:symbol, id:symbol)
+own_ref(t, d, cat(q, "::", d)) :- dep_ref(t, d), id_scope(t, q, _), target_id(cat(q, "::", d)).
+own_ref(t, d, d) :- dep_ref(t, d), !scoped(t), target_id(d), !scoped(d).
+.decl has_own(t:symbol, d:symbol)
+has_own(t, d) :- own_ref(t, d, _).
+.decl dep_resolves(t:symbol, d:symbol, id:symbol)
+dep_resolves(t, d, id) :- own_ref(t, d, id).
+dep_resolves(t, d, id) :- dep_ref(t, d), !has_own(t, d), name_candidate(d, id),
+  1 = count : { name_candidate(d, _) }.
+.decl dep_resolved(t:symbol, d:symbol)
+dep_resolved(t, d) :- dep_resolves(t, d, _).
+
+// ==== generic property propagation (usage requirements) ====
+.decl eff_prop(t:symbol, c:Cfg, key:symbol, value:symbol, vis:symbol)
+eff_prop(t, c, k, v, vis) :- needed(t, c), prop(t, k, v, vis).
+eff_prop(t, c, k, v, vis) :- needed(t, c), prop_when(t, k, v, vis, n), cond_holds(c, n).
+// prop_in(t, c, k, v, vis): an own property a layer derives per
+// configuration, for values that name the configuration (a configured
+// file's directory, gen/<config>/...). Rank 0 like prop.
+.decl prop_in(t:symbol, c:Cfg, key:symbol, value:symbol, vis:symbol)   // open
+eff_prop(t, c, k, v, vis) :- needed(t, c), prop_in(t, c, k, v, vis).
+
+.decl exported(vis:symbol)
+.decl used(vis:symbol)
+exported("public"). exported("interface").
+used("public"). used("private").
+
+.decl iface(t:symbol, c:Cfg, key:symbol, value:symbol)   // open
+iface(t, c, k, v) :- eff_prop(t, c, k, v, vis), exported(vis).
+// Dependency edges have the same visibilities: a public edge is used and
+// passed on, a private one only used, an interface one only passed on
+// (CMake's target_link_libraries(t INTERFACE d)).
+iface(t, c, k, v) :- eff_dep(t, c, d, vis), exported(vis), iface(d, c, k, v).
+error("unknown visibility", cat(t, " -> ", d, ": ", v)) :- dep(t, d, v), !exported(v), !used(v).
+error("unknown visibility", cat(t, " -> ", d, ": ", v)) :- dep_when(t, d, v, _), !exported(v), !used(v).
+
+.decl use_cand(t:symbol, c:Cfg, key:symbol, value:symbol, rank:number)
+use_cand(t, c, k, v, 0) :- eff_prop(t, c, k, v, vis), used(vis).
+use_cand(t, c, k, v, 1) :- eff_dep(t, c, d, vis), used(vis), iface(d, c, k, v).
+
+// Every property key declares its algebra (provided by the layer that owns it).
+.decl set_key(key:symbol)
+.decl lattice_rank(key:symbol, value:symbol, n:number)
+.decl lattice_key(key:symbol)
+lattice_key(k) :- lattice_rank(k, _, _).
+error("property key declares no algebra", k) :- prop(_, k, _, _), !set_key(k), !lattice_key(k).
+error("property key declares no algebra", k) :- prop_when(_, k, _, _, _), !set_key(k), !lattice_key(k).
+error("property key declares no algebra", k) :- prop_in(_, _, k, _, _), !set_key(k), !lattice_key(k).
+error("property key declares two algebras", k) :- set_key(k), lattice_key(k).
+error("value outside lattice", cat(k, "=", v)) :-
+  use_cand(_, _, k, v, _), lattice_key(k), !lattice_rank(k, v, _).
+
+.decl use(t:symbol, c:Cfg, key:symbol, value:symbol, rank:number)
+use(t, c, k, v, r) :- use_cand(t, c, k, v, _), set_key(k),
+  r = min r2 : { use_cand(t, c, k, v, r2) }.
+.decl use_join(t:symbol, c:Cfg, key:symbol, value:symbol)
+use_join(t, c, k, v) :- use_cand(t, c, k, v, _), lattice_key(k),
+  n = max m : { use_cand(t, c, k, v2, _), lattice_rank(k, v2, m) }, lattice_rank(k, v, n).
+
+// ==== generic ordered join ====
+// Linearize a set of items into one symbol, in a fact-declared total order.
+// A package instantiates it through open relations: it names a group
+// (prefix group ids with its namespace), the group's items, each item's
+// rank, and one separator; it reads joined(group, text). The fold is the
+// successor-via-min / recursive-suffix idiom. It is only defined when the
+// ranks are a total order on the items present, so ties, unranked items,
+// several ranks for one item, and missing or ambiguous separators are
+// errors, not lexical tie-breaks.
+.decl join_item(g:symbol, item:symbol)             // open
+.decl join_rank(g:symbol, item:symbol, pos:number) // open
+.decl join_sep(g:symbol, sep:symbol)               // open
+.decl joined(g:symbol, text:symbol)
+.decl join_pos(g:symbol, pos:number, item:symbol)
+join_pos(g, o, i) :- join_item(g, i), join_rank(g, i, o).
+.decl join_next(g:symbol, pos:number, next:number)
+join_next(g, o, n) :- join_pos(g, o, _), n = min oo : { join_pos(g, oo, _), oo > o }.
+// The fold only runs on a well-formed group: one rank per item, no tie, every
+// item ranked, one separator where two or more positions need one. An
+// ill-formed group would otherwise build one string per choice at every
+// rank (2^n suffixes) before the error below reports it. For a well-formed
+// group there is one suffix per position, no longer than the sum of its
+// items' lengths plus one separator per gap.
+.decl join_bad(g:symbol)
+join_bad(g) :- join_pos(g, o, a), join_pos(g, o, b), a < b.
+join_bad(g) :- join_pos(g, a, i), join_pos(g, b, i), a < b.
+join_bad(g) :- join_item(g, i), !join_ranked(g, i).
+join_bad(g) :- join_sep(g, a), join_sep(g, b), a < b.
+join_bad(g) :- join_next(g, a, b), !join_has_sep(g), !join_part_group(g).
+.decl join_suffix(g:symbol, pos:number, text:symbol)
+join_suffix(g, o, i) :- join_pos(g, o, i), !join_next(g, o, _), !join_bad(g).
+// The recursive rule takes the item at the rank, the next rank and the
+// separator as functions of the group (join_at, join_next, join_sep_one).
+.decl join_at(g:symbol, pos:number, item:symbol)
+join_at(g, o, i) :- join_pos(g, o, _), m = min ord(i0) : { join_pos(g, o, i0) }, join_pos(g, o, i), ord(i) = m.
+.decl join_sep_one(g:symbol, sep:symbol)
+join_sep_one(g, s) :- join_sep_eff(g, _), m = min ord(s0) : { join_sep_eff(g, s0) }, join_sep_eff(g, s), ord(s) = m.
+join_suffix(g, o, cat(i, s, rest)) :-
+  join_at(g, o, i), join_next(g, o, n), n > o, !join_bad(g), join_sep_one(g, s), join_suffix(g, n, rest).
+joined(g, text) :- join_suffix(g, o, text), o = min oo : { join_pos(g, oo, _) }.
+.decl join_ranked(g:symbol, item:symbol)
+join_ranked(g, i) :- join_pos(g, _, i).
+error("ordered join is not total", cat(g, ": ", a, " / ", b)) :- join_pos(g, o, a), join_pos(g, o, b), a < b.
+error("ordered join item has no rank", cat(g, ": ", i)) :- join_item(g, i), !join_ranked(g, i).
+error("ordered join item has two ranks", cat(g, ": ", i)) :-
+  join_pos(g, a, i), join_pos(g, b, i), a < b.
+.decl join_has_sep(g:symbol)
+join_has_sep(g) :- join_sep(g, _).
+// join_part(g, pos, item) states an item and its rank in one row, and its
+// group's separator is "" unless join_sep states one.
+.decl join_part(g:symbol, pos:number, item:symbol)   // open
+join_item(g, i), join_rank(g, i, o) :- join_part(g, o, i).
+.decl join_part_group(g:symbol)
+join_part_group(g) :- join_part(g, _, _).
+.decl join_sep_eff(g:symbol, sep:symbol)
+join_sep_eff(g, s) :- join_sep(g, s).
+join_sep_eff(g, "") :- join_part_group(g), !join_has_sep(g).
+error("ordered join has no separator", g) :-
+  join_pos(g, a, _), join_pos(g, b, _), a < b, !join_has_sep(g), !join_part_group(g).
+error("ordered join has two separators", g) :- join_sep(g, a), join_sep(g, b), a < b.
+
+// ==== artifact coverage ====
+// An artifact (a path) covers a set of platforms: a universal2 fat archive
+// covers {x86_64-macos, arm64-macos}, an arm64-only dylib {arm64-macos}.
+// Producers state coverage (a build layer for what it builds, a probe or a
+// binding source for prebuilt files); consumers state what they need: t in
+// configuration c consumes path, so path must cover every platform of c
+// (a multi-platform configuration needs all of its slices). Both relations
+// are platform notions, not language ones, hence core.
+.decl artifact_covers(path:symbol, p:symbol)            // open; also spec/package facts
+.decl coverage_need(t:symbol, c:Cfg, path:symbol)       // open
+.decl coverage_platform(c:Cfg, p:symbol)
+coverage_platform(c, p) :- config_platform(c, p).
+coverage_platform(u, p) :- config_slice(u, c), config_platform(c, p).
+error_at("artifact lacks platform coverage", cat(t, " in ", n, " needs ", path, " on ", p), t, c) :-
+  coverage_need(t, c, path), coverage_platform(c, p), !artifact_covers(path, p), cfg_name(c, n).
+
+// ==== error attribution (partial emission) ====
+// error_at(kind, detail, t, c): the error breaks target t in configuration c.
+// A broken target breaks every target that needs it in the same
+// configuration (deps), through the exec transition (tools) and a
+// multi-platform request through any slice. target_action(t, c, a) names the
+// actions a layer builds for t in c; they fail, and L0 fails their consumers.
+// Actions a layer does not attribute are affected only through L0's action
+// graph (a failing input).
+.decl error_at(kind:symbol, detail:symbol, t:symbol, c:Cfg)   // open
+.decl target_action(t:symbol, c:Cfg, a:symbol)                // open
+.decl target_broken(t:symbol, c:Cfg, kind:symbol, detail:symbol)
+error(k, d) :- error_at(k, d, _, _).
+error_attributed(k, d) :- error_at(k, d, _, _).
+target_broken(t, c, k, d) :- error_at(k, d, t, c).
+target_broken(t, c, k, d) :- discovery_complete(), eff_dep(t, c, x, _), target_broken(x, c, k, d).
+target_broken(t, c, k, d) :- discovery_complete(), tool_dep(t, c, g), exec_config(c, e), target_broken(g, e, k, d).
+target_broken(t, u, k, d) :- discovery_complete(), split_request(t, u), config_slice(u, c), target_broken(t, c, k, d).
+action_error(a, k, d) :- target_broken(t, c, k, d), target_action(t, c, a).
+
+// ==== tools: the exec configuration is inferred from use ====
+// A command names what it runs by a *target
+// reference*, never by a path: action_run(a, rank, prefix, ref, use) puts
+// prefix ++ <the path of ref> at argv position rank. use says how the
+// command uses it: "run" (the program, or an argument the program executes)
+// or "load" (a plugin the program loads). Either way the artifact must work
+// on the machine running the build, so the owner t of a in configuration c
+// (target_action) runs ref's target g in c's exec configuration, which
+// makes g needed there: tool_dep(t, c, g). Nothing states tool_dep, and
+// nothing says "host" or "exec": a target is built for exec exactly when
+// some needed command uses it. Toolchain selection (L2) then does the rest:
+// g's toolchain must run on the exec platform and target it.
+//
+// Stratification: the reference is a declaration. tool_dep reads it and
+// target_action, never a path, and g's path (run_artifact, L3) is filled in
+// only once g's exec instance is needed. Resolution below negates only
+// declaration-level relations (target ids, their scopes, aliases), never the
+// needed closure; so target_action, which now feeds needed, must not be
+// derived through negation of anything that depends on needed.
+//
+// A reference resolves like a dep: the owner's own name first
+// (inside package q, ref means q::ref when that is a target id; in the
+// project, the project's own unscoped target ref), otherwise the unique
+// name_candidate (an exact id or an alias chain).
+.decl action_run(a:symbol, rank:number, prefix:symbol, ref:symbol, use:symbol)   // open
+.decl run_artifact(t:symbol, c:Cfg, path:symbol)   // open: the file that runs or loads (L3)
+.decl tool_ref(t:symbol, c:Cfg, a:symbol, ref:symbol, use:symbol)
+tool_ref(t, c, a, r, u) :- action_run(a, _, _, r, u), target_action(t, c, a).
+.decl scope_name(q:symbol, n:symbol)
+scope_name(q, n) :- id_scope(_, q, n).
+.decl project_name(n:symbol)
+project_name(n) :- target_id(n), !scoped(n).
+.decl tool_resolves(t:symbol, ref:symbol, id:symbol)
+tool_resolves(t, r, cat(q, "::", r)) :- tool_ref(t, _, _, r, _), id_scope(t, q, _), scope_name(q, r).
+tool_resolves(t, r, r) :- tool_ref(t, _, _, r, _), !scoped(t), project_name(r).
+tool_resolves(t, r, id) :- tool_ref(t, _, _, r, _), id_scope(t, q, _), !scope_name(q, r),
+  name_candidate(r, id), 1 = count : { name_candidate(r, _) }.
+tool_resolves(t, r, id) :- tool_ref(t, _, _, r, _), !scoped(t), !project_name(r),
+  name_candidate(r, id), 1 = count : { name_candidate(r, _) }.
+.decl tool_resolved(t:symbol, ref:symbol)
+tool_resolved(t, r) :- tool_resolves(t, r, _).
+tool_dep(t, c, g) :- tool_ref(t, c, _, r, _), tool_resolves(t, r, g).
+
+// The path, once the exec instance exists; the program is an implicit input
+// (not data: nothing reads it as $in).
+action_arg(a, k, pre, p), action_in(a, p, "implicit") :- action_run(a, k, pre, r, _),
+  target_action(t, c, a), tool_resolves(t, r, g), exec_config(c, e), run_artifact(g, e, p).
+
+// A list of references in one argv word (e.g. a comma-separated plugin
+// list, -p a.so,b.so): action_run_list(a, rank, prefix, sep) declares the
+// word, action_run_item(a, rank, i, ref, use) its items in order of i. Each
+// item is a tool reference like action_run's (same tool_dep, same implicit
+// input); L0's action_arg_join/action_arg_part spell the word, each path a
+// part.
+.decl action_run_list(a:symbol, rank:number, prefix:symbol, sep:symbol)   // open
+.decl action_run_item(a:symbol, rank:number, i:number, ref:symbol, use:symbol)   // open
+tool_ref(t, c, a, r, u) :- action_run_item(a, _, _, r, u), target_action(t, c, a).
+action_arg_join(a, k, pre, sep) :- action_run_list(a, k, pre, sep).
+action_arg_part(a, k, i, p), action_in(a, p, "implicit") :- action_run_item(a, k, i, r, _),
+  target_action(t, c, a), tool_resolves(t, r, g), exec_config(c, e), run_artifact(g, e, p).
+error("tool reference list item without its list (add action_run_list)", cat(a, " ", r)) :-
+  action_run_item(a, k, _, r, _), !action_run_list(a, k, _, _).
+
+.decl run_use(u:symbol)
+run_use("run"). run_use("load").
+error("tool reference with an unknown use (run | load)", cat(a, " ", r, " ", u)) :-
+  action_run(a, _, _, r, u), !run_use(u).
+error("tool reference with an unknown use (run | load)", cat(a, " ", r, " ", u)) :-
+  action_run_item(a, _, _, r, u), !run_use(u).
+.decl owned_action(a:symbol)
+owned_action(a) :- target_action(_, _, a).
+error("tool reference in an action no target owns (add target_action)", cat(a, " runs ", r)) :-
+  action_run(a, _, _, r, _), !owned_action(a).
+error("tool reference in an action no target owns (add target_action)", cat(a, " runs ", r)) :-
+  action_run_item(a, _, _, r, _), !owned_action(a).
+error_at("ambiguous dependency", cat("tool ", r, " of ", t, " is ", x, " or ", y, " (qualify it)"), t, c) :-
+  tool_ref(t, c, _, r, _), !tool_resolved(t, r), name_candidate(r, x), name_candidate(r, y), x < y.
+.decl has_run_artifact(g:symbol, e:Cfg)
+has_run_artifact(g, e) :- run_artifact(g, e, _).
+error_at("tool has nothing to run", cat(g, " in ", n, " (run by ", t, ")"), t, c) :-
+  tool_dep(t, c, g), exec_config(c, e), !has_run_artifact(g, e), cfg_name(e, n).
+// The exec inference check: an action's program
+// (argv[0]) that this build makes must be made for the build machine. A
+// reference (action_run) is, by construction; a rule that spells the path
+// in another configuration (Bazel's tool in `srcs`, not `tools`) is not,
+// and would run a foreign binary or one an emulator hides. A universal
+// build that includes the build machine's platform runs. The error fails
+// the action, not the configuration.
+action_error(a, "action runs a program built for another platform",
+    cat(a, ": ", p, " (", g, " in ", n, "; the build machine is ", h, "; name it with action_run)")) :-
+  action_arg(a, 0, _, p), run_artifact(g, c, p), config_platform(c, q), host_platform(h), q != h,
+  !platform_slice(q, h), cfg_name(c, n).
+
+// ==== tests ====
+// test(name, program): after the build, run the program's run artifact, in
+// every configuration the program is needed in. A test's settings are
+// typed facts, never a shell line: literal arguments, arguments that name a
+// target's run artifact (CMake's $<TARGET_FILE:…>), environment, labels,
+// pass/fail/skip regexes (ctest's semantics), and run-alone. Program and
+// references are exact target ids (like request). A reference resolves in
+// the test's own configuration, not exec: the test runs the product, and a
+// file it names (a plugin it loads) belongs to that product, so it is
+// needed there too. L0's test_case* relations are what the driver writes
+// (tests.json) and `buildlog test` runs. A configuration whose platform is
+// not its exec platform (a cross build) cannot run on the build machine:
+// its tests are listed and skipped with the reason, as are the tests of a
+// broken program.
+.decl test(name:symbol, program:symbol)                               // open
+.decl test_arg(name:symbol, i:number, value:symbol)                   // open: a literal
+.decl test_arg_ref(name:symbol, i:number, ref:symbol)                 // open: a target's run artifact
+.decl test_env(name:symbol, key:symbol, value:symbol)                 // open
+.decl test_config_env(name:symbol, c:Cfg, key:symbol, value:symbol)   // open (layers)
+// ctest's ENVIRONMENT_MODIFICATION path_list_prepend: entry i (in order)
+// of the path list that is prepended to the variable key. A rooted path
+// (src:, out:) is made absolute by the runner; the files such a path holds
+// are not implied, so a layer states the ones the test needs built
+// (test_config_need: CMake's DEPENDS/fixtures).
+.decl test_env_path(name:symbol, key:symbol, i:number, path:symbol)   // open
+.decl test_config_env_path(name:symbol, c:Cfg, key:symbol, i:number, path:symbol)   // open (layers)
+.decl test_config_need(name:symbol, c:Cfg, path:symbol)               // open (layers)
+// ctest's WORKING_DIRECTORY: a rooted directory (src: or out:) in place of
+// the case's own directory under test/<config>/. At most one per test.
+.decl test_cwd(name:symbol, dir:symbol)                               // open
+.decl test_label(name:symbol, label:symbol)                           // open
+.decl test_regex(name:symbol, kind:symbol, re:symbol)                 // open: pass | fail | skip
+.decl test_serial(name:symbol)                                        // open: runs alone
+.decl test_when(name:symbol, cond:symbol)                             // open
+// A test is a request for its program (bug B1: a test whose program nothing
+// else needed used to vanish silently). Declaring a test states that the
+// program is built and run, so it is derived rather than asked for twice,
+// and `why needed(program, c)` cites the test row. It holds in every active
+// configuration (each slice of a multi-platform one), narrowed by
+// test_when(name, cond) like dep_when: an option-gated test is a test whose
+// condition fails, not a request the author must remember to withhold. A
+// test runs only where it applies, even if its program is needed there for
+// another reason.
+.decl has_test_when(n:symbol)
+has_test_when(n) :- test_when(n, _).
+.decl test_applies(name:symbol, c:Cfg)
+test_applies(n, c) :- test(n, _), config(c), !has_test_when(n).
+test_applies(n, c) :- test_when(n, k), cond_holds(c, k).
+needed(t, c) :- test(n, t), config_active(d), decl_cfg(d, c), config(c), test_applies(n, c).
+needed(t, c) :- test(n, t), config_active(d), decl_cfg(d, u), config_slice(u, c), test_applies(n, c).
+.decl test_in(name:symbol, c:Cfg)
+test_in(n, c) :- test(n, t), needed(t, c), test_applies(n, c).
+error("unknown condition", n) :- test_when(_, n), !known_cond(n).
+needed(g, c) :- test_in(n, c), test_arg_ref(n, _, g), target_id(g).
+
+.decl has_test_cwd(n:symbol)
+has_test_cwd(n) :- test_cwd(n, _).
+test_case(n, cn) :- test_in(n, c), cfg_name(c, cn).
+test_case_cwd(n, cn, cat("out:test/", cn, "/", n)) :- test_in(n, c), cfg_name(c, cn), !has_test_cwd(n).
+test_case_cwd(n, cn, d) :- test_in(n, c), test_cwd(n, d), cfg_name(c, cn).
+error("test has two working directories", n) :- test_cwd(n, a), test_cwd(n, b), a < b.
+error("test working directory is not a rooted path", cat(n, ": ", d)) :-
+  test_cwd(n, d), !match("(src|out):.*", d).
+test_case_arg(n, cn, 0, p), test_case_needs(n, cn, p) :-
+  test_in(n, c), test(n, t), run_artifact(t, c, p), cfg_name(c, cn).
+test_case_arg(n, cn, i + 1, v) :- test_in(n, c), test_arg(n, i, v), cfg_name(c, cn).
+test_case_arg(n, cn, i + 1, p), test_case_needs(n, cn, p) :-
+  test_in(n, c), test_arg_ref(n, i, g), run_artifact(g, c, p), cfg_name(c, cn).
+test_case_env(n, cn, k, v) :- test_in(n, c), test_env(n, k, v), cfg_name(c, cn).
+test_case_env(n, cn, k, v) :- test_in(n, c), test_config_env(n, c, k, v), cfg_name(c, cn).
+test_case_env_path(n, cn, k, i, p) :- test_in(n, c), test_env_path(n, k, i, p), cfg_name(c, cn).
+test_case_env_path(n, cn, k, i, p) :- test_in(n, c), test_config_env_path(n, c, k, i, p), cfg_name(c, cn).
+test_case_needs(n, cn, p) :- test_in(n, c), test_config_need(n, c, p), cfg_name(c, cn).
+test_case_label(n, cn, l) :- test_in(n, c), test_label(n, l), cfg_name(c, cn).
+test_case_regex(n, cn, k, r) :- test_in(n, c), test_regex(n, k, r), cfg_name(c, cn).
+test_case_serial(n, cn) :- test_in(n, c), test_serial(n), cfg_name(c, cn).
+test_case_skip(n, cn, cat("built for ", p, "; the build machine is ", q)) :-
+  test_in(n, c), exec_config(c, e), config_platform(c, p), config_platform(e, q), p != q,
+  !platform_runs_on(p, q, _), cfg_name(c, cn).
+// platform_runs_on(p, host, via): the user states
+// that the build machine host runs p's programs, through the command prefix
+// via (an emulator: "qemu-aarch64 -L /usr/aarch64-linux-gnu") or directly
+// (via ""; Rosetta runs a thin x86_64 program). Only `buildlog test` reads
+// it: a cross configuration's tests then run, with via before argv. It is
+// never inferred (an emulator that happens to be installed says nothing
+// about fidelity), and it does not excuse a build action that runs a
+// foreign program (the exec check above).
+.decl platform_runs_on(p:symbol, host:symbol, via:symbol)   // user
+test_case_launcher(n, cn, v) :-
+  test_in(n, c), exec_config(c, e), config_platform(c, p), config_platform(e, q), p != q,
+  platform_runs_on(p, q, v), v != "", cfg_name(c, cn).
+error("platform_runs_on a platform itself", p) :- platform_runs_on(p, p, _).
+error("platform_runs_on an unknown platform", p) :- platform_runs_on(p, _, _), !platform(p, _).
+error("platform_runs_on an unknown platform", h) :- platform_runs_on(_, h, _), !platform(h, _).
+error("platform_runs_on twice", cat(p, " on ", h, ": '", a, "', '", b, "'")) :-
+  platform_runs_on(p, h, a), platform_runs_on(p, h, b), a < b.
+test_case_skip(n, cn, cat("its program is broken: ", k)) :-
+  test_in(n, c), test(n, t), target_broken(t, c, k, _), cfg_name(c, cn).
+
+.decl has_test(n:symbol)
+has_test(n) :- test(n, _).
+error("test defined twice", cat(n, ": ", a, ", ", b)) :- test(n, a), test(n, b), a < b.
+error("unknown target", t) :- test(_, t), !target_id(t).
+error("unknown target", cat(g, " (argument of test ", n, ")")) :- test_arg_ref(n, _, g), !target_id(g).
+error("test setting for an unknown test", n) :- test_arg(n, _, _), !has_test(n).
+error("test setting for an unknown test", n) :- test_arg_ref(n, _, _), !has_test(n).
+error("test setting for an unknown test", n) :- test_env(n, _, _), !has_test(n).
+error("test setting for an unknown test", n) :- test_env_path(n, _, _, _), !has_test(n).
+error("test setting for an unknown test", n) :- test_config_env_path(n, _, _, _, _), !has_test(n).
+error("test setting for an unknown test", n) :- test_config_need(n, _, _), !has_test(n).
+error("test setting for an unknown test", n) :- test_cwd(n, _), !has_test(n).
+error("test setting for an unknown test", n) :- test_label(n, _), !has_test(n).
+error("test setting for an unknown test", n) :- test_regex(n, _, _), !has_test(n).
+error("test setting for an unknown test", n) :- test_serial(n), !has_test(n).
+error("two test arguments at one position", cat(n, " ", to_string(i))) :-
+  test_arg(n, i, a), test_arg(n, i, b), a < b.
+error("two test arguments at one position", cat(n, " ", to_string(i))) :-
+  test_arg_ref(n, i, a), test_arg_ref(n, i, b), a < b.
+error("two test arguments at one position", cat(n, " ", to_string(i))) :-
+  test_arg(n, i, _), test_arg_ref(n, i, _).
+error("negative test argument position", cat(n, " ", to_string(i))) :- test_arg(n, i, _), i < 0.
+error("negative test argument position", cat(n, " ", to_string(i))) :- test_arg_ref(n, i, _), i < 0.
+.decl test_regex_kind(k:symbol)
+test_regex_kind("pass"). test_regex_kind("fail"). test_regex_kind("skip").
+error("unknown test regex kind (pass | fail | skip)", cat(n, " ", k)) :-
+  test_regex(n, k, _), !test_regex_kind(k).
+error("test environment variable set twice", cat(n, " [", cn, "] ", k, "=", a, " | ", b)) :-
+  test_case_env(n, cn, k, a), test_case_env(n, cn, k, b), a < b.
+error("test has nothing to run", cat(n, ": ", t, " in ", cn)) :-
+  test_in(n, c), test(n, t), !has_run_artifact(t, c), cfg_name(c, cn).
+error("test has nothing to run", cat(n, ": argument ", g, " in ", cn)) :-
+  test_in(n, c), test_arg_ref(n, _, g), !has_run_artifact(g, c), cfg_name(c, cn).

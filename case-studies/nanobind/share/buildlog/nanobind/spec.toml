@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Static target facts from nanobind-config.cmake. The per-configuration
+# source location and optimization/link flags remain in L5_nanobind.dl.
+[target."nanobind::nanobind-static"]
+kind = "library"
+linkage = { require = "static", why = "compiled into each extension module (nanobind_build_library(nanobind-static)); a shared build is the separate nanobind target" }
+native_output_name = "nanobind-static"
+deps = { public = ["Python::Headers"], private = ["nanobind::robin_map"] }
+public = { "cxx.std" = "17" }
+private = { "cc.define" = "NB_BUILD", "cc.pic" = "on", "cc.compile_flag" = [
+  "-fno-strict-aliasing",
+  "-fvisibility=hidden"
+] }
+
+[target."nanobind::robin_map"]

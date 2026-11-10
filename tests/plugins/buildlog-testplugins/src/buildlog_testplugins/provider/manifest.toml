@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# A plugin that registers a package provider ("toy") for core discovery,
+# with a rule package that loads only when a find first reaches it.
+name = "test-provider"
+version = "0.1.0"
+rank = 2
+layers = []
+
+[[provider]]
+name = "toy"
+entry = "buildlog_testplugins.toy:TOY"
+rules = "toy_rules"

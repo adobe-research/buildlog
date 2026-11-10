@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The Linux counterpart of homebrew-arm64.toml: where the installed Halide's CMake
+# exports are. The NDK toolchain targets only the Android platforms and the host
+# compiler (BUILDLOG_LINUX_TOOLCHAINS) only the host's, so nothing needs a pin.
+# The NDK's x86_64 tools run through the container's binfmt emulation (linux/README.md).
+package_file = [
+  ["cmake", "${HALIDE_PREFIX}/lib/cmake/HalideCompiler/HalideCompiler-shared-targets.cmake"]
+]
+package_system_includes = [["cmake"]]

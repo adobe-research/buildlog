@@ -1,0 +1,13 @@
+Checking for function "memmove" : YES 
+Checking for function "memset" : YES 
+Checking for function "strdup" : YES 
+Has header "stdlib.h" : YES 
+Has header "string.h" : YES 
+Has header "memory.h" : YES 
+Has header "strings.h" : YES 
+Has header "sys/times.h" : YES 
+Has header "strings.h" : YES
+Has header "stdlib.h" : YES
+Has header "string.h" : YES
+Has header "strings.h" : YES
+Checking for size of "int" : 4 

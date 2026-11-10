@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+config_default = [["release"]]
+# CMake builds one tree: the host tools and generators of a Debug or ASan
+# build are Debug or ASan too. Match it (core's default builds tools
+# release, uninstrumented); an open policy question (notes.md, M3 phase 7).
+exec_setting = [["native.opt", "inherit"], ["native.sanitize", "inherit"]]
+# The toolchain per (language, exec platform, target platform): everything
+# runs on arm64-macos; products target it, or x86_64-macos (the x86_64
+# configuration and universal2's second slice).
+toolchain_pin = [
+  ["c", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["cxx", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["c", "arm64-macos", "x86_64-macos", "apple-clang"],
+  ["cxx", "arm64-macos", "x86_64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "x86_64-macos", "apple-clang"],
+]
+
+package_linkage = [["LLVM", "shared"]]
+# Homebrew installs Release builds only (IMPORTED_LOCATION_RELEASE); a Debug
+# build uses them, as CMake's fallback to the first imported configuration
+# does, but stated (CMAKE_MAP_IMPORTED_CONFIG_DEBUG=Release).
+package_config_map = [["debug", "release"]]
+
+# Other dependencies, from their generated CMake export files. Imported
+# include dirs are system includes, as CMake treats them.
+package_file = [
+  [
+    "cmake",
+    "${HALIDE_SRC}/dependencies/spirv/share/cmake/SPIRV-Headers/SPIRV-HeadersTargets.cmake"
+  ],
+  ["cmake", "${HOMEBREW}/lib/cmake/flatbuffers/FlatBuffersTargets.cmake"],
+  ["cmake", "${HOMEBREW}/lib/cmake/flatbuffers/FlatcTargets.cmake"],
+  ["cmake", "${HOMEBREW}/lib/cmake/wabt/wabt-targets.cmake"],
+]
+package_system_includes = [["cmake"], ["pc"]]
+# wabt::wabt links OpenSSL::Crypto. Homebrew's OpenSSLConfig.cmake is
+# hand-written and conditional (no generated export file): bind the name to
+# the pkg-config module instead.
+alias = [["OpenSSL::Crypto", "pc:libcrypto"]]
+package_search_dir = [
+  ["buildlog", "${REPO_ROOT}/case-studies/halide/llvm-install/homebrew-llvm-22/share/buildlog"],
+  ["buildlog", "${REPO_ROOT}/case-studies/halide/llvm-install/homebrew-lld-22/share/buildlog"],
+  ["pc", "${HOMEBREW}/lib/pkgconfig"],
+  # PNG/JPEG pkg-config metadata for the sampled ImageIO tests.
+  ["pc", "${HOMEBREW}/Library/Homebrew/os/mac/pkgconfig/26"],
+]

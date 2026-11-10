@@ -1,0 +1,83 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+[project]
+name = "buildlog"
+version = "0.1.0"
+description = "Research prototype logic meta build system using Souffle and Ninja"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+dependencies = ["packaging>=24"]
+
+[project.scripts]
+buildlog = "buildlog.cli:main"
+
+[dependency-groups]
+dev = [
+  "buildlog-cpp",
+  "buildlog-cuda",
+  "buildlog-emsdk",
+  "buildlog-ndk",
+  "buildlog-python",
+  "buildlog-testplugins",
+  "pre-commit>=4.6.2",
+  "pytest>=8",
+  "pytest-xdist>=3.8.0",
+  "ruff>=0.16.9",
+  "tombi>=1.5.8",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.0,<0.9"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+# pytest-xdist: one worker per CPU (os.cpu_count()); `-n0` runs serially.
+addopts = "-n auto"
+markers = [
+  "integration: requires platform tools/Halide/Ninja and may be slow",
+]
+# pytest's defaults plus the case studies' source submodules, whose own tests are not ours.
+norecursedirs = [
+  "*.egg",
+  ".*",
+  "_darcs",
+  "build",
+  "CVS",
+  "dist",
+  "node_modules",
+  "venv",
+  "{arch}",
+  "upstream"
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Gates apply to the package, tests and examples; upstream sources are excluded.
+extend-exclude = ["case-studies/*/upstream"]
+
+[tool.uv.workspace]
+# buildlog-cpp is the C-family plugin, buildlog-ndk and buildlog-emsdk the
+# cross-compilation SDKs'; buildlog-testplugins holds tier-1
+# plugin fixtures for the test suite; buildlog-python is the nanobind case
+# study's Python interpreter discovery plugin.
+members = [
+  "plugins/buildlog-cpp",
+  "plugins/buildlog-cuda",
+  "plugins/buildlog-ndk",
+  "plugins/buildlog-emsdk",
+  "tests/plugins/buildlog-testplugins",
+  "case-studies/nanobind/plugins/buildlog-python",
+]
+
+[tool.uv.sources]
+buildlog = { workspace = true }
+buildlog-cpp = { workspace = true }
+buildlog-cuda = { workspace = true }
+buildlog-emsdk = { workspace = true }
+buildlog-ndk = { workspace = true }
+buildlog-python = { workspace = true }
+buildlog-testplugins = { workspace = true }

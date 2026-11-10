@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The Threads:: target a Qt6 export names, as a find module defines it.
+name = "Threads"
+version = "6.11.3"
+rank = 4
+namespace = "threads"
+layers = ["Threads.dl"]
+requires = { buildlog-cpp = ">=0.1" }
+extends = ["imported", "imported_kind"]

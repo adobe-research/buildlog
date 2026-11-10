@@ -1,0 +1,109 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# gen.tab/meson.build: the host programs and the headers they generate.
+# Meson marks each program `native: true`; buildlog infers the exec
+# configuration because generator actions run those targets.
+
+generate = [
+  ["table1", "bidi-type", "UnicodeData.txt"],
+  ["table2", "joining-type", "UnicodeData.txt", "ArabicShaping.txt"],
+  ["table1", "arabic-shaping", "UnicodeData.txt"],
+  ["table1", "mirroring", "BidiMirroring.txt"],
+  ["table2", "brackets", "BidiBrackets.txt", "UnicodeData.txt"],
+  ["table1", "brackets-type", "BidiBrackets.txt"],
+]
+
+# The table compression argument (gen.tab/meson.build's COMPRESSION '2').
+[word_list]
+TABLE_COMPRESSION = ["2"]
+
+[profile.native]
+private = { "cc.compile_flag" = "-UHAVE_CONFIG_H", "cc.define" = [
+  "HAVE_STRINGIZE",
+  "DONT_HAVE_FRIBIDI_CONFIG_H"
+] }
+when."cc.check.HAVE_STDLIB_H == yes".private."cc.define" = "HAVE_STDLIB_H"
+when."cc.check.HAVE_STRING_H == yes".private."cc.define" = "HAVE_STRING_H"
+when."cc.check.HAVE_STRINGS_H == yes".private."cc.define" = ["HAVE_STRINGS_H", "STDC_HEADERS=1"]
+
+# The table programs: gen-X-tab.c and packtab.c each, with the generated
+# unicode-version header.
+[profile.table-tool]
+kind = "executable"
+profile = ["incs", "native"]
+gen_user = "unicode_version"
+
+# Generated owners. `unicode_version` is a header-only generated target that
+# libfribidi exposes; `tables` is private to libfribidi.
+[target.unicode_version]
+gen_include = { interface = [""] }
+
+[target.tables]
+gen_include = { interface = [""] }
+
+[target.gen-unicode-version]
+kind = "executable"
+profile = ["incs", "native"]
+sources = "gen.tab/gen-unicode-version.c"
+
+[target.gen-bidi-type-tab]
+profile = "table-tool"
+sources = ["gen.tab/gen-bidi-type-tab.c", "gen.tab/packtab.c"]
+
+[target.gen-joining-type-tab]
+profile = "table-tool"
+sources = ["gen.tab/gen-joining-type-tab.c", "gen.tab/packtab.c"]
+
+[target.gen-arabic-shaping-tab]
+profile = "table-tool"
+sources = ["gen.tab/gen-arabic-shaping-tab.c", "gen.tab/packtab.c"]
+
+[target.gen-mirroring-tab]
+profile = "table-tool"
+sources = ["gen.tab/gen-mirroring-tab.c", "gen.tab/packtab.c"]
+
+[target.gen-brackets-tab]
+profile = "table-tool"
+sources = ["gen.tab/gen-brackets-tab.c", "gen.tab/packtab.c"]
+
+[target.gen-brackets-type-tab]
+profile = "table-tool"
+sources = ["gen.tab/gen-brackets-type-tab.c", "gen.tab/packtab.c"]
+
+# custom_target(..., capture: true): stdout is the generated header/table.
+[generator.unicode_version]
+owner = "unicode_version"
+label = "GENERATE"
+run = [
+  "gen-unicode-version",
+  "${src:gen.tab/unidata/ReadMe.txt}",
+  "${src:gen.tab/unidata/BidiMirroring.txt}",
+  "gen-unicode-version"
+]
+stdout = "${out:fribidi-unicode-version.h}"
+
+[generator.table1]
+params = ["name", "input"]
+owner = "tables"
+label = "GENERATE"
+run = [
+  "gen-{name}-tab",
+  "${list:TABLE_COMPRESSION}",
+  "${src:gen.tab/unidata/{input}}",
+  "gen-{name}-tab"
+]
+stdout = "${out:{name}.tab.i}"
+
+[generator.table2]
+params = ["name", "input1", "input2"]
+owner = "tables"
+label = "GENERATE"
+run = [
+  "gen-{name}-tab",
+  "${list:TABLE_COMPRESSION}",
+  "${src:gen.tab/unidata/{input1}}",
+  "${src:gen.tab/unidata/{input2}}",
+  "gen-{name}-tab"
+]
+stdout = "${out:{name}.tab.i}"

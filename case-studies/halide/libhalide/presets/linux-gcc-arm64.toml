@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The Linux counterpart of homebrew-arm64.toml (docker scenario 7b: GCC 13
+# builds libHalide against LLVM 22 from apt.llvm.org, in linux/Dockerfile).
+# Everything runs on arm64-linux; the runtime is still compiled by LLVM's
+# clang (LLVM tier-2 package), as on macOS. Dependencies are the image's: apt's
+# libpng and libjpeg (pkg-config), OpenSSL, and flatbuffers and wabt built
+# into /usr/local.
+config_default = [["release"]]
+exec_setting = [["native.opt", "inherit"], ["native.sanitize", "inherit"]]
+toolchain_pin = [
+  ["c", "arm64-linux", "arm64-linux", "gcc"],
+  ["cxx", "arm64-linux", "arm64-linux", "gcc"],
+  ["native-link", "arm64-linux", "arm64-linux", "gcc"],
+]
+
+package_linkage = [["LLVM", "shared"]]
+package_config_map = [["debug", "release"]]
+
+package_file = [
+  [
+    "cmake",
+    "${HALIDE_SRC}/dependencies/spirv/share/cmake/SPIRV-Headers/SPIRV-HeadersTargets.cmake"
+  ],
+  ["cmake", "/usr/local/lib/cmake/flatbuffers/FlatBuffersTargets.cmake"],
+  ["cmake", "/usr/local/lib/cmake/flatbuffers/FlatcTargets.cmake"],
+  ["cmake", "/usr/local/lib/cmake/wabt/wabt-targets.cmake"],
+]
+package_system_includes = [["cmake"], ["pc"]]
+alias = [["OpenSSL::Crypto", "pc:libcrypto"]]
+package_search_dir = [
+  ["buildlog", "${REPO_ROOT}/case-studies/halide/llvm-install/linux-22/share/buildlog"],
+  ["pc", "/usr/lib/aarch64-linux-gnu/pkgconfig"],
+]

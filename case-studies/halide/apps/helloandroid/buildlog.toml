@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# HelloAndroid (apps/HelloAndroid): the JNI library of the app, for each ABI
+# Gradle's abiFilters name, with the Halide generators built and run on the
+# host. Configure with the case study's packages on the path, an installed
+# Halide, and the Android NDK (ANDROID_NDK_ROOT):
+#   uv run --frozen buildlog configure case-studies/halide/apps/helloandroid -C BUILD \
+#     --package-path case-studies/halide/packages -D HALIDE_PREFIX=$HALIDE_PREFIX \
+#     --user case-studies/halide/apps/helloandroid/presets/homebrew-arm64.toml
+uses = ["buildlog-cpp", "buildlog-ndk", "halide-build"]
+source_root = "${HALIDE_SRC}/apps/HelloAndroid/app/src/main/cpp"
+spec = ["spec.toml"]
+
+[vars]
+HALIDE_SRC = "${REPO_ROOT}/case-studies/halide/upstream"

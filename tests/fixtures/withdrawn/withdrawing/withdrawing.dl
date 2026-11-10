@@ -1,0 +1,1 @@
+withdrawn(p) :- res_test_discover(req, p), req_test_discover(req, _).

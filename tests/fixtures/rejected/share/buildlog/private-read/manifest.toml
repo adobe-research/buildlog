@@ -1,0 +1,8 @@
+# Rejected: reads and writes names that lower packages keep private or only
+# export (readable, not extendable).
+name = "private-read"
+version = "0.1.0"
+rank = 5
+layers = ["private_read.dl"]
+requires = { buildlog-cpp = ">=0.1" }
+extends = ["action", "tc_for"]

@@ -1,0 +1,97 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# buildlog-python: Python interpreters as discovered facts, and Python
+# extension modules (the nanobind case study; case-studies/nanobind/README.md).
+# The interpreter a configuration is built for is a user decision
+# (python_interpreter, and the setting python.interpreter); what it is
+# (version, ABI, extension suffixes, headers) and where a build requirement
+# lives in its environment are probe results. It defines the interface
+# targets Python::Headers and Python::Module, derives whether the stable ABI
+# applies, names extension modules, stages the importable package tree and
+# derives the wheel tag.
+name = "buildlog-python"
+version = "0.1.0"
+rank = 3
+target_namespace = "Python"
+layers = ["layers/L4_python.dl"]
+requires = { buildlog = ">=0.1", buildlog-cpp = ">=0.1" }
+extends = [
+  "native_file_named",
+  "native_file_name",
+  "setting_key",
+  "setting_value",
+  "setting_default",
+  "setting_exec_value",
+  "config_attr",
+  "attr_value",
+  "attr_discovered",
+  "request",
+  "target",
+  "dep",
+  "prop_in",
+  "action",
+  "action_arg",
+  "action_in",
+  "action_builtin",
+  "action_restat",
+  "default_output",
+  "run_artifact",
+  "error",
+  "error_at",
+]
+
+accepts = [
+  "python_requires",
+  "python_py_api",
+  "python_extension",
+  "python_package_file",
+]
+
+# A binding library's rules may derive the extension modules of a package.
+open = ["python_extension"]
+
+user = ["python_interpreter"]
+
+# Readable by higher layers (a binding library's rule package reads where
+# its sources are, and the ABI a configuration builds for).
+exports = [
+  "python_cfg",
+  "python_py_api",
+  "python_info",
+  "python_package_info",
+  "python_package_dir",
+  "python_limited_api",
+  "python_ext_suffix",
+  "python_tree",
+  "python_staged",
+  "python_wheel_tag",
+  "python_wheel",
+  "python_wheel_file",
+]
+
+outputs = [
+  "python_cfg",
+  "python_info",
+  "python_tree",
+  "python_staged",
+  "python_wheel_tag",
+  "python_wheel",
+  "python_wheel_file",
+]
+
+[[probe]]
+kind = "python_interp"
+request = "req_python_interp"
+domain = "domain_python_interp"
+result = "res_python_interp"
+entry = "buildlog_python.probes:python_interp"
+fingerprint = "buildlog_python.probes:interp_fingerprint"
+
+[[probe]]
+kind = "python_package"
+request = "req_python_package"
+domain = "domain_python_package"
+result = "res_python_package"
+entry = "buildlog_python.probes:python_package"
+fingerprint = "buildlog_python.probes:package_fingerprint"

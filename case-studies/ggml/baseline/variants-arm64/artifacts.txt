@@ -1,0 +1,51 @@
+===== bin/
+libggml-cpu-apple_m1.so
+libggml-cpu-apple_m2_m3.so
+libggml-cpu-apple_m4.so
+test-backend-ops
+===== src/*.dylib
+libggml-base.0.25.3.dylib
+libggml-base.0.dylib
+libggml-base.dylib
+libggml.0.25.3.dylib
+libggml.0.dylib
+libggml.dylib
+===== libggml-base.0.25.3.dylib
+Mach-O 64-bit dynamically linked shared library arm64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+         name @rpath/libggml-base.0.dylib (offset 24)
+===== libggml-base.0.dylib -> libggml-base.0.25.3.dylib
+===== libggml-base.dylib -> libggml-base.0.dylib
+===== libggml.0.25.3.dylib
+Mach-O 64-bit dynamically linked shared library arm64
+	@rpath/libggml.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         name @rpath/libggml.0.dylib (offset 24)
+         path $BUILD/src (offset 12)
+===== libggml.0.dylib -> libggml.0.25.3.dylib
+===== libggml.dylib -> libggml.0.dylib
+===== libggml-cpu-apple_m1.so
+Mach-O 64-bit bundle arm64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-apple_m2_m3.so
+Mach-O 64-bit bundle arm64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)
+===== libggml-cpu-apple_m4.so
+Mach-O 64-bit bundle arm64
+	@rpath/libggml-base.0.dylib (compatibility version 0.0.0, current version 0.25.3)
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2100.43.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+         path $BUILD/src (offset 12)

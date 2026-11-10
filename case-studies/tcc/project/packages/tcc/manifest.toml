@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The Tiny C Compiler as a toolchain the build makes (case-studies/tcc).
+# A pure rule package, as a toolchain would ship its own description: what
+# a TCC is (family, version, roles, what it targets and how it is spelled)
+# is stated here, never probed, so a TCC that does not exist yet at
+# configure time is a toolchain like an installed one. The project names
+# its TCCs (tcc_toolchain) and the targets that are TCC compilers
+# (tcc_compiler).
+name = "tcc"
+version = "0.1.0"
+rank = 5
+namespace = "tcc"
+layers = ["L5_tcc.dl"]
+requires = { buildlog-cpp = ">=0.1" }
+extends = [
+  "toolchain",
+  "toolchain_tool_target",
+  "toolchain_tool_arg",
+  "toolchain_runtime",
+  "toolchain_runs_on",
+  "toolchain_can_target",
+  "tc_platform_arg",
+  "family_setting_arg",
+  "prop_in",
+  "error",
+]
+accepts = ["tcc_toolchain", "tcc_compiler"]

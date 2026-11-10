@@ -1,0 +1,356 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L4: C++20 named modules, the static half. Configure derives what does not
+// depend on what the sources import: which sources are declared interface
+// units (and their visibility), the scan, collate and BMI actions, the BMI
+// path per compatibility class, and which targets may see which interfaces.
+// What a source imports is learned by scanning at build time: the collator
+// (strata/modules.dl, a build-time stratum run by `buildlog -E collate`)
+// reads the scan results and writes the Ninja dyndep files, module maps and
+// provenance. Scan results never re-enter this program (the loader checks
+// that nothing here names a relation of the stratum).
+//
+// Authors declare interface units; module names come from scanning. No
+// header units. An import never adds a link edge: a target's link line is
+// unchanged by anything it imports.
+
+// ---- declaring interface units ----
+// cxx_module_interface(t, src, vis): src of target t is a module interface
+// unit (an interface or partition unit: it produces a BMI), visible to
+// targets that depend on t (public) or to t alone (private).
+.decl cxx_module_interface(t:symbol, src:symbol, vis:symbol)
+// ... the same for an out: file an action generates (like cxx_generated_source).
+.decl cxx_generated_module_interface(t:symbol, c:Cfg, path:symbol, vis:symbol)   // open
+cxx_source(t, s) :- cxx_module_interface(t, s, _).
+cxx_generated_source(t, c, p) :- cxx_generated_module_interface(t, c, p, _).
+error("invalid module interface visibility", cat(t, ": ", s, " is ", v, " (public or private)")) :-
+  cxx_module_interface(t, s, v), v != "public", v != "private".
+error("invalid module interface visibility", cat(t, ": ", p, " is ", v, " (public or private)")) :-
+  cxx_generated_module_interface(t, _, p, v), v != "public", v != "private".
+
+// cxx_iface_unit(t, c, s, in, vis, o): the unit with object key s (the
+// object's source path below its root), input path `in`, object o.
+.decl cxx_iface_unit(t:symbol, c:Cfg, s:symbol, in:symbol, vis:symbol, o:symbol)
+cxx_iface_unit(t, c, s, in, vis, o) :- cxx_module_interface(t, s, vis), cxx_object(t, c, s, o), cxx_object_input(o, in).
+cxx_iface_unit(t, c, s, in, vis, o) :- cxx_generated_module_interface(t, c, p, vis), s = substr(p, 4, strlen(p) - 4),
+  cxx_object(t, c, s, o), cxx_object_input(o, in).
+
+// cxx_import_std(t): t imports the standard library's `std` module (the
+// toolchain provides its source; one BMI of it is built per class that needs
+// one, and only t sees it).
+.decl cxx_import_std(t:symbol)
+// ---- which targets are scanned ----
+// A configuration that has an interface unit: every C++ object of every
+// target in it is scanned (an import by a target that does not depend on the
+// provider is an error, which needs the importer's scan).
+.decl cxx_modules_cfg(c:Cfg)
+cxx_modules_cfg(c) :- cxx_iface_unit(_, c, _, _, _, _).
+cxx_modules_cfg(c) :- cxx_import_std(t), cxx_object(t, c, _, _).
+.decl cxx_aware(t:symbol, c:Cfg)
+cxx_aware(t, c) :- cxx_object(t, c, _, _), cxx_modules_cfg(c).
+.decl cxx_std_modules(t:symbol, c:Cfg)
+cxx_std_modules(t, c) :- use_join(t, c, "cxx.std", v), lattice_rank("cxx.std", v, n), n >= 20.
+error_at("modules need cxx.std 20 or later", t, t, c) :- cxx_aware(t, c), !cxx_std_modules(t, c).
+
+// ---- the toolchain: a scanner, and a probe that it works ----
+.decl req_cxx_modules(id:symbol, tc:symbol)
+.decl domain_cxx_modules(id:symbol, tc:symbol)
+domain_cxx_modules(cat("cxx-modules:", to_string(strlen(tc)), ":", tc), tc) :- tc_for("cxx", _, tc), !toolchain_built(tc).
+req_cxx_modules(id, tc) :- domain_cxx_modules(id, tc).
+// status yes | no; scan_tool: the program that emits P1689 (clang-scan-deps,
+// or the GCC driver itself).
+.decl res_cxx_modules(req:symbol, tc:symbol, scan_tool:symbol, status:symbol)
+.decl cxx_modules_tc(tc:symbol, scan_tool:symbol, status:symbol)
+cxx_modules_tc(tc, p, s) :- res_cxx_modules(req, tc, p, s), req_cxx_modules(req, tc).
+toolchain_tool(tc, "cxx_scan", p) :- cxx_modules_tc(tc, p, "yes").
+error_at("C++ modules are not supported by the selected toolchain",
+  cat(t, " in ", n, ": ", tc, " cannot scan or build named modules (needs clang with clang-scan-deps, or GCC 14)"), t, c) :-
+  cxx_aware(t, c), cfg_name(c, n), tc_of(t, "cxx", c, tc), cxx_modules_tc(tc, _, "no").
+
+// The standard library's `std` module source, per toolchain (a probe reads
+// the library's module metadata, libc++.modules.json).
+.decl req_cxx_std_module(id:symbol, tc:symbol)
+.decl domain_cxx_std_module(id:symbol, tc:symbol)
+domain_cxx_std_module(cat("cxx-std-module:", to_string(strlen(tc)), ":", tc), tc) :- tc_for("cxx", _, tc), !toolchain_built(tc).
+req_cxx_std_module(id, tc) :- domain_cxx_std_module(id, tc).
+.decl res_cxx_std_module(req:symbol, tc:symbol, source:symbol, incdir:symbol, status:symbol)
+.decl cxx_std_tc(tc:symbol, source:symbol, incdir:symbol, status:symbol)
+cxx_std_tc(tc, p, i, s) :- res_cxx_std_module(req, tc, p, i, s), req_cxx_std_module(req, tc).
+error_at("import std is not available with the selected toolchain",
+  cat(t, " in ", n, ": ", tc, " ships no std module source"), t, c) :-
+  cxx_import_std(t), cxx_aware(t, c), cfg_name(c, n), tc_of(t, "cxx", c, tc), cxx_std_tc(tc, _, _, "no").
+
+// ---- the compatibility class ----
+// A BMI is usable only by compiles whose BMI-relevant flags agree with the
+// ones it was built with (a hand-written table per family:
+// family_bmi_flag). One BMI is built per (interface unit, class): the class
+// of a target is the set of its relevant items, and a class is named by its
+// lexically least target (k0, k1, ... per configuration).
+.decl cxx_class_item(t:symbol, c:Cfg, item:symbol)
+cxx_class_item(t, c, cat("toolchain=", tc)) :- cxx_aware(t, c), tc_of(t, "cxx", c, tc).
+cxx_class_item(t, c, cat("std=", v)) :- cxx_aware(t, c), use_join(t, c, "cxx.std", v).
+cxx_class_item(t, c, cat(k, "=off")) :- cxx_aware(t, c), cxx_abi(t, c, k, "off").
+cxx_class_item(t, c, "pic") :- cxx_aware(t, c), native_kind_in(t, c, "shared_library").
+cxx_class_item(t, c, "pic") :- cxx_aware(t, c), native_kind_in(t, c, "module_library").
+cxx_class_item(t, c, "pic") :- cxx_aware(t, c), use(t, c, "cc.pic", "on", _).
+cxx_class_item(t, c, "pic") :- cxx_aware(t, c), cc_pic_in(t, c).
+cxx_class_item(t, c, cat("flag=", v)) :- cxx_aware(t, c), tc_of(t, "cxx", c, tc), toolchain(tc, f, _),
+  (use(t, c, "cc.compile_flag", v, _) ; use(t, c, "cxx.compile_flag", v, _)), family_bmi_flag(f, pre),
+  substr(v, 0, strlen(pre)) = pre.
+.decl cxx_class_differs(t:symbol, u:symbol, c:Cfg)
+cxx_class_differs(t, u, c) :- cxx_class_item(t, c, i), cxx_aware(u, c), !cxx_class_item(u, c, i).
+.decl cxx_class_same(t:symbol, u:symbol, c:Cfg)
+cxx_class_same(t, u, c) :- cxx_aware(t, c), cxx_aware(u, c), !cxx_class_differs(t, u, c), !cxx_class_differs(u, t, c).
+.decl cxx_class_lesser(t:symbol, u:symbol, c:Cfg)
+cxx_class_lesser(t, u, c) :- cxx_class_same(t, u, c), u < t.
+.decl cxx_class(t:symbol, c:Cfg, rep:symbol)
+cxx_class(t, c, r) :- cxx_class_same(t, r, c), !cxx_class_lesser(r, _, c).
+.decl cxx_class_tag(c:Cfg, rep:symbol, tag:symbol)
+cxx_class_tag(c, r, cat("k", to_string(n))) :- cxx_class(r, c, r), n = count : { cxx_class(r2, c, r2), r2 < r }.
+
+// ---- visibility and closure ----
+// cxx_sees(u, c, p): u may import the public interface units of p: p is a
+// dependency u uses, or reached from it by exported edges (the way a
+// usage requirement's include dirs reach u).
+.decl cxx_sees(u:symbol, c:Cfg, p:symbol)
+cxx_sees(u, c, p) :- eff_dep(u, c, p, vis), (vis = "public" ; vis = "private").
+cxx_sees(u, c, x) :- cxx_sees(u, c, d), eff_dep(d, c, x, vis), (vis = "public" ; vis = "interface").
+// The target and every dependency below it: the interface units a build of
+// t may have to read (a dependency's interface imports modules t cannot see).
+.decl cxx_closure(t:symbol, c:Cfg, p:symbol)
+cxx_closure(t, c, t) :- cxx_aware(t, c).
+cxx_closure(t, c, d) :- cxx_closure(t, c, x), eff_dep(x, c, d, _).
+
+// ---- scan, BMI and collate outputs ----
+.decl cxx_scan_out(t:symbol, c:Cfg, o:symbol, ddi:symbol)
+cxx_scan_out(t, c, o, cat("out:scan/", n, "/", t, "/", s, ".ddi")) :- cxx_aware(t, c), cxx_object(t, c, s, o), cfg_name(c, n).
+.decl cxx_unit_ddi(p:symbol, c:Cfg, in:symbol, ddi:symbol)
+cxx_unit_ddi(p, c, in, ddi) :- cxx_iface_unit(p, c, _, in, _, o), cxx_scan_out(p, c, o, ddi).
+
+// A BMI of (interface unit, class) for every class of a target that has the
+// unit's target in its closure.
+.decl cxx_bmi(p:symbol, c:Cfg, s:symbol, k:symbol, bmi:symbol)
+cxx_bmi(p, c, s, k, cat("out:bmi/", n, "/", p, "/", s, ".", tag, ".pcm")) :- cxx_closure(t, c, p), cxx_class(t, c, k),
+  cxx_iface_unit(p, c, s, _, _, _), cfg_name(c, n), cxx_class_tag(c, k, tag).
+// The one target, of the class and with the interface's target in its
+// closure, whose collate run builds the BMI (the lexically least).
+.decl cxx_bmi_cand(p:symbol, c:Cfg, k:symbol, u:symbol)
+cxx_bmi_cand(p, c, k, u) :- cxx_closure(u, c, p), cxx_class(u, c, k), cxx_iface_unit(p, c, _, _, _, _).
+.decl cxx_bmi_cand_lesser(p:symbol, c:Cfg, k:symbol, u:symbol)
+cxx_bmi_cand_lesser(p, c, k, u) :- cxx_bmi_cand(p, c, k, u), cxx_bmi_cand(p, c, k, v), v < u.
+.decl cxx_bmi_builder(p:symbol, c:Cfg, k:symbol, u:symbol)
+cxx_bmi_builder(p, c, k, u) :- cxx_bmi_cand(p, c, k, u), !cxx_bmi_cand_lesser(p, c, k, u).
+
+.decl cxx_dd(t:symbol, c:Cfg, dd:symbol)
+cxx_dd(t, c, cat("out:modules/", n, "/", t, ".dd")) :- cxx_aware(t, c), cfg_name(c, n).
+.decl cxx_obj_map(o:symbol, map:symbol)
+cxx_obj_map(o, cat("out:modmap/", n, "/", t, "/", s, ".map")) :- cxx_aware(t, c), cxx_object(t, c, s, o), cfg_name(c, n).
+.decl cxx_bmi_map(bmi:symbol, map:symbol)
+cxx_bmi_map(bmi, cat("out:modmap/", n, "/", p, "/", s, ".", tag, ".map")) :- cxx_bmi(p, c, s, k, bmi), cfg_name(c, n),
+  cxx_class_tag(c, k, tag).
+
+// ---- the scan actions ----
+// A copy of the object's argv moves down ten ranks (the scanner's own words
+// come first); a lookup table, since an argv rank built by arithmetic from
+// argv itself would be a recursive construction.
+.decl cxx_shift(r:number, r2:number)
+cxx_shift(n, n + 10) :- n = range(0, 100).
+
+// One per object of a module-aware target: its argv is the object's, run
+// through the scanner (clang-scan-deps -format=p1689 -- <the compile>, GCC:
+// the driver with -fdeps-format=p1689r5), P1689 on the output.
+.decl cxx_scan_of(sc:symbol, o:symbol, tc:symbol)
+cxx_scan_of(sc, o, tc) :- cxx_scan_out(t, c, o, sc), tc_of(t, "cxx", c, tc).
+action(sc, "SCAN") :- cxx_scan_of(sc, _, _).
+action_stdout(sc, sc) :- cxx_scan_of(sc, _, tc), toolchain(tc, f, _), family_scan_style(f, "tool").
+action_arg(sc, 2, "", "-format=p1689") :- cxx_scan_of(sc, _, tc), toolchain(tc, f, _), family_scan_style(f, "tool").
+action_arg(sc, 5, "", "--") :- cxx_scan_of(sc, _, tc), toolchain(tc, f, _), family_scan_style(f, "tool").
+action_tc_tool(sc, tc, "cxx_scan") :- cxx_scan_of(sc, _, tc), toolchain(tc, f, _), family_scan_style(f, "tool").
+// The scanner reads the compile's own flags (rank 0 is the compiler it
+// emulates, shifted to rank 10), except what is about its outputs.
+action_arg(sc, r2, p, v) :- cxx_scan_of(sc, o, tc), toolchain(tc, f, _), family_scan_style(f, "tool"),
+  action_arg(o, r, p, v), r != 40, r != 42, r < 60, cxx_shift(r, r2).
+action_arg_set(sc, r2) :- cxx_scan_of(sc, o, tc), toolchain(tc, f, _), family_scan_style(f, "tool"), action_arg_set(o, r), cxx_shift(r, r2).
+action_arg(sc, 52, "-MT ", sc), action_arg(sc, 53, "-MD -MF ", cat(sc, ".d")) :- cxx_scan_of(sc, _, tc), toolchain(tc, f, _),
+  family_scan_style(f, "tool").
+action_depfile(sc, cat(sc, ".d")) :- cxx_scan_of(sc, _, _).
+// GCC scans with the driver itself, preprocessing only.
+action_tc_tool(sc, tc, "cxx") :- cxx_scan_of(sc, _, tc), toolchain(tc, f, _), family_scan_style(f, "driver").
+action_out(sc, d) :- cxx_scan_of(sc, _, tc), toolchain(tc, f, _), family_scan_style(f, "driver"), d = cat(sc, ".ii").
+action_arg(sc, r, p, v) :- cxx_scan_of(sc, o, tc), toolchain(tc, f, _), family_scan_style(f, "driver"),
+  action_arg(o, r, p, v), r > 1, r != 40, r != 41, r != 42, r < 60.
+action_arg_set(sc, r) :- cxx_scan_of(sc, o, tc), toolchain(tc, f, _), family_scan_style(f, "driver"), action_arg_set(o, r).
+action_arg(sc, 40, "-fdeps-format=p1689r5 -fdeps-file=", sc), action_arg(sc, 41, "-fdeps-target=", o),
+  action_arg(sc, 43, "-MT ", sc), action_arg(sc, 44, "-MD -MF ", cat(sc, ".d")), action_arg(sc, 45, "-E ", p),
+  action_arg(sc, 46, "-o ", cat(sc, ".ii")), action_arg(sc, 3, "", "-fmodules-ts") :-
+  cxx_scan_of(sc, o, tc), toolchain(tc, f, _), family_scan_style(f, "driver"), cxx_object_input(o, p).
+action_in(sc, p, k) :- cxx_scan_of(sc, o, _), action_in(o, p, k), !cxx_modules_extra_in(o, p).
+action_seq(sc, r2, i) :- cxx_scan_of(sc, o, tc), toolchain(tc, f, _), family_scan_style(f, "tool"), action_seq(o, r, i), cxx_shift(r, r2).
+action_seq_before(sc, r2, x, y) :- cxx_scan_of(sc, o, tc), toolchain(tc, f, _), family_scan_style(f, "tool"), action_seq_before(o, r, x, y), cxx_shift(r, r2).
+action_seq_spelled(sc, r2, i, a, b) :- cxx_scan_of(sc, o, tc), toolchain(tc, f, _), family_scan_style(f, "tool"), action_seq_spelled(o, r, i, a, b), cxx_shift(r, r2).
+action_seq(sc, r, i) :- cxx_scan_of(sc, o, tc), toolchain(tc, f, _), family_scan_style(f, "driver"), action_seq(o, r, i).
+action_seq_before(sc, r, x, y) :- cxx_scan_of(sc, o, tc), toolchain(tc, f, _), family_scan_style(f, "driver"), action_seq_before(o, r, x, y).
+action_seq_spelled(sc, r, i, a, b) :- cxx_scan_of(sc, o, tc), toolchain(tc, f, _), family_scan_style(f, "driver"), action_seq_spelled(o, r, i, a, b).
+
+// ---- the BMI actions ----
+// bmi(p, s, k): the BMI of interface unit s of p for class k, built from the
+// unit's own compile (its flags, includes and defines) with the class's
+// BMI-relevant flags in place of the unit's own: ranks 6, 7, 10 and the
+// relevant compile flags (ranks 15, 16) come from the building target's
+// object.
+.decl cxx_bmi_action(bmi:symbol, po:symbol, uo:symbol, u:symbol, c:Cfg)
+cxx_bmi_action(bmi, po, uo, u, c) :- cxx_bmi(p, c, s, k, bmi), cxx_iface_unit(p, c, s, _, _, po),
+  cxx_bmi_builder(p, c, k, u), cxx_object(u, c, _, uo), !cxx_object_lesser(u, c, uo).
+.decl cxx_object_lesser(t:symbol, c:Cfg, o:symbol)
+cxx_object_lesser(t, c, o) :- cxx_object(t, c, _, o), cxx_object(t, c, _, o2), o2 < o.
+.decl cxx_relevant_flag(o:symbol, r:number, v:symbol)
+cxx_relevant_flag(o, 15 + r, v) :- cxx_object(t, c, _, o), tc_of(t, "cxx", c, tc), toolchain(tc, f, _), family_bmi_flag(f, pre),
+  (use(t, c, "cc.compile_flag", v, r) ; use(t, c, "cxx.compile_flag", v, r)), substr(v, 0, strlen(pre)) = pre.
+action(b, "BMI") :- cxx_bmi_action(b, _, _, _, _).
+action_tc_tool(b, tc, "cxx") :- cxx_bmi_action(b, po, _, _, _), cxx_scan_of(_, po, tc).
+action_arg(b, r, p, v) :- cxx_bmi_action(b, po, _, _, _), action_arg(po, r, p, v), r > 1, r != 6, r != 7, r != 10, r != 40, r != 41,
+  r != 42, r < 60, !cxx_relevant_flag(po, r, v).
+action_arg(b, r, p, v) :- cxx_bmi_action(b, _, uo, _, _), action_arg(uo, r, p, v), (r = 6 ; r = 7 ; r = 10).
+action_arg(b, r, p, v) :- cxx_bmi_action(b, _, uo, _, _), action_arg(uo, r, p, v), cxx_relevant_flag(uo, r, v).
+action_arg(b, 1, p, v) :- cxx_bmi_action(b, po, _, _, _), action_arg(po, 1, p, v).
+action_arg_set(b, r) :- cxx_bmi_action(b, po, _, _, _), action_arg_set(po, r).
+action_arg_set(b, r) :- cxx_bmi_action(b, _, uo, _, _), action_arg_set(uo, r), (r = 6 ; r = 7 ; r = 15 ; r = 16).
+action_seq(b, r, i) :- cxx_bmi_action(b, po, _, _, _), action_seq(po, r, i).
+action_seq_before(b, r, x, y) :- cxx_bmi_action(b, po, _, _, _), action_seq_before(po, r, x, y).
+action_seq_spelled(b, r, i, a, d) :- cxx_bmi_action(b, po, _, _, _), action_seq_spelled(po, r, i, a, d).
+action_in(b, p, k) :- cxx_bmi_action(b, po, _, _, _), action_in(po, p, k), !cxx_modules_extra_in(po, p).
+action_arg(b, r, p, v) :- cxx_bmi_action(b, po, _, _, _), cxx_scan_of(_, po, tc), toolchain(tc, f, _),
+  family_bmi_only_arg(f, r, p, v).
+action_arg(b, 41, pre, p) :- cxx_bmi_action(b, po, _, _, _), cxx_scan_of(_, po, tc), toolchain(tc, f, _), family_bmi_only_input(f, pre),
+  cxx_object_input(po, p).
+action_arg(b, 42, pre, b) :- cxx_bmi_action(b, po, _, _, _), cxx_scan_of(_, po, tc), toolchain(tc, f, _), family_bmi_only_output(f, pre).
+action_arg(b, 43, "-MD -MF ", cat(b, ".d")) :- cxx_bmi_action(b, po, _, _, _), !cxx_scan_deps(po).
+action_depfile(b, cat(b, ".d")) :- cxx_bmi_action(b, po, _, _, _), !cxx_scan_deps(po).
+action_in(b, sc, "implicit") :- cxx_bmi_action(b, po, _, _, _), cxx_scan_deps(po), cxx_scan_of(sc, po, _).
+// The BMI's own imports: its builder's dyndep and module map.
+action_dyndep(b, dd) :- cxx_bmi_action(b, _, _, u, c), cxx_dd(u, c, dd).
+action_in(b, dd, "implicit") :- cxx_bmi_action(b, _, _, u, c), cxx_dd(u, c, dd).
+action_in(b, m, "implicit") :- cxx_bmi_action(b, _, _, _, _), cxx_bmi_map(b, m).
+action_arg(b, 60, pre, m) :- cxx_bmi_action(b, po, _, _, _), cxx_bmi_map(b, m), cxx_scan_of(_, po, tc), toolchain(tc, f, _),
+  family_modmap_arg(f, pre).
+
+// ---- the objects of module-aware targets ----
+// A compile whose depfile would name the imported BMIs (GCC's does) takes
+// its header dependencies from the scan instead: a stale depfile entry for a
+// BMI is what makes Ninja report a cycle when an import flips direction
+// (ninja#2666).
+.decl cxx_scan_deps(o:symbol)
+cxx_scan_deps(o) :- cxx_aware(t, c), cxx_object(t, c, _, o), tc_of(t, "cxx", c, tc), toolchain(tc, f, _), family_scan_deps(f).
+action_in(o, sc, "implicit") :- cxx_scan_deps(o), cxx_scan_of(sc, o, _).
+cxx_modules_extra_in(o, sc) :- cxx_scan_deps(o), cxx_scan_of(sc, o, _).
+.decl cxx_modules_extra_in(o:symbol, p:symbol)
+cxx_modules_extra_in(o, dd) :- cxx_aware(t, c), cxx_object(t, c, _, o), cxx_dd(t, c, dd).
+cxx_modules_extra_in(o, m) :- cxx_obj_map(o, m).
+action_dyndep(o, dd) :- cxx_aware(t, c), cxx_object(t, c, _, o), cxx_dd(t, c, dd).
+action_in(o, dd, "implicit") :- cxx_aware(t, c), cxx_object(t, c, _, o), cxx_dd(t, c, dd).
+action_in(o, m, "implicit") :- cxx_obj_map(o, m).
+action_arg(o, 60, pre, m) :- cxx_aware(t, c), cxx_object(t, c, _, o), cxx_obj_map(o, m), tc_of(t, "cxx", c, tc),
+  toolchain(tc, f, _), family_modmap_arg(f, pre).
+action_arg(o, 3, "", a) :- cxx_aware(t, c), cxx_object(t, c, _, o), tc_of(t, "cxx", c, tc), toolchain(tc, f, _), family_modules_arg(f, a).
+action_arg(o, r, p, v) :- cxx_aware(t, c), cxx_object(t, c, _, o), tc_of(t, "cxx", c, tc), toolchain(tc, f, _), family_module_object_arg(f, r, p, v).
+
+
+// ---- import std ----
+// The BMI of `std` for a class: needed by a class one of whose targets
+// has, in its closure, a target that imports std (a dependency's interface
+// may import std). Built from the standard library's module source with the
+// class's flags, by the lexically least such target (its collate run).
+.decl cxx_std_user(t:symbol, c:Cfg, u:symbol)
+cxx_std_user(t, c, u) :- cxx_aware(t, c), cxx_closure(t, c, u), cxx_import_std(u).
+.decl cxx_std_class(c:Cfg, k:symbol)
+cxx_std_class(c, k) :- cxx_std_user(t, c, _), cxx_class(t, c, k).
+.decl cxx_std_cand(c:Cfg, k:symbol, t:symbol)
+cxx_std_cand(c, k, t) :- cxx_std_user(t, c, _), cxx_class(t, c, k).
+.decl cxx_std_cand_lesser(c:Cfg, k:symbol, t:symbol)
+cxx_std_cand_lesser(c, k, t) :- cxx_std_cand(c, k, t), cxx_std_cand(c, k, u), u < t.
+.decl cxx_std_builder(c:Cfg, k:symbol, t:symbol)
+cxx_std_builder(c, k, t) :- cxx_std_cand(c, k, t), !cxx_std_cand_lesser(c, k, t).
+// The std unit of (config, class): its source, scan result, BMI, module map,
+// and the object whose flags it is compiled with (the builder's least).
+.decl cxx_std_unit(c:Cfg, k:symbol, in:symbol, ddi:symbol, bmi:symbol, map:symbol, uo:symbol, tc:symbol)
+cxx_std_unit(c, k, in, cat("out:scan/", n, "/std.", tag, ".ddi"), cat("out:bmi/", n, "/std.", tag, ".pcm"),
+  cat("out:modmap/", n, "/std.", tag, ".map"), uo, tc) :- cxx_std_builder(c, k, u), cxx_class_tag(c, k, tag), cfg_name(c, n),
+  cxx_object(u, c, _, uo), !cxx_object_lesser(u, c, uo), tc_of(u, "cxx", c, tc), cxx_std_tc(tc, in, _, "yes").
+
+action(sd, "SCAN") :- cxx_std_unit(_, _, _, sd, _, _, _, _).
+action_stdout(sd, sd) :- cxx_std_unit(_, _, _, sd, _, _, _, _).
+action_tc_tool(sd, tc, "cxx_scan") :- cxx_std_unit(_, _, _, sd, _, _, _, tc).
+action_arg(sd, 2, "", "-format=p1689"), action_arg(sd, 5, "", "--") :- cxx_std_unit(_, _, _, sd, _, _, _, _).
+action_arg(sd, r2, p, v) :- cxx_std_unit(_, _, _, sd, _, _, uo, _), action_arg(uo, r, p, v), r != 40, r != 41, r != 42, r < 60, cxx_shift(r, r2).
+action_arg_set(sd, r2) :- cxx_std_unit(_, _, _, sd, _, _, uo, _), action_arg_set(uo, r), cxx_shift(r, r2).
+action_seq(sd, r2, i) :- cxx_std_unit(_, _, _, sd, _, _, uo, _), action_seq(uo, r, i), cxx_shift(r, r2).
+action_seq_before(sd, r2, x, y) :- cxx_std_unit(_, _, _, sd, _, _, uo, _), action_seq_before(uo, r, x, y), cxx_shift(r, r2).
+action_seq_spelled(sd, r2, i, a, b) :- cxx_std_unit(_, _, _, sd, _, _, uo, _), action_seq_spelled(uo, r, i, a, b), cxx_shift(r, r2).
+action_arg(sd, 48, "", "-Wno-reserved-module-identifier"), action_arg(sd, 49, "-x ", "c++-module"), action_arg(sd, 51, "-c ", in),
+  action_arg(sd, 52, "-MT ", sd), action_arg(sd, 53, "-MD -MF ", cat(sd, ".d")) :- cxx_std_unit(_, _, in, sd, _, _, _, _).
+action_depfile(sd, cat(sd, ".d")) :- cxx_std_unit(_, _, _, sd, _, _, _, _).
+action_in(sd, in, "explicit") :- cxx_std_unit(_, _, in, sd, _, _, _, _).
+action_in(sd, p, k) :- cxx_std_unit(_, _, _, sd, _, _, uo, _), action_in(uo, p, k), !cxx_modules_extra_in(uo, p), !cxx_object_input(uo, p).
+
+action(b, "BMI") :- cxx_std_unit(_, _, _, _, b, _, _, _).
+action_tc_tool(b, tc, "cxx") :- cxx_std_unit(_, _, _, _, b, _, _, tc).
+action_arg(b, r, p, v) :- cxx_std_unit(_, _, _, _, b, _, uo, _), action_arg(uo, r, p, v), r > 0, r != 40, r != 41, r != 42, r < 60.
+action_arg_set(b, r) :- cxx_std_unit(_, _, _, _, b, _, uo, _), action_arg_set(uo, r).
+action_seq(b, r, i) :- cxx_std_unit(_, _, _, _, b, _, uo, _), action_seq(uo, r, i).
+action_seq_before(b, r, x, y) :- cxx_std_unit(_, _, _, _, b, _, uo, _), action_seq_before(uo, r, x, y).
+action_seq_spelled(b, r, i, a, d) :- cxx_std_unit(_, _, _, _, b, _, uo, _), action_seq_spelled(uo, r, i, a, d).
+action_arg(b, 38, "", "-Wno-reserved-module-identifier"), action_arg(b, 43, "-MD -MF ", cat(b, ".d")) :- cxx_std_unit(_, _, _, _, b, _, _, _).
+action_arg(b, r, p, v) :- cxx_std_unit(_, _, _, _, b, _, _, tc), toolchain(tc, f, _), family_bmi_only_arg(f, r, p, v).
+action_arg(b, 41, pre, in) :- cxx_std_unit(_, _, in, _, b, _, _, tc), toolchain(tc, f, _), family_bmi_only_input(f, pre).
+action_arg(b, 42, pre, b) :- cxx_std_unit(_, _, _, _, b, _, _, tc), toolchain(tc, f, _), family_bmi_only_output(f, pre).
+action_depfile(b, cat(b, ".d")) :- cxx_std_unit(_, _, _, _, b, _, _, _).
+action_in(b, in, "explicit") :- cxx_std_unit(_, _, in, _, b, _, _, _).
+action_dyndep(b, dd) :- cxx_std_unit(c, k, _, _, b, _, _, _), cxx_std_builder(c, k, u), cxx_dd(u, c, dd).
+action_in(b, dd, "implicit") :- cxx_std_unit(c, k, _, _, b, _, _, _), cxx_std_builder(c, k, u), cxx_dd(u, c, dd).
+action_in(b, p, k) :- cxx_std_unit(_, _, _, _, b, _, uo, _), action_in(uo, p, k), !cxx_modules_extra_in(uo, p), !cxx_object_input(uo, p).
+
+// ---- the collate action of a target ----
+// Inputs: the scan results of the target's own objects and of the interface
+// units of its dependency closure. Outputs: the dyndep file (primary), the
+// provenance, and a module map per object and per BMI the target builds.
+// Its argv is the static table the collator reads (strata/modules.dl).
+action(dd, "COLLATE") :- cxx_dd(_, _, dd).
+action_builtin(dd, "collate") :- cxx_dd(_, _, dd).
+action_restat(dd) :- cxx_dd(_, _, dd).
+action_arg(dd, 1, "", "buildlog-cpp:modules") :- cxx_dd(_, _, dd).
+action_arg(dd, 2, "--dd=", dd) :- cxx_dd(_, _, dd).
+action_arg(dd, 3, "--prov=", cat(dd, ".prov")) :- cxx_dd(_, _, dd).
+action_out(dd, cat(dd, ".prov")) :- cxx_dd(_, _, dd).
+action_arg(dd, 4, "--family=", f) :- cxx_dd(t, c, dd), tc_of(t, "cxx", c, tc), toolchain(tc, f, _).
+
+// The rows of the static table, each a word of parts: --tu=kind,owner,src,ddi,out,map
+.decl cxx_cl_tu(dd:symbol, key:symbol, kind:symbol, owner:symbol, in:symbol, ddi:symbol, out:symbol, map:symbol)
+cxx_cl_tu(dd, o, "obj", t, in, ddi, o, m) :- cxx_dd(t, c, dd), cxx_object(t, c, _, o), cxx_object_input(o, in),
+  cxx_scan_out(t, c, o, ddi), cxx_obj_map(o, m).
+cxx_cl_tu(dd, bmi, "bmi", p, in, ddi, bmi, m) :- cxx_dd(u, c, dd), cxx_bmi_builder(p, c, k, u), cxx_class(u, c, k),
+  cxx_bmi(p, c, s, k, bmi), cxx_iface_unit(p, c, s, in, _, _), cxx_unit_ddi(p, c, in, ddi), cxx_bmi_map(bmi, m).
+cxx_cl_tu(dd, bmi, "bmi", "std", in, ddi, bmi, m) :- cxx_dd(u, c, dd), cxx_std_builder(c, k, u), cxx_std_unit(c, k, in, ddi, bmi, m, _, _).
+.decl cxx_cl_iface(dd:symbol, key:symbol, p:symbol, in:symbol, vis:symbol, ddi:symbol, bmi:symbol)
+cxx_cl_iface(dd, in, p, in, vis, ddi, bmi) :- cxx_dd(t, c, dd), cxx_class(t, c, k), cxx_closure(t, c, p),
+  cxx_iface_unit(p, c, s, in, vis, _), cxx_unit_ddi(p, c, in, ddi), cxx_bmi(p, c, s, k, bmi).
+cxx_cl_iface(dd, in, "std", in, "public", ddi, bmi) :- cxx_dd(t, c, dd), cxx_class(t, c, k), cxx_std_user(t, c, _),
+  cxx_std_unit(c, k, in, ddi, bmi, _, _, _).
+.decl cxx_cl_sees(dd:symbol, key:symbol, u:symbol, p:symbol)
+cxx_cl_sees(dd, cat(u, ",", p), u, p) :- cxx_dd(t, c, dd), cxx_closure(t, c, u), cxx_sees(u, c, p), cxx_iface_unit(p, c, _, _, _, _).
+
+cxx_cl_sees(dd, cat(u, ",std"), u, "std") :- cxx_dd(t, c, dd), cxx_closure(t, c, u), cxx_import_std(u).
+
+action_arg_join(dd, 100 + n, "--tu=", ","), action_arg_part(dd, 100 + n, 0, kind), action_arg_part(dd, 100 + n, 1, owner),
+  action_arg_part(dd, 100 + n, 2, in), action_arg_part(dd, 100 + n, 3, ddi), action_arg_part(dd, 100 + n, 4, out),
+  action_arg_part(dd, 100 + n, 5, m) :-
+  cxx_cl_tu(dd, key, kind, owner, in, ddi, out, m), n = count : { cxx_cl_tu(dd, k2, _, _, _, _, _, _), k2 < key }.
+action_arg_join(dd, 10000 + n, "--iface=", ","), action_arg_part(dd, 10000 + n, 0, p), action_arg_part(dd, 10000 + n, 1, in),
+  action_arg_part(dd, 10000 + n, 2, vis), action_arg_part(dd, 10000 + n, 3, ddi), action_arg_part(dd, 10000 + n, 4, bmi) :-
+  cxx_cl_iface(dd, key, p, in, vis, ddi, bmi), n = count : { cxx_cl_iface(dd, k2, _, _, _, _, _), k2 < key }.
+action_arg_join(dd, 20000 + n, "--sees=", ","), action_arg_part(dd, 20000 + n, 0, u), action_arg_part(dd, 20000 + n, 1, p) :-
+  cxx_cl_sees(dd, key, u, p), n = count : { cxx_cl_sees(dd, k2, _, _), k2 < key }.
+
+action_in(dd, ddi, "explicit") :- cxx_cl_tu(dd, _, _, _, _, ddi, _, _).
+action_in(dd, ddi, "explicit") :- cxx_cl_iface(dd, _, _, _, _, ddi, _).
+action_out(dd, m) :- cxx_cl_tu(dd, _, _, _, _, _, _, m).

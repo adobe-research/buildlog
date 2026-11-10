@@ -1,0 +1,12 @@
+.decl partialdemo_broken(t:symbol, why:symbol)
+.decl partialdemo_global(why:symbol)
+.decl partialdemo_out(t:symbol, c:Cfg, o:symbol)
+partialdemo_out(t, c, cat("out:", n, "/", t)) :- needed(t, c), cfg_name(c, n).
+action(o, "STEP") :- partialdemo_out(_, _, o).
+target_action(t, c, o) :- partialdemo_out(t, c, o).
+action_arg(o, 0, "", "touch") :- partialdemo_out(_, _, o).
+action_arg(o, 1, "", o) :- partialdemo_out(_, _, o).
+action_in(o, i, "explicit") :- partialdemo_out(t, c, o), eff_dep(t, c, d, _), partialdemo_out(d, c, i).
+default_output(o) :- partialdemo_out(_, _, o).
+error_at("partial demo broken", why, t, c) :- partialdemo_broken(t, why), needed(t, c), cfg_name(c, "toy-a.debug.none").
+error("partial demo global", why) :- partialdemo_global(why).

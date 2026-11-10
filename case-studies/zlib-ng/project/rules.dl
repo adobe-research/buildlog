@@ -1,0 +1,93 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// zlib-ng's CMakeLists.txt, as project rules: the library, source sets a
+// configuration may or may not compile, and directory-wide properties. The ISA model is
+// isa.dl's.
+
+// ---- the library ----
+// One target, kind library, which the configuration builds static, shared or
+// both (core linkage; CMake's zlib-ng SHARED and zlib-ng-static STATIC, both
+// OUTPUT_NAME z-ng, are its two instances). A shared build also defines the
+// export symbol (DEFINE_SYMBOL ZLIB_DLL) and carries the versions.
+.decl library(lib:symbol)
+.decl library_source(lib:symbol, src:symbol)                          // C sources
+.decl library_prop(lib:symbol, key:symbol, value:symbol, vis:symbol)
+.decl library_prop_when(lib:symbol, key:symbol, value:symbol, vis:symbol, cond:symbol)
+.decl library_define_symbol(lib:symbol, name:symbol)                  // a shared build's
+.decl library_output_name(lib:symbol, name:symbol)
+.decl library_version(lib:symbol, version:symbol, soversion:symbol)   // a shared build's
+// library_version_variable(t, lib, var): t's configured files see lib's version as var.
+.decl library_version_variable(t:symbol, lib:symbol, var:symbol)
+// shared_prop_when(lib, ...): a compile property of lib's shared build only
+// (CMake's COMPILE_FLAGS on the SHARED target), also its source sets'.
+.decl shared_prop_when(lib:symbol, key:symbol, value:symbol, cond:symbol)
+
+target(l), native_kind(l, "library") :- library(l).
+c_source(l, s) :- library_source(l, s).
+prop(l, k, v, vis) :- library_prop(l, k, v, vis).
+prop_when(l, k, v, vis, n) :- library_prop_when(l, k, v, vis, n).
+linkage_prop(l, "shared", "cc.define", d, "private") :- library_define_symbol(l, d).
+prop_in(i, c, k, v, "private") :- shared_prop_when(l, k, v, n), library_of(i, l), native_kind_in(i, c, "shared_library"),
+  cond_holds(c, n).
+native_output_name(l, n) :- library_output_name(l, n).
+native_version(l, v, s) :- library_version(l, v, s).
+prop(t, "configure.define", cat(x, "=", v), "private") :- library_version_variable(t, l, x), library_version(l, v, _).
+
+error("shared property of an undeclared library", l) :- shared_prop_when(l, _, _, _), !library(l).
+
+// Include order: the configured headers' dir, then the source tree (CMake's
+// target_include_directories(PUBLIC ${CMAKE_CURRENT_BINARY_DIR}
+// ${CMAKE_CURRENT_SOURCE_DIR})).
+cc_include_before(d, "src:") :- cc_configured_header_dir("zlib-ng", _, d).
+
+// library_include(t, lib): t compiles against lib's headers without linking
+// it (test/CMakeLists.txt's configure_test_executable: the build dir and the
+// source tree as private include dirs, and the configured headers built
+// first).
+.decl library_include(t:symbol, lib:symbol)
+prop(t, "cc.include_dir", "src:", "private") :- library_include(t, _).
+prop_in(t, c, "cc.include_dir", d, "private") :- library_include(t, l), needed(t, c),
+  cc_configured_header_dir(l, c, d).
+prop_in(t, c, "cc.generated_header", p, "private") :- library_include(t, l), needed(t, c),
+  configured_file(l, c, _, p).
+error("library_include of an undeclared library", cat(t, ": ", l)) :- library_include(t, l), !library(l).
+
+// ---- source sets: sources a configuration may or may not compile ----
+// CMake decides per configure run which sources a target has (list(APPEND
+// ZLIB_ARCH_SRCS ...) under if()), and gives some of them their own flags
+// (set_property(SOURCE ... COMPILE_FLAGS)). A source set is the library's;
+// in each variant it is a buildlog-cpp source group (step 4, design input
+// §5): its sources compile as the variant's own, with the variant's
+// properties, where the set's condition holds, plus the set's properties.
+.decl source_set(set:symbol, lib:symbol)
+.decl source_set_source(set:symbol, src:symbol)
+.decl source_set_when(set:symbol, cond:symbol)                     // at most one; none: always
+.decl source_set_prop_when(set:symbol, key:symbol, value:symbol, cond:symbol)
+.decl source_set_prop(set:symbol, key:symbol, value:symbol)
+// The condition a set compiles under: its own, unless a refinement (isa.dl,
+// for ISA sets) states it.
+.decl source_set_cond(set:symbol, cond:symbol)
+.decl source_set_refined(set:symbol)
+source_set_cond(s, w) :- source_set_when(s, w), !source_set_refined(s).
+
+source_group(l, s) :- source_set(s, l).
+c_source(l, src), group_source(l, s, src) :- source_set(s, l), source_set_source(s, src).
+group_when(v, s, n) :- source_group(v, s), source_set_cond(s, n).
+group_prop(v, s, k, val) :- source_group(v, s), source_set_prop(s, k, val).
+group_prop_when(v, s, k, val, n) :- source_group(v, s), source_set_prop_when(s, k, val, n).
+
+error("source set of an undeclared library", cat(s, ": ", l)) :- source_set(s, l), !library(l).
+error("source set without sources", s) :- source_set(s, _), !source_set_has_source(s).
+.decl source_set_has_source(set:symbol)
+source_set_has_source(s) :- source_set_source(s, _).
+error("source set has two conditions", cat(s, ": ", a, " / ", b)) :- source_set_when(s, a), source_set_when(s, b), a < b.
+
+// ---- directory-wide properties ----
+// CMAKE_C_FLAGS, add_compile_options() and add_definitions() in the
+// top-level CMakeLists.txt reach every C target of the directory and its
+// subdirectories (test/): every target of this project with C sources.
+.decl dir_prop(key:symbol, value:symbol)
+.decl dir_prop_when(key:symbol, value:symbol, cond:symbol)
+prop(t, k, v, "private") :- dir_prop(k, v), c_source(t, _).
+prop_when(t, k, v, "private", n) :- dir_prop_when(k, v, n), c_source(t, _).

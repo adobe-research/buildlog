@@ -1,0 +1,6 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+.decl req_bad_entry(id:symbol)
+.decl domain_bad_entry(id:symbol)
+.decl res_bad_entry(req:symbol, ok:symbol)

@@ -1,0 +1,71 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# bin/meson.build's programs and test/meson.build's tests. Every program
+# uses `incs` and links the library; the ones meson.build compiles with
+# -DHAVE_CONFIG_H are members of configured.toml's `config` owner.
+# bin/meson.build builds fribidi always (the tests run it) and the other
+# three when the option `bin` is true (its default). The test programs need
+# no request: a test requests its program (core).
+request_all = [
+  ["fribidi"],
+  ["fribidi-benchmark"],
+  ["fribidi-bidi-types"],
+  ["fribidi-caprtl2utf8"],
+]
+# test/meson.build: the six reference tests (rules.dl), reorder-nsm, and
+# test/unicode-conformance's BidiTest and BidiCharacterTest over the Unicode
+# conformance files.
+reference_test = [
+  ["CapRTL", "explicit"],
+  ["CapRTL", "implicit"],
+  ["CapRTL", "isolate"],
+  ["ISO8859-8", "hebrew"],
+  ["UTF-8", "persian"],
+  ["UTF-8", "reordernsm"],
+]
+test = [
+  ["reorder-nsm", "test-reorder-nsm"],
+  ["BidiTest", "BidiTest"],
+  ["BidiCharacterTest", "BidiCharacterTest"]
+]
+test_arg = [
+  ["BidiTest", 0, "src:test/unicode-conformance/BidiTest.txt"],
+  ["BidiCharacterTest", 0, "src:test/unicode-conformance/BidiCharacterTest.txt"],
+]
+
+[defaults.target]
+kind = "executable"
+profile = "incs"
+deps = { private = ["libfribidi"] }
+
+[target.fribidi]
+sources = ["bin/fribidi-main.c", "bin/getopt.c", "bin/getopt1.c"]
+private = { "cc.define" = "HAVE_CONFIG_H" }
+
+[target.fribidi-benchmark]
+sources = ["bin/fribidi-benchmark.c", "bin/getopt.c", "bin/getopt1.c"]
+private = { "cc.define" = "HAVE_CONFIG_H" }
+
+[target.fribidi-bidi-types]
+sources = "bin/fribidi-bidi-types.c"
+private = { "cc.define" = "HAVE_CONFIG_H" }
+
+[target.fribidi-caprtl2utf8]
+sources = "bin/fribidi-caprtl2utf8.c"
+private = { "cc.define" = "HAVE_CONFIG_H" }
+
+[target.test-reorder-nsm]
+sources = "test/test-reorder-nsm.c"
+
+[target.BidiTest]
+sources = "test/unicode-conformance/BidiTest.c"
+private = { "cc.define" = "HAVE_CONFIG_H" }
+
+[target.BidiCharacterTest]
+sources = "test/unicode-conformance/BidiCharacterTest.c"
+private = { "cc.define" = "HAVE_CONFIG_H" }
+
+# The reference tests' runner and rows (rules.dl).
+[script."test-runner.py"]
+src = "test/test-runner.py"

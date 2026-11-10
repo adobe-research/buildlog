@@ -1,0 +1,190 @@
+[
+  {
+    "cmd": [
+      "$SRC/test/test-runner.py",
+      "bin/fribidi",
+      "CapRTL",
+      "$SRC/test/test_CapRTL_explicit.input",
+      "$SRC/test/test_CapRTL_explicit.reference"
+    ],
+    "depends": [
+      "51a1f05@@fribidi@exe"
+    ],
+    "extra_paths": [],
+    "is_parallel": true,
+    "name": "CapRTL_explicit",
+    "priority": 0,
+    "protocol": "exitcode",
+    "suite": [
+      "fribidi"
+    ],
+    "timeout": 30,
+    "workdir": null
+  },
+  {
+    "cmd": [
+      "$SRC/test/test-runner.py",
+      "bin/fribidi",
+      "CapRTL",
+      "$SRC/test/test_CapRTL_implicit.input",
+      "$SRC/test/test_CapRTL_implicit.reference"
+    ],
+    "depends": [
+      "51a1f05@@fribidi@exe"
+    ],
+    "extra_paths": [],
+    "is_parallel": true,
+    "name": "CapRTL_implicit",
+    "priority": 0,
+    "protocol": "exitcode",
+    "suite": [
+      "fribidi"
+    ],
+    "timeout": 30,
+    "workdir": null
+  },
+  {
+    "cmd": [
+      "$SRC/test/test-runner.py",
+      "bin/fribidi",
+      "CapRTL",
+      "$SRC/test/test_CapRTL_isolate.input",
+      "$SRC/test/test_CapRTL_isolate.reference"
+    ],
+    "depends": [
+      "51a1f05@@fribidi@exe"
+    ],
+    "extra_paths": [],
+    "is_parallel": true,
+    "name": "CapRTL_isolate",
+    "priority": 0,
+    "protocol": "exitcode",
+    "suite": [
+      "fribidi"
+    ],
+    "timeout": 30,
+    "workdir": null
+  },
+  {
+    "cmd": [
+      "$SRC/test/test-runner.py",
+      "bin/fribidi",
+      "ISO8859-8",
+      "$SRC/test/test_ISO8859-8_hebrew.input",
+      "$SRC/test/test_ISO8859-8_hebrew.reference"
+    ],
+    "depends": [
+      "51a1f05@@fribidi@exe"
+    ],
+    "extra_paths": [],
+    "is_parallel": true,
+    "name": "ISO8859-8_hebrew",
+    "priority": 0,
+    "protocol": "exitcode",
+    "suite": [
+      "fribidi"
+    ],
+    "timeout": 30,
+    "workdir": null
+  },
+  {
+    "cmd": [
+      "$SRC/test/test-runner.py",
+      "bin/fribidi",
+      "UTF-8",
+      "$SRC/test/test_UTF-8_persian.input",
+      "$SRC/test/test_UTF-8_persian.reference"
+    ],
+    "depends": [
+      "51a1f05@@fribidi@exe"
+    ],
+    "extra_paths": [],
+    "is_parallel": true,
+    "name": "UTF-8_persian",
+    "priority": 0,
+    "protocol": "exitcode",
+    "suite": [
+      "fribidi"
+    ],
+    "timeout": 30,
+    "workdir": null
+  },
+  {
+    "cmd": [
+      "$SRC/test/test-runner.py",
+      "bin/fribidi",
+      "UTF-8",
+      "$SRC/test/test_UTF-8_reordernsm.input",
+      "$SRC/test/test_UTF-8_reordernsm.reference"
+    ],
+    "depends": [
+      "51a1f05@@fribidi@exe"
+    ],
+    "extra_paths": [],
+    "is_parallel": true,
+    "name": "UTF-8_reordernsm",
+    "priority": 0,
+    "protocol": "exitcode",
+    "suite": [
+      "fribidi"
+    ],
+    "timeout": 30,
+    "workdir": null
+  },
+  {
+    "cmd": [
+      "$BUILD/test/test-reorder-nsm"
+    ],
+    "depends": [
+      "9f86d08@@test-reorder-nsm@exe"
+    ],
+    "extra_paths": [],
+    "is_parallel": true,
+    "name": "reorder-nsm",
+    "priority": 0,
+    "protocol": "exitcode",
+    "suite": [
+      "fribidi"
+    ],
+    "timeout": 30,
+    "workdir": null
+  },
+  {
+    "cmd": [
+      "$BUILD/test/unicode-conformance/BidiTest",
+      "$SRC/test/unicode-conformance/BidiTest.txt"
+    ],
+    "depends": [
+      "93b8e58@@BidiTest@exe"
+    ],
+    "extra_paths": [],
+    "is_parallel": true,
+    "name": "BidiTest",
+    "priority": 0,
+    "protocol": "exitcode",
+    "suite": [
+      "fribidi"
+    ],
+    "timeout": 30,
+    "workdir": null
+  },
+  {
+    "cmd": [
+      "$BUILD/test/unicode-conformance/BidiCharacterTest",
+      "$SRC/test/unicode-conformance/BidiCharacterTest.txt"
+    ],
+    "depends": [
+      "93b8e58@@BidiCharacterTest@exe"
+    ],
+    "extra_paths": [],
+    "is_parallel": true,
+    "name": "BidiCharacterTest",
+    "priority": 0,
+    "protocol": "exitcode",
+    "suite": [
+      "fribidi"
+    ],
+    "timeout": 30,
+    "workdir": null
+  }
+]

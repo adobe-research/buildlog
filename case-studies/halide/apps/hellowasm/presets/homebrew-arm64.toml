@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The user's side: where the installed Halide's CMake exports are, and
+# Homebrew's libpng and libjpeg (found by pkg-config) for the native run
+# program. The toolchains need no pin: each SDK toolchain targets only its
+# own platform.
+package_file = [
+  ["cmake", "${HALIDE_PREFIX}/lib/cmake/HalideCompiler/HalideCompiler-shared-targets.cmake"],
+]
+package_prefix = [["${HOMEBREW}"]]
+package_search_dir = [
+  ["pc", "${HOMEBREW}/lib/pkgconfig"],
+  ["pc", "${HOMEBREW}/Library/Homebrew/os/mac/pkgconfig/26"],
+]
+package_system_includes = [["cmake"], ["pc"]]

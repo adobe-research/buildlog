@@ -1,0 +1,6 @@
+action("out:a", "STEP").
+action("out:b", "STEP").
+action_in("out:a", "out:b", "explicit").
+action_in("out:b", "out:a", "explicit").
+action_arg("out:a", 0, "", "/bin/step").
+action_arg("out:b", 0, "", "/bin/step").

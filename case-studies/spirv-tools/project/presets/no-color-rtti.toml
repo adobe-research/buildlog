@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# -DSPIRV_COLOR_TERMINAL=OFF -DENABLE_RTTI=ON.
+option_value = [["SPIRV_COLOR_TERMINAL", "off"], ["ENABLE_RTTI", "on"]]

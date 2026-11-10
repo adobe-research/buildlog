@@ -1,0 +1,7 @@
+name = "unusedgen"
+version = "1.0.0"
+rank = 5
+namespace = "unusedgen"
+layers = ["unused.dl"]
+requires = { buildlog-cpp = ">=0.1" }
+extends = ["request_all", "warning"]

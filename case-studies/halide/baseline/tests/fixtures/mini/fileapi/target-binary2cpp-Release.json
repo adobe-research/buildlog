@@ -1,0 +1,32 @@
+{
+ "artifacts": [
+  {
+   "path": "tools/binary2cpp"
+  }
+ ],
+ "backtrace": 0,
+ "backtraceGraph": {
+  "commands": [],
+  "files": [
+   "tools/CMakeLists.txt"
+  ],
+  "nodes": [
+   {
+    "file": 0
+   }
+  ]
+ },
+ "dependencies": [],
+ "id": "binary2cpp::@3",
+ "name": "binary2cpp",
+ "paths": {
+  "build": "tools",
+  "source": "tools"
+ },
+ "sources": [
+  {
+   "path": "tools/binary2cpp.cpp"
+  }
+ ],
+ "type": "EXECUTABLE"
+}

@@ -1,0 +1,22 @@
+# buildlog install of the variants build (release), prefix $PREFIX; simple-backend copied into $PREFIX/bin by hand
+$ find $PREFIX
+$PREFIX/bin
+$PREFIX/bin/libggml-cpu-apple_m1.so
+$PREFIX/bin/libggml-cpu-apple_m2_m3.so
+$PREFIX/bin/libggml-cpu-apple_m4.so
+$PREFIX/bin/simple-backend
+$PREFIX/lib
+$PREFIX/lib/libggml-base.0.25.3.dylib
+$PREFIX/lib/libggml-base.0.dylib
+$PREFIX/lib/libggml-base.dylib
+$PREFIX/lib/libggml.0.25.3.dylib
+$PREFIX/lib/libggml.0.dylib
+$PREFIX/lib/libggml.dylib
+
+$ $PREFIX/bin/simple-backend
+dyld[79144]: Library not loaded: @rpath/libggml.0.dylib
+  Referenced from: <2C7AAD69-B063-327B-B82C-9DAAC1D18F8F> $PREFIX/bin/simple-backend
+  Reason: tried: '$PREFIX/bin/../../lib/arm64-macos.release.none/libggml.0.dylib' (no such file), '$PREFIX/bin/../../lib/arm64-macos.release.none/libggml.0.dylib' (no such file)
+
+$ cd / && DYLD_LIBRARY_PATH=$PREFIX/lib $PREFIX/bin/simple-backend | grep loaded
+load_backend: loaded CPU backend from $PREFIX/bin/libggml-cpu-apple_m2_m3.so

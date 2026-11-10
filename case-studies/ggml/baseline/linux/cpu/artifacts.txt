@@ -1,0 +1,83 @@
+===== bin/
+gpt-2-alloc
+gpt-2-backend
+gpt-2-batched
+gpt-2-ctx
+gpt-2-quantize
+gpt-2-sched
+gpt-j
+gpt-j-quantize
+magika
+mnist-eval
+mnist-train
+sam
+simple-backend
+simple-ctx
+test-arange
+test-backend-ops
+test-cont
+test-conv-transpose
+test-conv-transpose-1d
+test-conv1d
+test-conv1d-dw-c1
+test-conv1d-dw-c2
+test-conv2d
+test-conv2d-dw
+test-customop
+test-dup
+test-interpolate
+test-opt
+test-pad-reflect-1d
+test-pool
+test-quantize-fns
+test-quantize-perf
+test-rel-pos
+test-roll
+test-timestep_embedding
+yolov3-tiny
+===== src/*.so*
+libggml-base.so
+libggml-base.so.0
+libggml-base.so.0.25.3
+libggml-cpu.so
+libggml-cpu.so.0
+libggml-cpu.so.0.25.3
+libggml.so
+libggml.so.0
+libggml.so.0.25.3
+===== libggml-base.so -> libggml-base.so.0
+===== libggml-base.so.0 -> libggml-base.so.0.25.3
+===== libggml-base.so.0.25.3
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libgomp.so.1]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libm.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(NEEDED) Shared library: [ld-linux-aarch64.so.1]
+(SONAME) Library soname: [libggml-base.so.0]
+===== libggml-cpu.so -> libggml-cpu.so.0
+===== libggml-cpu.so.0 -> libggml-cpu.so.0.25.3
+===== libggml-cpu.so.0.25.3
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libggml-base.so.0]
+(NEEDED) Shared library: [libgomp.so.1]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libm.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(NEEDED) Shared library: [ld-linux-aarch64.so.1]
+(SONAME) Library soname: [libggml-cpu.so.0]
+(RUNPATH) Library runpath: [$BUILD/src:]
+===== libggml.so -> libggml.so.0
+===== libggml.so.0 -> libggml.so.0.25.3
+===== libggml.so.0.25.3
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libggml-cpu.so.0]
+(NEEDED) Shared library: [libggml-base.so.0]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(NEEDED) Shared library: [ld-linux-aarch64.so.1]
+(SONAME) Library soname: [libggml.so.0]
+(RUNPATH) Library runpath: [$BUILD/src:]

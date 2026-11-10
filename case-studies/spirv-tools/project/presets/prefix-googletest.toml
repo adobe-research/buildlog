@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# googletest from an install prefix, given on the command line:
+# -D GOOGLETEST_PREFIX=/abs/prefix (its lib/cmake/GTest/ holds the CMake export).
+# The Linux image installs 1.18.0 at /opt/googletest, the version Homebrew has.
+package_prefix = [["${GOOGLETEST_PREFIX}"]]

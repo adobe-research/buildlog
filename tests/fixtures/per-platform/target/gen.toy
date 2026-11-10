@@ -1,0 +1,2 @@
+executable toy:gen gen-target.sh
+version toy:gen 2 0 0

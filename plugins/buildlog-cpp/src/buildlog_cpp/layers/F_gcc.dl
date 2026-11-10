@@ -1,0 +1,71 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Toolchain-family plugin (sits beside L2): the GCC family, and how a
+// GNU-style driver (GCC or clang) links for Linux (ELF, GNU ld or lld).
+// A GCC targets the one triple it was built for (the capability probe
+// checks gcc -dumpmachine), so it takes no platform argument; a cross GCC
+// is another toolchain.
+
+toolchain_tool(tc, "link", p) :- toolchain(tc, "gcc", _), toolchain_tool(tc, "cxx", p).
+
+// Settings, per phase: the clang spellings, which GCC shares.
+family_setting_arg("gcc", ph, k, v, a) :- family_setting_arg("clang", ph, k, v, a).
+family_pic_arg("gcc", "-fPIC").
+family_cxx_off_arg("gcc", "cxx.rtti", "-fno-rtti").
+family_cxx_off_arg("gcc", "cxx.exceptions", "-fno-exceptions").
+family_werror_arg("gcc", "-Werror").
+
+// ISA spellings: GCC's are clang's, except that GCC 13 has no +sme (GCC 14
+// added it; versions within a family are not modelled, so GCC lacks it).
+// Checked against GCC 13 (Ubuntu 24.04: gcc for aarch64,
+// gcc-x86-64-linux-gnu for x86) by tests/test_gcc_family.py, which compiles
+// every flag and -march piece.
+family_isa_flag("gcc", e, f) :- family_isa_flag("clang", e, f).
+family_isa_march_ext("gcc", e, x, r) :- family_isa_march_ext("clang", e, x, r), e != "sme".
+family_isa_march_off("gcc", e, x, r) :- family_isa_march_off("clang", e, x, r).
+family_isa_march_version("gcc", cpu, v, r) :- family_isa_march_version("clang", cpu, v, r).
+family_isa_ext_version("gcc", e, v) :- family_isa_ext_version("clang", e, v).
+
+// ---- ELF (Linux, and Android's bionic), for either family ----
+.decl elf_driver(tc:symbol, p:symbol)    // open: a plugin for an ELF OS (the NDK's) adds its platforms
+elf_driver(tc, p) :- toolchain(tc, f, _), (f = "gcc" ; f = "clang"), platform_constraint(p, "os", "linux").
+// GNU ld needs --start-group/--end-group around an archive cycle.
+linker_cycle_policy(tc, p, "group") :- elf_driver(tc, p), toolchain(tc, "gcc", _).
+// A shared library is lib<o>.so.<version>, its soname lib<o>.so.<soversion>
+// (DT_SONAME, no directory: the loader searches the rpath), and lib<o>.so
+// is what -l<o> finds. ELF has no compatibility or current version fields.
+shared_link_spelling(tc, p, "shared", "-shared"),
+shared_link_spelling(tc, p, "install_name", "-Wl,-soname,"),
+shared_link_spelling(tc, p, "install_name_dir", ""),
+shared_link_spelling(tc, p, "version_after_suffix", "yes"),
+shared_link_spelling(tc, p, "suffix", ".so") :- elf_driver(tc, p).
+// GNU ld forces an archive between --whole-archive and --no-whole-archive;
+// one word, so the mode ends right after the archive it applies to.
+whole_archive_prefix(tc, p, "-Wl,--whole-archive,"),
+whole_archive_suffix(tc, p, ",--no-whole-archive") :- elf_driver(tc, p).
+// A version script is ELF's export list (a different file format from
+// ld64's exported-symbols list, which has no spelling here).
+shared_link_spelling(tc, p, "version_script", "-Wl,--version-script=") :- elf_driver(tc, p).
+// Modules are shared objects (their export list is the same version script);
+// build-tree rpaths are relative to the linked artifact ($ORIGIN, quoted for
+// the shell by the emitter).
+module_link_spelling(tc, p, "version_script", "-Wl,--version-script=") :- elf_driver(tc, p).
+module_link_spelling(tc, p, "module", "-shared"),
+module_link_spelling(tc, p, "suffix", ".so"),
+rpath_origin_prefix(tc, p, "-Wl,-rpath,$ORIGIN/") :- elf_driver(tc, p).
+
+// ---- C++ modules (L4_modules.dl) ----
+// GCC 14: the driver itself scans (-fdeps-format=p1689r5 with -E), builds a
+// BMI (CMI) with -fmodule-only, and reads module name -> CMI path pairs from
+// a mapper file (-fmodule-mapper=).
+family_scan_style("gcc", "driver").
+family_bmi_flag("gcc", p) :- family_bmi_flag("clang", p), p != "-stdlib=", p != "-fms-", p != "-fno-char8_t", p != "-fchar8_t".
+family_bmi_only_arg("gcc", 36, "", "-c").
+family_bmi_only_arg("gcc", 39, "", "-fmodule-only").
+family_bmi_only_input("gcc", "").
+family_scan_deps("gcc").
+family_module_object_arg("gcc", 38, "-x ", "c++").
+family_bmi_only_output("gcc", "-o ").
+family_modmap_arg("gcc", "-fmodule-mapper=").
+family_modules_arg("gcc", "-fmodules-ts").

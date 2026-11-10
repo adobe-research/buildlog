@@ -1,0 +1,340 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L0: actions & artifacts. Backend-neutral action graph; the only layer the
+// translator (emit.py) reads. Paths are rooted strings: "src:<rel>" (project
+// source tree) or "out:<rel>" (build tree). Relativizing them is translation.
+//
+// An action is identified by its primary output.
+.decl action(a:symbol, label:symbol)                      // label: human-readable kind, e.g. "STUB"
+.decl action_out(a:symbol, path:symbol)                   // additional outputs
+.decl action_in(a:symbol, path:symbol, kind:symbol)       // kind: explicit | implicit | order_only
+.decl action_depfile(a:symbol, path:symbol)
+// argv: sorted by (rank, prefix, value); rendered as prefix ++ relativize(value).
+.decl action_arg(a:symbol, rank:number, prefix:symbol, value:symbol)
+// An argv segment at `rank` whose items are ordered by `before` edges; the
+// translator toposorts it with a lexicographic tie-break (and rejects cycles).
+.decl action_seq(a:symbol, rank:number, item:symbol)
+.decl action_seq_before(a:symbol, rank:number, x:symbol, y:symbol)
+// An item written as prefix ++ relativize(path) (e.g. a forced archive,
+// -Wl,-force_load,<path>); other items are relativized whole.
+.decl action_seq_spelled(a:symbol, rank:number, item:symbol, prefix:symbol, path:symbol)
+// ... followed by a suffix in the same word (GNU ld's
+// -Wl,--whole-archive,<path>,--no-whole-archive).
+.decl action_seq_spelled_suffix(a:symbol, rank:number, item:symbol, suffix:symbol)
+// Strongly connected items of a segment: the translator collapses each group
+// to one node for toposorting, lists its members lexically, and wraps them
+// in the group's delimiters if the core supplied any. A cycle among items
+// not declared as a group is an error.
+.decl action_seq_same_group(a:symbol, rank:number, x:symbol, y:symbol)
+.decl action_seq_group_delims(a:symbol, rank:number, open:symbol, close:symbol)
+.decl default_output(path:symbol)
+.decl error(kind:symbol, detail:symbol)
+// A warning: printed by configure, never fails it (e.g. an export format
+// that cannot state a usage requirement, L3_install.dl).
+.decl warning(kind:symbol, detail:symbol)
+// The spec loader's warnings (driver facts), e.g. a key a TOML table header
+// captured; `why warning(...)` leads to the line.
+.decl spec_warning(kind:symbol, detail:symbol)
+warning(k, d) :- spec_warning(k, d).
+
+// A segment (rank) with several action_arg tokens is an unordered set that
+// the translator sorts by (prefix, value). The producing layer must declare
+// it, which makes the lexical order an explicit decision.
+// Ranks are sparse sort keys: optional arguments leave interior gaps by
+// design, so only a missing argv[0] is an error.
+.decl action_arg_set(a:symbol, rank:number)
+
+// ---- regeneration ----
+// The driver writes what configure read (spec and buildlog.toml, the
+// lockfile, every loaded package's manifest, layer and facts files, the
+// buildlog and plugin distribution metadata, and the project directories so
+// added spec files count) and the argv that reruns it. Regeneration is an
+// ordinary L0 action on build.ninja that the translator marks as the
+// generator. Probe results are not files: a changed toolchain does not
+// trigger it (rerun configure; the probe cache is keyed by fingerprints).
+.decl configure_input(path:symbol)             // driver facts
+.decl configure_arg(pos:number, arg:symbol)    // driver facts
+.decl author_decision(rel:symbol, key:symbol, reason:symbol) // auditable author/user bypass
+.decl action_generator(a:symbol)
+action("out:build.ninja", "CONFIGURE") :- configure_arg(0, _).
+action_generator("out:build.ninja") :- configure_arg(0, _).
+action_arg("out:build.ninja", i, "", v) :- configure_arg(i, v).
+action_in("out:build.ninja", p, "implicit") :- configure_input(p), configure_arg(0, _).
+
+// action_arg_basis(a, rank, value, basis): a layer's statement of why an
+// argument may stand where a check would otherwise reject it (e.g. a
+// -Werror on a program the author's facts fix). `buildlog why --flag`
+// shows its proof beside the argument's.
+.decl action_arg_basis(a:symbol, rank:number, value:symbol, basis:symbol)   // open
+
+// ---- partial emission ----
+// An error is attributed when some layer names the action it breaks
+// (action_error, or L1's error_at for a target in a configuration). A failed
+// action, and every action that consumes its outputs, is emitted as a
+// failing edge that prints the errors; the rest of the graph is emitted as
+// usual. An unattributed error is global: nothing is emitted.
+.decl action_error(a:symbol, kind:symbol, detail:symbol)      // open
+error(k, d) :- action_error(_, k, d).
+// Discovery is complete when every probe request is answered. Before that a
+// round's errors are provisional (a missing toolchain answer breaks nearly
+// every target), and the final round, which has no pending request, derives
+// every error again, so copying an error to the targets and actions that
+// depend on the broken one waits for completion: it is quadratic on a deep
+// or wide graph. probe_pending(req) is generated by the loader from the
+// probe declarations.
+.decl probe_pending(req:symbol)
+.decl discovery_complete()
+discovery_complete() :- !probe_pending(_).
+.decl action_failed(a:symbol, kind:symbol, detail:symbol)
+.decl failed(a:symbol)
+failed(a) :- action_failed(a, _, _).
+.decl error_attributed(kind:symbol, detail:symbol)
+error_attributed(k, d) :- action_error(_, k, d).
+.decl global_error(kind:symbol, detail:symbol)
+global_error(k, d) :- error(k, d), !error_attributed(k, d).
+
+// ---- integrity  ----
+// Path classes: "src:" project sources, "out:" build outputs, absolute
+// "/..." external files (installed tools, libraries). An input is a source,
+// an external file, or produced by an action.
+.decl path_class(path:symbol, cls:symbol)
+path_class(p, "src") :- action_in(_, p, _), substr(p, 0, 4) = "src:".
+path_class(p, "out") :- action_in(_, p, _), substr(p, 0, 4) = "out:".
+path_class(p, "external") :- action_in(_, p, _), substr(p, 0, 1) = "/".
+path_class(p, "out") :- action(p, _), substr(p, 0, 4) = "out:".
+path_class(p, "out") :- action_out(_, p), substr(p, 0, 4) = "out:".
+.decl has_path_class(path:symbol)
+has_path_class(p) :- path_class(p, _).
+
+.decl produced_by(path:symbol, a:symbol)
+produced_by(a, a) :- action(a, _).
+produced_by(p, a) :- action_out(a, p).
+.decl produced(path:symbol)
+produced(p) :- produced_by(p, _).
+
+error("output produced by more than one action", cat(p, " <- ", a, " | ", b)) :-
+  produced_by(p, a), produced_by(p, b), a < b.
+error("action output outside the build tree", cat(a, " -> ", p)) :-
+  produced_by(p, a), !path_class(p, "out").
+error("action input is neither a source nor produced", cat(a, " <- ", p)) :-
+  action_in(a, p, _), path_class(p, "out"), !produced(p), !failed(a).
+error("action input is neither a source nor produced", cat(a, " <- ", p)) :-
+  action_in(a, p, _), !has_path_class(p), !failed(a).
+error("action input of unknown kind", cat(a, " <- ", p, " (", k, ")")) :-
+  action_in(a, p, k), k != "explicit", k != "implicit", k != "order_only".
+
+.decl action_dep(a:symbol, b:symbol)
+action_dep(a, b) :- action_in(a, p, _), produced_by(p, b).
+action_failed(a, k, d) :- action_error(a, k, d), action(a, _).
+action_failed(a, k, d) :- discovery_complete(), action_dep(a, b), action_failed(b, k, d).
+// Dependency cycles, without the transitive closure of action_dep (which
+// is quadratic in a deep or wide graph). Trimming peels off, in both
+// directions, every action that reaches no cycle (all its dependencies are
+// trimmed) or that no cycle reaches (all its dependents are trimmed): Kahn's
+// algorithm, monotone, linear in the edges. What survives, the core, is a
+// superset of the actions on cycles and empty for an acyclic graph; every
+// path between two actions of one cycle stays inside it, so reachability
+// within the core decides cycles exactly.
+// action_adj(d, a, b): d = 0 follows action_dep, d = 1 runs against it.
+.decl action_adj(d:number, a:symbol, b:symbol)
+action_adj(0, a, b) :- action_dep(a, b).
+action_adj(1, b, a) :- action_dep(a, b).
+// An action with at most 16 edges ranks them 0..deg-1 by ord(b) (the rank of b
+// is the number of edges whose ord is smaller: a count, quadratic in the
+// degree, so bounded) and trims them in a chain of positive steps. An action
+// with more edges has "all edges below this node trimmed" propagated up a
+// binary trie over ord(b), which is linear in the edges and as deep as the
+// bits of the largest ord, where a chain would be as long as the degree.
+.decl action_adj_from(d:number, a:symbol)
+action_adj_from(d, a) :- action_adj(d, a, _).
+.decl action_adj_degree(d:number, a:symbol, n:number)
+action_adj_degree(d, a, n) :- action_adj_from(d, a), n = count : { action_adj(d, a, _) }.
+.decl action_adj_rank(d:number, a:symbol, i:number, b:symbol)
+action_adj_rank(d, a, i, b) :- action_adj_degree(d, a, n), n <= 16, action_adj(d, a, b),
+  i = count : { action_adj(d, a, x), ord(x) < ord(b) }.
+.decl action_adj_big(d:number, a:symbol)
+action_adj_big(d, a) :- action_adj_degree(d, a, n), n > 16.
+.decl action_adj_level(l:number)
+action_adj_level(l) :- l = range(0, 32).
+// The trie has levels 0..top; level top is the root (k = 0).
+.decl action_adj_top(t:number)
+action_adj_top(t) :- m = max ord(b) : { action_adj_big(d, a), action_adj(d, a, b) },
+  t = min l : { action_adj_level(l), (m bshr l) = 0 }.
+.decl action_adj_node(d:number, a:symbol, l:number, k:number)
+action_adj_node(d, a, l, ord(b) bshr l) :- action_adj_big(d, a), action_adj(d, a, b),
+  action_adj_top(t), action_adj_level(l), l <= t.
+.decl action_adj_lone(d:number, a:symbol, l:number, k:number)   // no sibling
+action_adj_lone(d, a, l, k) :- action_adj_node(d, a, l, k), action_adj_top(t), l < t,
+  !action_adj_node(d, a, l, k bxor 1).
+.decl action_adj_twin(d:number, a:symbol, l:number, k:number, s:number)   // s = k bxor 1, both present
+action_adj_twin(d, a, l, k, s) :- action_adj_node(d, a, l, k), s = k bxor 1, action_adj_node(d, a, l, s).
+.decl action_node(a:symbol)
+action_node(a) :- action_dep(a, _).
+action_node(b) :- action_dep(_, b).
+.decl action_trim_upto(d:number, a:symbol, i:number)   // edges 0..i-1 trimmed
+.decl action_trim_all(d:number, a:symbol, l:number, k:number)   // trie node: every edge below it trimmed
+.decl action_trimmed(d:number, a:symbol)
+action_trim_upto(d, a, 0) :- action_adj_degree(d, a, n), n <= 16.
+action_trim_upto(d, a, i + 1) :- action_trim_upto(d, a, i), action_adj_rank(d, a, i, b), action_trimmed(d, b).
+.plan 1:(3,2,1)
+action_trim_all(d, a, 0, ord(b)) :- action_trimmed(d, b), action_adj(d, a, b), action_adj_big(d, a).
+action_trim_all(d, a, l + 1, k bshr 1) :- action_trim_all(d, a, l, k), action_adj_lone(d, a, l, k).
+action_trim_all(d, a, l + 1, k bshr 1) :- action_trim_all(d, a, l, k), action_adj_twin(d, a, l, k, s), action_trim_all(d, a, l, s).
+.plan 1:(3,2,1)
+action_trimmed(d, a) :- action_trim_upto(d, a, n), action_adj_degree(d, a, n).
+action_trimmed(d, a) :- action_trim_all(d, a, t, 0), action_adj_top(t).
+action_trimmed(d, a) :- action_node(a), (d = 0 ; d = 1), !action_adj_from(d, a).
+.decl action_core(a:symbol)
+action_core(a) :- action_node(a), !action_trimmed(0, a), !action_trimmed(1, a).
+.decl action_core_reach(a:symbol, b:symbol)
+action_core_reach(a, b) :- action_core(a), action_dep(a, b), action_core(b).
+action_core_reach(a, c) :- action_core_reach(a, b), action_dep(b, c), action_core(c).
+error("action dependency cycle", a) :- action_core_reach(a, a).
+
+.decl declared_action(a:symbol)
+declared_action(a) :- action(a, _).
+error("action has two labels", cat(a, ": ", x, " / ", y)) :- action(a, x), action(a, y), x < y.
+error("action has two depfiles", a) :- action_depfile(a, x), action_depfile(a, y), x < y.
+error("action has two group delimiters", cat(a, " segment ", to_string(r))) :-
+  action_seq_group_delims(a, r, o1, c1), action_seq_group_delims(a, r, o2, c2), (o1 < o2 ; c1 < c2).
+error("argv of an undeclared action", a) :- action_arg(a, _, _, _), !declared_action(a).
+error("argv of an undeclared action", a) :- action_seq(a, _, _), !declared_action(a).
+
+.decl has_argv0(a:symbol)
+has_argv0(a) :- action_arg(a, 0, _, _).
+has_argv0(a) :- action_builtin(a, _).
+error("action has no argv", a) :- action(a, _), !action_arg(a, _, _, _), !action_builtin(a, _), !failed(a).
+error("action argv has no program (gap at position 0)", a) :-
+  action(a, _), action_arg(a, _, _, _), !has_argv0(a), !failed(a).
+error("action argv position is negative", cat(a, " ", to_string(r))) :- action_arg(a, r, _, _), r < 0.
+error("action argv position used by an argument and a sequence", cat(a, " ", to_string(r))) :-
+  action_seq(a, r, _), action_arg(a, r, _, _).
+// Count distinct tokens only at positions that require a single token;
+// a pairwise join would also enumerate the pairs of every declared set.
+.decl action_arg_single_position(a:symbol, rank:number)
+action_arg_single_position(a, r) :- action_arg(a, r, p, v), !action_arg_set(a, r), !failed(a).
+error("action argv position has several tokens but is not a declared set", cat(a, " ", to_string(r))) :-
+  action_arg_single_position(a, r), n = count : { action_arg(a, r, p, v) }, n > 1.
+
+error("default output not produced by any action", p) :- default_output(p), !produced(p).
+
+// ---- standard streams  ----
+// A command reads its stdin from a file and writes its stdout to one
+// (`binary2cpp SYMBOL < in > out`). These are typed facts, not shell words
+// in argv: the translator spells them for its backend (after the argv, for
+// Ninja's /bin/sh). stdin is an input of the action; stdout must be one of
+// its outputs. At most one of each.
+.decl action_stdin(a:symbol, path:symbol)
+.decl action_stdout(a:symbol, path:symbol)
+action_in(a, p, "explicit") :- action_stdin(a, p).
+error("action has two stdin files", cat(a, ": ", x, " / ", y)) :- action_stdin(a, x), action_stdin(a, y), x < y.
+error("action has two stdout files", cat(a, ": ", x, " / ", y)) :- action_stdout(a, x), action_stdout(a, y), x < y.
+error("action stdout is not one of its outputs", cat(a, " > ", p)) :- action_stdout(a, p), !produced_by(p, a).
+error("stdin of an undeclared action", a) :- action_stdin(a, _), !declared_action(a).
+
+// ---- working directory, restat, portable builtins ----
+// action_cwd(a, dir): the command runs in dir, a rooted directory ("src:" or
+// "out:"). Paths stay rooted in every other fact: the translator rebases the
+// rooted tokens of the command (argv, streams) onto dir and spells the
+// change of directory (`cd dir && ...`); Ninja's own paths (the build line,
+// the depfile it reads) stay relative to the build directory. A depfile's
+// contents are relative to the command's directory, which Ninja does not
+// rebase, so a depfile and a cwd are exclusive.
+.decl action_cwd(a:symbol, dir:symbol)
+error("action has two working directories", cat(a, ": ", x, " / ", y)) :-
+  action_cwd(a, x), action_cwd(a, y), x < y.
+error("action working directory is not a rooted path", cat(a, ": ", d)) :-
+  action_cwd(a, d), !match("(src|out):.*", d).
+error("action with a working directory has a depfile", a) :- action_cwd(a, _), action_depfile(a, _).
+error("working directory of an undeclared action", a) :- action_cwd(a, _), !declared_action(a).
+
+// action_restat(a): the command may leave an output untouched when its
+// content would not change (copy_if_different); the backend rechecks the
+// outputs' timestamps and prunes the consumers that are then up to date
+// (Ninja's restat).
+.decl action_restat(a:symbol)
+error("restat of an undeclared action", a) :- action_restat(a), !declared_action(a).
+
+// action_dyndep(a, f): the dependencies of `a` that its build discovers are
+// in the file f (Ninja's dyndep), which another action writes: extra inputs
+// and outputs for a's edge, so a language's build-time stratum (C++ modules:
+// buildlog-cpp's collator) orders actions by what the build found. f must
+// be an input of a. Not a depfile: dyndep edges are known before a runs.
+.decl action_dyndep(a:symbol, f:symbol)
+error("action has two dyndep files", cat(a, ": ", x, " / ", y)) :- action_dyndep(a, x), action_dyndep(a, y), x < y.
+error("dyndep file is not an input of its action", cat(a, ": ", f)) :-
+  action_dyndep(a, f), !action_in(a, f, _).
+error("dyndep of an undeclared action", a) :- action_dyndep(a, _), !declared_action(a).
+
+// action_builtin(a, name): the program is buildlog's portable command
+// `name` (`buildlog -E name`, like `cmake -E`): language-neutral file tasks
+// with one spelling on every host. It takes argv[0]; the action's
+// action_arg positions from 1 are its arguments. The translator spells the
+// program from builtin_argv, which the driver writes (the interpreter that
+// runs this buildlog).
+.decl action_builtin(a:symbol, name:symbol)
+.decl builtin_argv(pos:number, arg:symbol)     // driver facts
+.decl builtin_command(name:symbol)
+builtin_command("configure_file").
+builtin_command("collate").
+builtin_command("copy").
+builtin_command("copy_if_different").
+builtin_command("create_symlink").
+builtin_command("export_package").
+builtin_command("install").
+builtin_command("make_directory").
+builtin_command("remove").
+builtin_command("touch").
+error("unknown buildlog builtin", cat(a, ": ", n)) :- action_builtin(a, n), !builtin_command(n).
+error("action has two builtins", cat(a, ": ", x, " / ", y)) :-
+  action_builtin(a, x), action_builtin(a, y), x < y.
+error("builtin action also has an argv[0]", a) :- action_builtin(a, _), action_arg(a, 0, _, _).
+error("builtin of an undeclared action", a) :- action_builtin(a, _), !declared_action(a).
+
+// ---- a word of several paths ----
+// action_arg_join(a, rank, prefix, sep): argv position rank is one word,
+// prefix ++ its parts joined by sep; action_arg_part(a, rank, i, value) are
+// the parts, in order of i, each relativized like an action_arg value (a
+// comma-separated list of plugin paths, -p a.so,b.so). The word is typed,
+// not a pre-joined string, so every part is a path the translator spells.
+.decl action_arg_join(a:symbol, rank:number, prefix:symbol, sep:symbol)
+.decl action_arg_part(a:symbol, rank:number, i:number, value:symbol)
+error("joined argv word without parts", cat(a, " ", to_string(r))) :-
+  action_arg_join(a, r, _, _), !action_arg_part(a, r, _, _), !failed(a).
+error("argv part without its joined word (add action_arg_join)", cat(a, " ", to_string(r))) :-
+  action_arg_part(a, r, _, _), !action_arg_join(a, r, _, _).
+error("joined argv word has two spellings", cat(a, " ", to_string(r))) :-
+  action_arg_join(a, r, p1, s1), action_arg_join(a, r, p2, s2), (p1 < p2 ; p1 = p2, s1 < s2).
+error("argv part has two values", cat(a, " ", to_string(r), " ", to_string(i))) :-
+  action_arg_part(a, r, i, x), action_arg_part(a, r, i, y), x < y.
+error("action argv position used by a joined word and another argument", cat(a, " ", to_string(r))) :-
+  action_arg_join(a, r, _, _), action_arg(a, r, _, _).
+error("action argv position used by a joined word and another argument", cat(a, " ", to_string(r))) :-
+  action_arg_join(a, r, _, _), action_seq(a, r, _).
+error("joined argv word of an undeclared action", a) :- action_arg_join(a, _, _, _), !declared_action(a).
+
+// ---- tests ----
+// A test case is a command run after the build, keyed by (name, config
+// name): argv (position 0 the program; rooted paths or literals, rebased
+// onto its working directory like an action's), environment, labels,
+// pass/fail/skip regexes, run-alone, the files it needs built first, and a
+// reason not to run it at all. The translator writes them as tests.json
+// next to build.ninja; `buildlog test` runs them. L1 derives them (test).
+.decl test_case(name:symbol, cfg:symbol)
+.decl test_case_arg(name:symbol, cfg:symbol, i:number, value:symbol)
+.decl test_case_cwd(name:symbol, cfg:symbol, dir:symbol)
+.decl test_case_env(name:symbol, cfg:symbol, key:symbol, value:symbol)
+.decl test_case_env_path(name:symbol, cfg:symbol, key:symbol, i:number, path:symbol)   // a path-list entry, rooted
+.decl test_case_label(name:symbol, cfg:symbol, label:symbol)
+.decl test_case_regex(name:symbol, cfg:symbol, kind:symbol, re:symbol)
+.decl test_case_serial(name:symbol, cfg:symbol)
+.decl test_case_needs(name:symbol, cfg:symbol, path:symbol)
+.decl test_case_skip(name:symbol, cfg:symbol, reason:symbol)
+.decl test_case_launcher(name:symbol, cfg:symbol, via:symbol)   // a command prefix (an emulator)
+.decl has_test_program(name:symbol, cfg:symbol)
+has_test_program(n, c) :- test_case_arg(n, c, 0, _).
+error("test case without a program", cat(n, " [", c, "]")) :-
+  test_case(n, c), !has_test_program(n, c), !test_case_skip(n, c, _).
+error("test case working directory is not a rooted path", cat(n, " [", c, "] ", d)) :-
+  test_case_cwd(n, c, d), !match("(src|out):.*", d).

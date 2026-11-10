@@ -1,0 +1,3 @@
+.decl coveragedemo_consumes(t:symbol, path:symbol)
+coverage_need(t, c, f) :- coveragedemo_consumes(t, f), needed(t, c).
+coverage_need(t, u, f) :- coveragedemo_consumes(t, f), split_request(t, u).

@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The CPU backend as dlopen'd modules, one per ISA level of each
+# configuration's platform: CMake's -DGGML_BACKEND_DL=ON
+# -DGGML_CPU_ALL_VARIANTS=ON -DGGML_NATIVE=OFF.
+option_value = [
+  ["GGML_BACKEND_DL", "on"],
+  ["GGML_CPU_ALL_VARIANTS", "on"],
+  ["GGML_NATIVE", "off"],
+]

@@ -1,0 +1,23 @@
+{
+ "backtrace": 0,
+ "backtraceGraph": {
+  "commands": [],
+  "files": [
+   "CMakeLists.txt"
+  ],
+  "nodes": [
+   {
+    "file": 0
+   }
+  ]
+ },
+ "dependencies": [],
+ "id": "edit_cache::@0",
+ "name": "edit_cache",
+ "paths": {
+  "build": ".",
+  "source": "."
+ },
+ "sources": [],
+ "type": "UTILITY"
+}

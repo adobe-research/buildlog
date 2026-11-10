@@ -1,0 +1,54 @@
+# cpu (CMake) vs buildlog arm64-macos.release.none
+# not compared (toolchain spelling): compiler path, -arch vs --target/-isysroot,
+# -o/-c/-MD/-MF/-MT
+
+## compiles
+objects: cmake 66 (all targets), buildlog 28, compared 28
+- 12 objects of ggml-cpu
+    define only cmake:    -Dggml_cpu_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 6 objects of ggml-base
+    define only cmake:    -Dggml_base_EXPORTS
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 3 objects of ggml-base
+    define only cmake:    -Dggml_base_EXPORTS
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 3 objects of ggml-cpu
+    define only cmake:    -Dggml_cpu_EXPORTS
+    include only cmake:    <sdk frameworks>
+    flag only cmake:    -Werror=implicit-function-declaration -Werror=implicit-int
+- 2 objects of ggml
+    define only cmake:    -Dggml_EXPORTS
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+- 2 objects of simple-backend, test-backend-ops
+    flag only cmake:    -std=gnu++17
+    flag only buildlog: -std=c++17
+
+## links
+- libggml-base.0.25.3.dylib
+    cmake:    -dynamiclib -Wl,-headerpad_max_install_names -lm
+    buildlog: -dynamiclib -lm
+- libggml-cpu.0.25.3.dylib
+    cmake:    -dynamiclib -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-base.0.25.3.dylib -framework Accelerate
+    buildlog: -dynamiclib -Wl,-framework,Accelerate libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/arm64-macos.release.none
+- libggml.0.25.3.dylib
+    cmake:    -dynamiclib -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml-cpu.0.25.3.dylib libggml-base.0.25.3.dylib
+    buildlog: -dynamiclib libggml-cpu.0.25.3.dylib libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/arm64-macos.release.none
+- simple-backend
+    cmake:    -Wl,-search_paths_first -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml.0.25.3.dylib libggml-cpu.0.25.3.dylib libggml-base.0.25.3.dylib
+    buildlog: libggml.0.25.3.dylib libggml-cpu.0.25.3.dylib libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/arm64-macos.release.none
+- test-backend-ops
+    cmake:    -Wl,-search_paths_first -Wl,-headerpad_max_install_names -Wl,-rpath,$BUILD/src libggml.0.25.3.dylib libggml-cpu.0.25.3.dylib libggml-base.0.25.3.dylib
+    buildlog: libggml.0.25.3.dylib libggml-cpu.0.25.3.dylib libggml-base.0.25.3.dylib -Wl,-rpath,@loader_path/../../lib/arm64-macos.release.none
+
+## global symbols and load commands
+- libggml-base.0.25.3.dylib: 695 vs 695 global symbols, same
+    loads: /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib
+- libggml-cpu.0.25.3.dylib: 422 vs 422 global symbols, same
+    loads: /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate, /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib, @rpath/libggml-cpu.0.dylib
+- libggml.0.25.3.dylib: 19 vs 19 global symbols, same
+    loads: /usr/lib/libSystem.B.dylib, /usr/lib/libc++.1.dylib, @rpath/libggml-base.0.dylib, @rpath/libggml-cpu.0.dylib, @rpath/libggml.0.dylib

@@ -1,0 +1,306 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Halide generator tooling and autoschedulers (M3 phase 4). Project rules
+# cover repeated autoscheduler module declarations and target-property
+# defaults; cost-model tools and generated libraries remain raw policy facts.
+# Targets are named by CMake OUTPUT_NAME where it differs from target name.
+target = [
+  "Halide_GenGen",
+  "Halide_Generator",
+  "gengen",
+  "Halide_ASLog",
+  "Halide_Plugin",
+  "get_host_target",
+  "featurization_to_sample",
+  "adams2019_weights_obj",
+  "adams2019_cost_model.generator",
+  "adams2019_retrain_cost_model",
+  "adams2019_weightsdir_to_weightsfile",
+  "anderson2021_weights_obj",
+  "anderson2021_cost_model.generator",
+  "anderson2021_retrain_cost_model",
+  "anderson2021_weightsdir_to_weightsfile",
+]
+
+native_kind = [
+  ["Halide_GenGen", "library"],
+  ["gengen", "executable"],
+  ["Halide_ASLog", "library"],
+  ["get_host_target", "executable"],
+  ["featurization_to_sample", "executable"],
+  ["adams2019_weights_obj", "object_library"],
+  ["adams2019_cost_model.generator", "executable"],
+  ["adams2019_retrain_cost_model", "executable"],
+  ["adams2019_weightsdir_to_weightsfile", "executable"],
+  ["anderson2021_weights_obj", "object_library"],
+  ["anderson2021_cost_model.generator", "executable"],
+  ["anderson2021_retrain_cost_model", "executable"],
+  ["anderson2021_weightsdir_to_weightsfile", "executable"],
+]
+
+linkage_require = [
+  ["Halide_GenGen", "static", "holds main(), linked into each generator; upstream STATIC"],
+  ["Halide_ASLog", "static", "compiled into each autoscheduler plugin; upstream STATIC"],
+]
+
+request_all = [
+  "Halide_GenGen",
+  "gengen",
+  "Halide_ASLog",
+  "get_host_target",
+  "featurization_to_sample",
+  "adams2019_retrain_cost_model",
+  "adams2019_weightsdir_to_weightsfile",
+  "anderson2021_retrain_cost_model",
+  "anderson2021_weightsdir_to_weightsfile",
+]
+
+whole_archive = [
+  ["Halide_Generator", "Halide_GenGen"],
+]
+
+halide_build_embed = [
+  [
+    "adams2019_weights_obj",
+    "binary2cpp",
+    "baseline_weights",
+    "src/autoschedulers/adams2019/baseline.weights",
+    "baseline.cpp"
+  ],
+  [
+    "anderson2021_weights_obj",
+    "binary2cpp",
+    "baseline_weights",
+    "src/autoschedulers/anderson2021/baseline.weights",
+    "baseline.cpp"
+  ],
+]
+
+halide_build_library = [
+  [
+    "adams2019_cost_model",
+    "adams2019_cost_model.generator",
+    "cost_model",
+    "cost_model",
+    "adams2019_cost_model.runtime"
+  ],
+  [
+    "adams2019_train_cost_model",
+    "adams2019_cost_model.generator",
+    "train_cost_model",
+    "train_cost_model",
+    "adams2019_cost_model.runtime"
+  ],
+  [
+    "anderson2021_cost_model",
+    "anderson2021_cost_model.generator",
+    "cost_model",
+    "cost_model",
+    "anderson2021_cost_model.runtime"
+  ],
+  [
+    "anderson2021_train_cost_model",
+    "anderson2021_cost_model.generator",
+    "train_cost_model",
+    "train_cost_model",
+    "anderson2021_cost_model.runtime"
+  ],
+]
+
+halide_build_library_target = [
+  ["adams2019_cost_model", 0, "cmake"],
+  ["adams2019_train_cost_model", 0, "cmake"],
+  ["anderson2021_cost_model", 0, "cmake"],
+  ["anderson2021_train_cost_model", 0, "cmake"],
+]
+
+halide_build_runtime_library = [
+  ["adams2019_cost_model.runtime", "gengen", "Halide_Runtime"],
+  ["anderson2021_cost_model.runtime", "gengen", "Halide_Runtime"],
+]
+
+# Raw sources for non-module helper targets and cost-model tools.
+cxx_source = [
+  ["Halide_GenGen", "tools/GenGen.cpp"],
+  ["gengen", "tools/GenGen.cpp"],
+  ["Halide_ASLog", "src/autoschedulers/common/ASLog.cpp"],
+  ["get_host_target", "src/autoschedulers/common/get_host_target.cpp"],
+  ["featurization_to_sample", "src/autoschedulers/common/featurization_to_sample.cpp"],
+  ["adams2019_cost_model.generator", "src/autoschedulers/adams2019/cost_model_generator.cpp"],
+  ["adams2019_retrain_cost_model", "src/autoschedulers/adams2019/DefaultCostModel.cpp"],
+  ["adams2019_retrain_cost_model", "src/autoschedulers/adams2019/Weights.cpp"],
+  ["adams2019_retrain_cost_model", "src/autoschedulers/adams2019/retrain_cost_model.cpp"],
+  [
+    "adams2019_weightsdir_to_weightsfile",
+    "src/autoschedulers/adams2019/weightsdir_to_weightsfile.cpp"
+  ],
+  ["adams2019_weightsdir_to_weightsfile", "src/autoschedulers/adams2019/Weights.cpp"],
+  [
+    "anderson2021_cost_model.generator",
+    "src/autoschedulers/anderson2021/cost_model_generator.cpp"
+  ],
+  ["anderson2021_retrain_cost_model", "src/autoschedulers/anderson2021/DefaultCostModel.cpp"],
+  ["anderson2021_retrain_cost_model", "src/autoschedulers/anderson2021/Weights.cpp"],
+  ["anderson2021_retrain_cost_model", "src/autoschedulers/anderson2021/retrain_cost_model.cpp"],
+  [
+    "anderson2021_weightsdir_to_weightsfile",
+    "src/autoschedulers/anderson2021/weightsdir_to_weightsfile.cpp"
+  ],
+  ["anderson2021_weightsdir_to_weightsfile", "src/autoschedulers/anderson2021/Weights.cpp"],
+]
+
+# Raw deps for helper targets; autoscheduler module default/plugin deps are rules.
+dep = [
+  ["Halide_GenGen", "Halide", "public"],
+  ["Halide_Generator", "Halide_GenGen", "interface"],
+  ["gengen", "Halide", "private"],
+  ["Halide_Plugin", "Halide", "interface"],
+  ["Halide_Plugin", "Halide_ASLog", "interface"],
+  ["get_host_target", "Halide", "private"],
+  ["adams2019_cost_model.generator", "Halide_Generator", "private"],
+  ["anderson2021_cost_model.generator", "Halide_Generator", "private"],
+  ["adams2019_retrain_cost_model", "adams2019_cost_model", "private"],
+  ["adams2019_retrain_cost_model", "adams2019_train_cost_model", "private"],
+  ["adams2019_retrain_cost_model", "Halide_Plugin", "private"],
+  ["adams2019_retrain_cost_model", "adams2019_weights_obj", "private"],
+  ["adams2019_weightsdir_to_weightsfile", "Halide_Runtime", "private"],
+  ["anderson2021_retrain_cost_model", "anderson2021_cost_model", "private"],
+  ["anderson2021_retrain_cost_model", "anderson2021_train_cost_model", "private"],
+  ["anderson2021_retrain_cost_model", "Halide_Plugin", "private"],
+  ["anderson2021_retrain_cost_model", "anderson2021_weights_obj", "private"],
+  ["anderson2021_weightsdir_to_weightsfile", "Halide_Runtime", "private"],
+]
+
+# Repeated src/autoschedulers target properties factored through project rules.
+halide_autoscheduler_cxx17 = [
+  "Halide_GenGen",
+  "gengen",
+  "Halide_ASLog",
+  "get_host_target",
+  "featurization_to_sample",
+  "adams2019_weights_obj",
+  "adams2019_cost_model.generator",
+  "adams2019_retrain_cost_model",
+  "adams2019_weightsdir_to_weightsfile",
+  "anderson2021_weights_obj",
+  "anderson2021_cost_model.generator",
+  "anderson2021_retrain_cost_model",
+  "anderson2021_weightsdir_to_weightsfile",
+]
+
+halide_autoscheduler_hidden = [
+  "Halide_ASLog",
+  "adams2019_cost_model.generator",
+  "adams2019_retrain_cost_model",
+  "adams2019_weights_obj",
+  "adams2019_weightsdir_to_weightsfile",
+  "anderson2021_cost_model.generator",
+  "anderson2021_retrain_cost_model",
+  "anderson2021_weights_obj",
+  "anderson2021_weightsdir_to_weightsfile",
+  "featurization_to_sample",
+  "get_host_target",
+]
+
+halide_autoscheduler_exe_link_defaults = [
+  "adams2019_cost_model.generator",
+  "adams2019_retrain_cost_model",
+  "adams2019_weightsdir_to_weightsfile",
+  "anderson2021_cost_model.generator",
+  "anderson2021_retrain_cost_model",
+  "anderson2021_weightsdir_to_weightsfile",
+  "featurization_to_sample",
+  "gengen",
+  "get_host_target",
+]
+
+# Remaining one-off properties: interface includes, ASLog PIC, module names
+# not covered by the add_autoscheduler abstraction.
+prop = [
+  ["Halide_Plugin", "cc.include_dir", "src:src/autoschedulers/common", "interface"],
+  ["Halide_ASLog", "cc.include_dir", "src:src/autoschedulers/common", "public"],
+  ["Halide_ASLog", "cc.compile_flag", "-fPIC", "private"],
+  [
+    "adams2019_retrain_cost_model",
+    "cc.include_dir",
+    "src:src/autoschedulers/adams2019",
+    "private"
+  ],
+  [
+    "adams2019_weightsdir_to_weightsfile",
+    "cc.include_dir",
+    "src:src/autoschedulers/common",
+    "private"
+  ],
+  [
+    "anderson2021_retrain_cost_model",
+    "cc.include_dir",
+    "src:src/autoschedulers/anderson2021",
+    "private"
+  ],
+  [
+    "anderson2021_weightsdir_to_weightsfile",
+    "cc.include_dir",
+    "src:src/autoschedulers/common",
+    "private"
+  ],
+]
+
+# add_autoscheduler modules. Rules add module kind, request_all, Halide_Plugin,
+# C++17, hidden visibility, module headerpad, defines and include dirs.
+[halide_autoscheduler.adams2019]
+target = "autoschedule_adams2019"
+include_dir = "src:src/autoschedulers/adams2019"
+define = "Halide_Adams2019_EXPORTS"
+autoscheduler_source = [
+  "src/autoschedulers/adams2019/AutoSchedule.cpp",
+  "src/autoschedulers/adams2019/Cache.cpp",
+  "src/autoschedulers/adams2019/DefaultCostModel.cpp",
+  "src/autoschedulers/adams2019/FunctionDAG.cpp",
+  "src/autoschedulers/adams2019/LoopNest.cpp",
+  "src/autoschedulers/adams2019/State.cpp",
+  "src/autoschedulers/adams2019/Weights.cpp",
+]
+autoscheduler_library = [
+  "adams2019_cost_model",
+  "adams2019_train_cost_model",
+  "adams2019_weights_obj",
+]
+
+[halide_autoscheduler.anderson2021]
+target = "autoschedule_anderson2021"
+include_dir = "src:src/autoschedulers/anderson2021"
+define = "Halide_Anderson2021_EXPORTS"
+autoscheduler_source = [
+  "src/autoschedulers/anderson2021/AutoSchedule.cpp",
+  "src/autoschedulers/anderson2021/DefaultCostModel.cpp",
+  "src/autoschedulers/anderson2021/FunctionDAG.cpp",
+  "src/autoschedulers/anderson2021/GPULoopInfo.cpp",
+  "src/autoschedulers/anderson2021/LoopNest.cpp",
+  "src/autoschedulers/anderson2021/SearchSpace.cpp",
+  "src/autoschedulers/anderson2021/State.cpp",
+  "src/autoschedulers/anderson2021/Tiling.cpp",
+  "src/autoschedulers/anderson2021/Weights.cpp",
+]
+autoscheduler_library = [
+  "anderson2021_cost_model",
+  "anderson2021_train_cost_model",
+  "anderson2021_weights_obj",
+]
+
+[halide_autoscheduler.li2018]
+target = "autoschedule_li2018"
+include_dir = ""
+define = "Halide_Li2018_EXPORTS"
+autoscheduler_source = [
+  "src/autoschedulers/li2018/GradientAutoscheduler.cpp",
+]
+
+[halide_autoscheduler.mullapudi2016]
+target = "autoschedule_mullapudi2016"
+include_dir = ""
+define = "Halide_Mullapudi2016_EXPORTS"
+autoscheduler_source = [
+  "src/autoschedulers/mullapudi2016/AutoSchedule.cpp",
+]

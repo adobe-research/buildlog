@@ -1,0 +1,8 @@
+# Environment
+Darwin arm64
+26.5.2
+meson 1.12.1
+ninja 1.13.2
+Apple clang version 21.0.0 (clang-2100.1.1.101)
+ccache version 4.14
+fribidi v1.0.17 b93119f5fdc7ea47672cc304c1455ffa6dfe7536

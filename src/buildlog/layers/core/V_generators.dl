@@ -1,0 +1,124 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Generated files: one vocabulary for "run a program that writes files"
+// A generator is an argv template,
+// written in [generator.G]:
+//   owner  = "T"       the target whose action it is; its outputs go in
+//                      gen_dir(T, c) and are T's generated files
+//   run    = ["flatc", "--cpp", "-o", "${gen:tests}", "${src:tests/a.fbs}"]
+//   output = ["x.h"]   more outputs the argv does not name
+//   input  = ["${src:utils/helpers.py}"]   more inputs, implicit
+//   stdout = "${out:tables.i}", stdin = "${src:data.txt}"
+//   label  = "FLATC"   the action's kind (default GEN)
+// A word is literal text, or a prefix and one typed placeholder:
+//   ${out:F}    the output F, in gen_dir(owner, c)
+//   ${gen} / ${gen:SUB}   the directory (or SUB below it), not an input
+//   ${src:P}    the source file P, an input
+//   ${pkg:T/REL}, ${pkg:KEY}   the file REL of the imported target T (or
+//               package_data KEY's), an input; a plugin says where an
+//               imported target's files are (package_data_root)
+//   ${tool:T}   the program of target T, run in the exec configuration
+//   ${list:L}   the words of word_list L, spliced in
+// The first word, without a placeholder, is a target reference too (the
+// program: exec inference applies unchanged). The rank of a word is its
+// position; placeholders declare the action's inputs and outputs, so
+// nothing is stated twice. The action's id is its first output.
+//
+// A generator with params = ["dir", "name"] is a template: its text holds
+// {dir} and {name}, and generate = [["tpl", "tests", "monster"], ...] states
+// one generator per row. The loader parses words and expands templates
+// (facts.py, desugar_generators) into gen_word/gen_file/gen_primary rows
+// whose origins are the rows that wrote them, so `why` on an argument cites
+// the template's run line and the instance row.
+//
+// The key is the owner's configuration (rather than one per target): a generator runs
+// once per configuration its owner is needed in.
+.decl generator(g:symbol)
+.decl generator_owner(g:symbol, t:symbol)
+.decl generator_label(g:symbol, label:symbol)
+.decl generator_run(g:symbol, pos:number, word:symbol)
+.decl generator_output(g:symbol, pos:number, word:symbol)
+.decl generator_input(g:symbol, word:symbol)
+.decl generator_stdout(g:symbol, word:symbol)
+.decl generator_stdin(g:symbol, word:symbol)
+.decl generator_params(g:symbol, pos:number, name:symbol)
+.decl generate(template:symbol, args:symbol)             // args: the loader's, joined
+.decl word_list(name:symbol, pos:number, word:symbol)
+.decl package_data(key:symbol, t:symbol, rel:symbol)     // open: KEY names T's file REL
+
+// The loader's parse (desugar_generators). kind: lit | tool | out | gen |
+// src | pkg (value T, rel REL) | pkgkey (value KEY) | list (value L).
+.decl gen_word(g:symbol, rank:number, prefix:symbol, kind:symbol, value:symbol, rel:symbol)
+// role: out | in | stdout | stdin (kinds as above, no prefix)
+.decl gen_file(g:symbol, role:symbol, kind:symbol, value:symbol, rel:symbol)
+.decl gen_primary(g:symbol, file:symbol)
+
+.decl package_data_root(t:symbol, c:Cfg, dir:symbol)          // open: where imported t's files are
+.decl package_file_want(t:symbol, rel:symbol)            // exported: asked of the plugins
+.decl gen_output(owner:symbol, c:Cfg, path:symbol)   // exported: owner's outputs
+
+.decl gen_ref(g:symbol, kind:symbol, value:symbol, rel:symbol)
+gen_ref(g, k, v, x) :- gen_word(g, _, _, k, v, x).
+gen_ref(g, k, v, x) :- gen_file(g, _, k, v, x).
+package_file_want(t, x) :- gen_ref(_, "pkg", t, x).
+package_file_want(t, x) :- gen_ref(_, "pkgkey", k, _), package_data(k, t, x).
+
+.decl gen_action(g:symbol, o:symbol, c:Cfg, a:symbol, d:symbol)
+gen_action(g, o, c, cat(d, "/", f), d) :- gen_primary(g, f), generator_owner(g, o), gen_dir(o, c, d).
+
+// The path a placeholder stands for in c.
+.decl gen_path(g:symbol, c:Cfg, kind:symbol, value:symbol, rel:symbol, path:symbol)
+// Outputs have their own relation: the plugins' package roots depend on
+// gen_output, and the "pkg" paths below are built from those roots, so a
+// "pkg" path must not share a column with the outputs it is derived from.
+.decl gen_out_path(g:symbol, c:Cfg, value:symbol, rel:symbol, path:symbol)
+gen_out_path(g, c, v, x, cat(d, "/", v)) :- gen_ref(g, "out", v, x), gen_action(g, _, c, _, d).
+gen_path(g, c, "out", v, x, path) :- gen_out_path(g, c, v, x, path).
+gen_path(g, c, "gen", "", x, d) :- gen_ref(g, "gen", "", x), gen_action(g, _, c, _, d).
+gen_path(g, c, "gen", v, x, cat(d, "/", v)) :- gen_ref(g, "gen", v, x), v != "", gen_action(g, _, c, _, d).
+gen_path(g, c, "src", v, x, cat("src:", v)) :- gen_ref(g, "src", v, x), gen_action(g, _, c, _, _).
+gen_path(g, c, "pkg", t, x, cat(d, "/", x)) :- gen_ref(g, "pkg", t, x), gen_action(g, _, c, _, _),
+  package_data_root(t, c, d).
+gen_path(g, c, "pkgkey", k, x, cat(d, "/", r)) :- gen_ref(g, "pkgkey", k, x), gen_action(g, _, c, _, _),
+  package_data(k, t, r), package_data_root(t, c, d).
+.decl gen_input_kind(k:symbol)
+gen_input_kind("src"). gen_input_kind("pkg"). gen_input_kind("pkgkey").
+
+.decl gen_label(g:symbol, label:symbol)
+gen_label(g, l) :- generator_label(g, l).
+gen_label(g, "GEN") :- gen_primary(g, _), !generator_label(g, _).
+
+action(a, l), target_action(o, c, a) :- gen_action(g, o, c, a, _), gen_label(g, l).
+action_run(a, r, p, v, "run") :- gen_action(g, _, _, a, _), gen_word(g, r, p, "tool", v, _).
+action_arg(a, r, p, v) :- gen_action(g, _, _, a, _), gen_word(g, r, p, "lit", v, _).
+action_arg(a, r + i, "", w) :- gen_action(g, _, _, a, _), gen_word(g, r, _, "list", l, _), word_list(l, i, w).
+action_arg(a, r, p, path) :- gen_action(g, _, c, a, _), gen_word(g, r, p, k, v, x), gen_path(g, c, k, v, x, path).
+action_in(a, path, "explicit") :- gen_action(g, _, c, a, _), gen_word(g, _, _, k, v, x),
+  gen_input_kind(k), gen_path(g, c, k, v, x, path).
+action_in(a, path, "implicit") :- gen_action(g, _, c, a, _), gen_file(g, "in", k, v, x),
+  gen_path(g, c, k, v, x, path).
+action_stdin(a, path) :- gen_action(g, _, c, a, _), gen_file(g, "stdin", k, v, x), gen_path(g, c, k, v, x, path).
+action_stdout(a, path) :- gen_action(g, _, c, a, _), gen_file(g, "stdout", k, v, x), gen_path(g, c, k, v, x, path).
+action_out(a, path) :- gen_action(g, _, c, a, _), gen_ref(g, "out", v, x), gen_out_path(g, c, v, x, path), path != a.
+gen_output(o, c, path) :- gen_action(g, o, c, _, _), gen_ref(g, "out", v, x), gen_out_path(g, c, v, x, path).
+
+error("generator without an owner", g) :- gen_primary(g, _), !generator_owner(g, _).
+error("generator writes no file (use ${out:F}, output or stdout)", g) :- generator(g), !gen_primary(g, _),
+  !generator_params(g, _, _).
+error("unknown word list", cat(g, ": ", l)) :- gen_word(g, _, _, "list", l, _), !word_list(l, _, _).
+error("unknown package data key", cat(g, ": ", k)) :- gen_ref(g, "pkgkey", k, _), !package_data(k, _, _).
+error_at("generator's package file: the plugins know no files of this target", cat(g, ": ", t), o, c) :-
+  gen_action(g, o, c, _, _), gen_ref(g, "pkg", t, _), !package_data_root(t, c, _).
+error_at("generator's package file: the plugins know no files of this target", cat(g, ": ", t), o, c) :-
+  gen_action(g, o, c, _, _), gen_ref(g, "pkgkey", k, _), package_data(k, t, _), !package_data_root(t, c, _).
+
+// [target.T] gen_include = { private = ["", "tests"] }: T compiles with
+// gen_dir(T, c)/SUB as an include dir of that visibility (a plugin spells it).
+.decl target_gen_include(t:symbol, vis:symbol, sub:symbol)   // exported
+// gen_user(t, owner): t compiles against owner's generated files as its own
+// (private: -I gen_dir(owner, c), after them), where owner generates for
+// several targets (SPIRV-Tools' tables). A dependency's include dirs would be
+// -isystem instead (buildlog-cpp's include classes).
+.decl gen_user(t:symbol, owner:symbol)                       // exported
+dep(t, o, "private") :- gen_user(t, o).

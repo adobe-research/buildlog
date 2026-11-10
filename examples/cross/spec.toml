@@ -1,0 +1,94 @@
+condition = [
+  ["is_x86", "$Eq(platform.cpu, x86_64)"],
+  ["is_debug", "$Eq(native.opt, debug)"],
+  ["not_x86", "$Not($Eq(platform.cpu, x86_64))"],
+  ["checked", "$Or($Eq(native.opt, debug), $Not($Eq(native.sanitize, none)))"],
+]
+
+config_decl = [
+  ["cross-release", "x86_64-macos"],
+  ["host-asan", "arm64-macos"],
+  ["u2-release", "universal2-macos"],
+]
+
+config_decl_setting = [
+  ["cross-release", "native.opt", "release"],
+  ["host-asan", "native.opt", "debug"],
+  ["host-asan", "native.sanitize", "address"],
+  ["u2-release", "native.opt", "release"],
+]
+
+cxx_source = [
+  ["core", "core/core.cpp"],
+  ["util", "util/util.cpp"],
+  ["blurgen", "gen/blurgen.cpp"],
+  ["app", "app/main.cpp"],
+  ["ping", "ping/ping.cpp"],
+  ["pong", "pong/pong.cpp"],
+  ["simd", "simd/simd.cpp"],
+]
+
+dep = [
+  ["util", "core", "public"],
+  ["blurgen", "core", "private"],
+  ["app", "util", "private"],
+  ["app", "blur", "private"],
+  ["app", "zlib", "private"],
+  ["app", "ping", "private"],
+  ["ping", "pong", "public"],
+  ["pong", "ping", "public"],
+]
+
+dep_when = [
+  ["app", "simd", "private", "is_x86"],
+]
+
+blurgen_library = [
+  ["blur", "blurgen", "blur"],
+]
+
+native_kind = [
+  ["core", "library"],
+  ["util", "library"],
+  ["blurgen", "executable"],
+  ["app", "executable"],
+  ["ping", "library"],
+  ["pong", "library"],
+  ["simd", "library"],
+]
+
+prop = [
+  ["core", "cc.include_dir", "src:core/include", "public"],
+  ["util", "cc.include_dir", "src:util/include", "public"],
+  ["ping", "cc.include_dir", "src:ping/include", "public"],
+  ["pong", "cc.include_dir", "src:pong/include", "public"],
+  ["simd", "cc.include_dir", "src:simd/include", "public"],
+  ["simd", "cc.define", "HAVE_SIMD=1", "public"],
+  ["core", "cc.define", "CORE_API=1", "public"],
+  ["util", "cc.define", "UTIL_IMPL", "private"],
+  ["core", "cxx.std", "17", "public"],
+  ["util", "cxx.std", "20", "public"],
+]
+
+prop_when = [
+  ["core", "cc.define", "CORE_DEBUG=1", "private", "is_debug"],
+  ["simd", "cc.compile_flag", "-msse4.1", "private", "is_x86"],
+  ["app", "cc.define", "SIMD_FALLBACK=1", "private", "not_x86"],
+  ["core", "cc.define", "CORE_CHECKED=1", "public", "checked"],
+]
+
+request = [
+  ["app", "cross-release"],
+  ["app", "host-asan"],
+  ["app", "u2-release"],
+]
+
+target = [
+  ["core"],
+  ["util"],
+  ["blurgen"],
+  ["app"],
+  ["ping"],
+  ["pong"],
+  ["simd"],
+]

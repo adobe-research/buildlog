@@ -1,0 +1,359 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Halide tests: the tests() calls are suites.toml; their per-test
+# exceptions (the CMake statements that name one test target) are here.
+# test/runtime: halide_define_runtime_internal_test
+halide_runtime_test = [
+  "block_allocator",
+  "block_storage",
+  "device_buffer_utils",
+  "linked_list",
+  "memory_arena",
+  "string_storage",
+  "string_table",
+]
+halide_test_dep = [
+  ["fuzz_bounds", "Halide_fuzz"],
+  ["fuzz_cse", "Halide_fuzz"],
+  ["fuzz_in_clone", "Halide_fuzz"],
+  ["fuzz_lossless_cast", "Halide_fuzz"],
+  ["fuzz_simplify", "Halide_fuzz"],
+  ["fuzz_solve", "Halide_fuzz"],
+  ["fuzz_widening_lerp", "Halide_fuzz"],
+  ["correctness_image_io", "Halide_ImageIO"],
+  ["correctness_gpu_allocation_cache", "Halide_ThreadPool"],
+  ["correctness_spirv_ir", "SPIRV-Headers::SPIRV-Headers"],
+]
+halide_test_include = [
+  ["correctness_arm_cpu_detect", "src/runtime"],
+  ["correctness_powerpc_cpu_detect", "src/runtime"],
+  ["correctness_x86_cpu_detect", "src/runtime"],
+  ["correctness_spirv_ir", "src"],
+]
+halide_test_define = [
+  ["correctness_spirv_ir", "WITH_SPIRV"],
+  ["correctness_serialization", "TEST_WITH_SERIALIZATION"],
+  ["correctness_generator_cache", "TEST_WITH_SERIALIZATION"],
+  ["correctness_streaming", "TEST_WITH_SERIALIZATION"],
+]
+# Tests which use external funcs need to enable exports (ENABLE_EXPORTS).
+halide_test_exports = [
+  "correctness_async",
+  "correctness_atomics",
+  "correctness_c_function",
+  "correctness_callable",
+  "correctness_callable_generator",
+  "correctness_callable_typed",
+  "correctness_compute_at_split_rvar",
+  "correctness_concat",
+  "correctness_custom_lowering_pass",
+  "correctness_extern_bounds_inference",
+  "correctness_extern_consumer",
+  "correctness_extern_consumer_tiled",
+  "correctness_extern_error",
+  "correctness_extern_output_expansion",
+  "correctness_extern_partial",
+  "correctness_extern_producer",
+  "correctness_extern_reorder_storage",
+  "correctness_extern_sort",
+  "correctness_extern_stage",
+  "correctness_extern_stage_on_device",
+  "correctness_handle",
+  "correctness_image_of_lists",
+  "correctness_lazy_convolution",
+  "correctness_loop_invariant_extern_calls",
+  "correctness_make_struct",
+  "correctness_many_small_extern_stages",
+  "correctness_memoize",
+  "correctness_memoize_cloned",
+  "correctness_multiple_outputs_extern",
+  "correctness_nested_parallel_stack",
+  "correctness_non_nesting_extern_bounds_query",
+  "correctness_parallel_fork",
+  "correctness_pipeline_set_jit_externs_func",
+  "correctness_process_some_tiles",
+  "correctness_side_effects",
+  "correctness_skip_stages",
+  "correctness_skip_stages_cse_bug",
+  "correctness_skip_stages_external_array_functions",
+  "correctness_sliding_backwards",
+  "correctness_sliding_over_guard_with_if",
+  "correctness_sliding_reduction",
+  "correctness_sliding_window",
+  "correctness_stage_strided_loads",
+  "correctness_storage_folding",
+  "performance_fast_pow",
+]
+
+# Irregular targets left as raw facts: _test_internal, test interface
+# targets, extern helper libraries, rungen_test and the Adams2019 demo.
+target = [
+  "test_defaults",
+  "test_warnings",
+  "halide_generator_options",
+  "halide_aot_test",
+  "Halide_test",
+  "Halide_terminate_handler",
+  "Halide_fuzz",
+  "halide_runtime_options",
+  "runtime_internal_common",
+  "registration_test",
+  "_test_internal",
+  "Halide_ImageIO",
+  "Halide_Tools",
+  "Halide_ThreadPool",
+  "Halide_RunGenMain",
+  "cxx_mangling_externs",
+  "cxx_mangling_define_extern_externs",
+  "rungen_test",
+]
+
+native_kind = [
+  ["Halide_terminate_handler", "object_library"],
+  ["Halide_fuzz", "object_library"],
+  ["runtime_internal_common", "object_library"],
+  ["_test_internal", "executable"],
+  ["cxx_mangling_externs", "library"],
+  ["cxx_mangling_define_extern_externs", "library"],
+  ["rungen_test", "executable"],
+  ["registration_test", "executable"],
+]
+
+request_all = [
+  "_test_internal",
+  "rungen_test",
+  "registration_test",
+]
+
+halide_build_test = [
+  ["rungen_test", "rungen_test"],
+  ["registration_test", "registration_test"],
+]
+
+halide_build_test_group = [
+  ["rungen_test", "generator"],
+  ["registration_test", "generator"],
+]
+
+halide_build_test_environment = [
+  ["generator_aot_multitarget_0", "HL_MULTITARGET_TEST_USE_NOBOUNDSQUERY_FEATURE", "0"],
+  ["generator_aot_multitarget_1", "HL_MULTITARGET_TEST_USE_NOBOUNDSQUERY_FEATURE", "1"],
+]
+
+# ImageIO PNG/JPEG are optional in Halide CMake. The workspace opts into
+# finding them; zlib comes from Homebrew's per-OS pkgconfig directory.
+package_want = [
+  "libpng",
+  "libjpeg",
+]
+
+# Remaining raw source rows are non-pattern helpers and irregular test
+# support files (extern libraries, RunGenMain, demo generator).
+cxx_source = [
+  ["Halide_terminate_handler", "test/common/terminate_handler.cpp"],
+  ["Halide_fuzz", "test/fuzz/IRGraphCXXPrinter.cpp"],
+  ["Halide_fuzz", "test/fuzz/halide_fuzz_main.cpp"],
+  ["runtime_internal_common", "test/runtime/common.cpp"],
+  ["runtime_internal_common", "src/runtime/msan_stubs.cpp"],
+  ["runtime_internal_common", "src/runtime/to_string.cpp"],
+  ["_test_internal", "test/pch_helper.cpp"],
+  ["cxx_mangling_externs", "test/generator/cxx_mangling_externs.cpp"],
+  ["cxx_mangling_define_extern_externs", "test/generator/cxx_mangling_define_extern_externs.cpp"],
+  ["rungen_test", "test/generator/rungen_test.cpp"],
+  ["registration_test", "test/generator/registration_test.cpp"],
+]
+
+# add_halide_runtime and the runtime-prefix libraries (test/generator's
+# runtime_prefixes_iso block); the other libraries are hl_lib (generators.toml).
+halide_build_runtime_defaults = [
+  ["gengen", "Halide_Runtime"],
+]
+
+halide_build_library = [
+  [
+    "rniso_none",
+    "runtime_prefixes_iso.generator",
+    "runtime_prefixes_iso",
+    "pipe_none",
+    "rniso_rt_none"
+  ],
+  [
+    "rniso_none_c",
+    "runtime_prefixes_iso.generator",
+    "runtime_prefixes_iso",
+    "pipe_none_c",
+    ""
+  ],
+  [
+    "rniso_a",
+    "runtime_prefixes_iso.generator",
+    "runtime_prefixes_iso",
+    "pipe_a",
+    "rniso_rt_a"
+  ],
+  ["rniso_a_c", "runtime_prefixes_iso.generator", "runtime_prefixes_iso", "pipe_a_c", ""],
+  [
+    "rniso_b",
+    "runtime_prefixes_iso.generator",
+    "runtime_prefixes_iso",
+    "pipe_b",
+    "rniso_rt_b"
+  ],
+  ["rniso_b_c", "runtime_prefixes_iso.generator", "runtime_prefixes_iso", "pipe_b_c", ""],
+]
+
+halide_build_runtime_library = [
+  ["rniso_rt_none", "gengen", "Halide_Runtime"],
+  ["rniso_rt_a", "gengen", "Halide_Runtime"],
+  ["rniso_rt_b", "gengen", "Halide_Runtime"],
+]
+
+halide_build_library_c_backend = [
+  ["rniso_none_c", ""],
+  ["rniso_a_c", ""],
+  ["rniso_b_c", ""],
+]
+
+# TARGETS cmake-no_bounds_query cmake
+halide_build_library_target = [
+  ["metadata_tester", 0, "cmake"],
+  ["metadata_tester", 1, "cmake"],
+  ["multitarget", 0, "cmake"],
+  ["multitarget", 1, "cmake"],
+]
+
+halide_build_library_target_feature = [
+  ["metadata_tester", 0, 0, "no_bounds_query"],
+  ["multitarget", 0, 0, "no_bounds_query"],
+]
+
+halide_build_library_param_set = [
+  ["rniso_a", "rniso_a_import"],
+  ["rniso_a_c", "rniso_a_import"],
+  ["rniso_b", "rniso_b_import"],
+  ["rniso_b_c", "rniso_b_import"],
+]
+
+halide_build_runtime_params = [
+  ["rniso_rt_a", "rniso_a_export"],
+  ["rniso_rt_b", "rniso_b_export"],
+]
+
+halide_build_params = [
+  ["rniso_a_import", 0, "runtime_prefixes.import=runtime_a_"],
+  ["rniso_a_import", 1, "runtime_prefixes.internal=runtime_ai_"],
+  ["rniso_a_export", 0, "runtime_prefixes.export=runtime_a_"],
+  ["rniso_a_export", 1, "runtime_prefixes.internal=runtime_ai_"],
+  ["rniso_b_import", 0, "runtime_prefixes.import=runtime_b_"],
+  ["rniso_b_import", 1, "runtime_prefixes.internal=runtime_bi_"],
+  ["rniso_b_export", 0, "runtime_prefixes.export=runtime_b_"],
+  ["rniso_b_export", 1, "runtime_prefixes.internal=runtime_bi_"],
+]
+
+# Remaining deps: interface targets, externs, rungen/demo, and defaults for
+# irregular raw targets. Patterned correctness/generator/AOT deps are rules.
+dep = [
+  ["Halide_test", "Halide", "interface"],
+  ["Halide_fuzz", "Halide_test", "private"],
+  ["runtime_internal_common", "halide_runtime_options", "private"],
+  ["runtime_internal_common", "test_defaults", "private"],
+  ["runtime_internal_common", "test_warnings", "private"],
+  ["Halide_fuzz", "test_defaults", "private"],
+  ["_test_internal", "Halide_test", "private"],
+  ["_test_internal", "Halide_terminate_handler", "private"],
+  ["_test_internal", "test_defaults", "private"],
+  ["_test_internal", "test_warnings", "private"],
+  ["Halide_ImageIO", "Halide_Runtime", "interface"],
+  ["Halide_ImageIO", "libpng", "interface"],
+  ["Halide_ImageIO", "libjpeg", "interface"],
+  ["Halide_RunGenMain", "Halide_Runtime", "interface"],
+  ["Halide_RunGenMain", "Halide_ImageIO", "interface"],
+  ["Halide_RunGenMain", "Halide_Tools", "interface"],
+  ["cxx_mangling_define_extern_externs", "cxx_mangling", "private"],
+  ["registration_test", "blur2x2", "private"],
+  ["registration_test", "cxx_mangling", "private"],
+  ["registration_test", "pyramid", "private"],
+  ["registration_test", "blur2x2.runtime", "private"],
+  ["registration_test", "test_defaults", "private"],
+  ["registration_test", "test_warnings", "private"],
+  ["rungen_test", "example", "private"],
+  ["rungen_test", "example.runtime", "private"],
+  ["rungen_test", "Halide_ImageIO", "private"],
+  ["rungen_test", "Halide_Tools", "private"],
+  ["cxx_mangling_externs", "test_defaults", "private"],
+  ["cxx_mangling_define_extern_externs", "test_defaults", "private"],
+  ["rniso_none_c", "test_defaults", "private"],
+  ["rniso_a_c", "test_defaults", "private"],
+  ["rniso_b_c", "test_defaults", "private"],
+  ["rungen_test", "test_defaults", "private"],
+  ["rungen_test", "test_warnings", "private"],
+]
+
+prop = [
+  ["test_defaults", "cxx.std", "17", "interface"],
+  ["test_defaults", "cxx.compile_flag", "-fvisibility=hidden", "interface"],
+  ["test_defaults", "cxx.compile_flag", "-fvisibility-inlines-hidden", "interface"],
+  ["test_warnings", "cc.compile_flag", "-Wall", "interface"],
+  ["test_warnings", "cc.compile_flag", "-Wcast-qual", "interface"],
+  ["test_warnings", "cc.compile_flag", "-Wignored-qualifiers", "interface"],
+  ["test_warnings", "cc.compile_flag", "-Wimplicit-fallthrough", "interface"],
+  ["test_warnings", "cxx.compile_flag", "-Woverloaded-virtual", "interface"],
+  ["test_warnings", "cc.compile_flag", "-Wdeprecated-declarations", "interface"],
+  ["halide_generator_options", "cxx.compile_flag", "-Wdeprecated-declarations", "interface"],
+  ["halide_aot_test", "cc.include_dir", "src:test/common", "interface"],
+  ["halide_aot_test", "cc.include_dir", "src:tools", "interface"],
+  ["Halide_test", "cc.define", "HALIDE_KEEP_MACROS", "interface"],
+  ["Halide_test", "cc.include_dir", "src:test/common", "interface"],
+  ["Halide_test", "cc.include_dir", "src:tools", "interface"],
+  ["Halide_terminate_handler", "cxx.std", "17", "private"],
+  ["Halide_fuzz", "cxx.std", "17", "private"],
+  ["halide_runtime_options", "cc.include_dir", "src:src", "interface"],
+  ["halide_runtime_options", "cc.include_dir", "src:src/runtime", "interface"],
+  ["halide_runtime_options", "cc.define", "HALIDE_VERSION_MAJOR=22", "interface"],
+  ["halide_runtime_options", "cc.define", "HALIDE_VERSION_MINOR=0", "interface"],
+  ["halide_runtime_options", "cc.define", "HALIDE_VERSION_PATCH=0", "interface"],
+  ["halide_runtime_options", "cc.define", "BITS_64", "interface"],
+  ["halide_runtime_options", "cc.define", "COMPILING_HALIDE_RUNTIME", "interface"],
+  ["halide_runtime_options", "cc.define", "COMPILING_HALIDE_RUNTIME_TESTS", "interface"],
+  ["Halide_fuzz", "cc.define", "HALIDE_FUZZER_BACKEND=HALIDE_FUZZER_BACKEND_STDLIB", "public"],
+  ["Halide_fuzz", "cc.include_dir", "src:test/fuzz", "public"],
+  ["Halide_ImageIO", "cc.include_dir", "src:tools", "interface"],
+  ["Halide_Tools", "cc.include_dir", "src:tools", "interface"],
+  ["Halide_ThreadPool", "cc.include_dir", "src:tools", "interface"],
+  ["Halide_RunGenMain", "cc.include_dir", "src:tools", "interface"],
+  ["Halide_RunGenMain", "cxx.std", "17", "interface"],
+]
+
+# add_halide_generator for the generators which are not an hl_lib's own.
+[halide_generator.runtime_prefixes_iso]
+
+[halide_generator.stubtest]
+
+[halide_generator.nested_externs]
+
+[halide_generator.gpu_multi_context_threaded]
+
+[halide_generator.stubuser]
+generator_extra_source = [
+  "test/generator/stubtest_generator.cpp",
+  "test/generator/configure_generator.cpp",
+]
+generator_extra_dep = [
+  "configure.stub",
+  "stubtest.stub",
+]
+
+# The runtime-prefix test states its libraries (hl_aot is for one pipeline).
+[aot.runtime_prefixes_iso]
+aot_library = [
+  "rniso_none",
+  "rniso_a",
+  "rniso_b",
+  "rniso_none_c",
+  "rniso_a_c",
+  "rniso_b_c",
+]
+aot_group = [
+  "generator",
+]

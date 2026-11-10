@@ -1,0 +1,13 @@
+config_decl = [["release", "arm64-macos"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+package_want = ["zlib"]
+request = [["hello", "release"]]
+
+[target.greet]
+native_kind = "library"
+cxx_source = "greet.cpp"
+
+[target.hello]
+native_kind = "executable"
+cxx_source = "main.cpp"
+dep = { greet = "private", zlib = "private" }

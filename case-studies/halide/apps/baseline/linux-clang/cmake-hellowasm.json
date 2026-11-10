@@ -1,0 +1,653 @@
+{
+ "archive": [
+  {
+   "members": [
+    "reaction_diffusion_init.o"
+   ],
+   "output": "index_init"
+  },
+  {
+   "members": [
+    "reaction_diffusion_init.runtime.o"
+   ],
+   "output": "index_init.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_render.o"
+   ],
+   "output": "index_render"
+  },
+  {
+   "members": [
+    "reaction_diffusion_render.runtime.o"
+   ],
+   "output": "index_render.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_init.o"
+   ],
+   "output": "index_simd_init"
+  },
+  {
+   "members": [
+    "reaction_diffusion_init.runtime.o"
+   ],
+   "output": "index_simd_init.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_render.o"
+   ],
+   "output": "index_simd_render"
+  },
+  {
+   "members": [
+    "reaction_diffusion_render.runtime.o"
+   ],
+   "output": "index_simd_render.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_init.o"
+   ],
+   "output": "index_simd_threads_init"
+  },
+  {
+   "members": [
+    "reaction_diffusion_init.runtime.o"
+   ],
+   "output": "index_simd_threads_init.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_render.o"
+   ],
+   "output": "index_simd_threads_render"
+  },
+  {
+   "members": [
+    "reaction_diffusion_render.runtime.o"
+   ],
+   "output": "index_simd_threads_render.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_update.o"
+   ],
+   "output": "index_simd_threads_update"
+  },
+  {
+   "members": [
+    "reaction_diffusion_update.runtime.o"
+   ],
+   "output": "index_simd_threads_update.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_update.o"
+   ],
+   "output": "index_simd_update"
+  },
+  {
+   "members": [
+    "reaction_diffusion_update.runtime.o"
+   ],
+   "output": "index_simd_update.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_init.o"
+   ],
+   "output": "index_threads_init"
+  },
+  {
+   "members": [
+    "reaction_diffusion_init.runtime.o"
+   ],
+   "output": "index_threads_init.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_render.o"
+   ],
+   "output": "index_threads_render"
+  },
+  {
+   "members": [
+    "reaction_diffusion_render.runtime.o"
+   ],
+   "output": "index_threads_render.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_update.o"
+   ],
+   "output": "index_threads_update"
+  },
+  {
+   "members": [
+    "reaction_diffusion_update.runtime.o"
+   ],
+   "output": "index_threads_update.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_update.o"
+   ],
+   "output": "index_update"
+  },
+  {
+   "members": [
+    "reaction_diffusion_update.runtime.o"
+   ],
+   "output": "index_update.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_init.o"
+   ],
+   "output": "reaction_diffusion_init"
+  },
+  {
+   "members": [
+    "reaction_diffusion_init.runtime.o"
+   ],
+   "output": "reaction_diffusion_init.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_render.o"
+   ],
+   "output": "reaction_diffusion_render"
+  },
+  {
+   "members": [
+    "reaction_diffusion_render.runtime.o"
+   ],
+   "output": "reaction_diffusion_render.runtime"
+  },
+  {
+   "members": [
+    "reaction_diffusion_update.o"
+   ],
+   "output": "reaction_diffusion_update"
+  },
+  {
+   "members": [
+    "reaction_diffusion_update.runtime.o"
+   ],
+   "output": "reaction_diffusion_update.runtime"
+  }
+ ],
+ "compile": [
+  {
+   "compiler": "em++",
+   "flags": [
+    "--use-port=sdl2",
+    "-DNDEBUG",
+    "-I$BUILD/index",
+    "-O3",
+    "-isystem PREFIX/include",
+    "-std=c++17"
+   ],
+   "source": "SRC/app/core.cpp",
+   "target": "index"
+  },
+  {
+   "compiler": "em++",
+   "flags": [
+    "--use-port=sdl2",
+    "-DNDEBUG",
+    "-I$BUILD/index_simd",
+    "-O3",
+    "-isystem PREFIX/include",
+    "-std=c++17"
+   ],
+   "source": "SRC/app/core.cpp",
+   "target": "index_simd"
+  },
+  {
+   "compiler": "em++",
+   "flags": [
+    "--use-port=sdl2",
+    "-DNDEBUG",
+    "-I$BUILD/index_simd_threads",
+    "-O3",
+    "-isystem PREFIX/include",
+    "-std=c++17"
+   ],
+   "source": "SRC/app/core.cpp",
+   "target": "index_simd_threads"
+  },
+  {
+   "compiler": "em++",
+   "flags": [
+    "--use-port=sdl2",
+    "-DNDEBUG",
+    "-I$BUILD/index_threads",
+    "-O3",
+    "-isystem PREFIX/include",
+    "-std=c++17"
+   ],
+   "source": "SRC/app/core.cpp",
+   "target": "index_threads"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "-DHALIDE_ENABLE_RTTI",
+    "-DHALIDE_VERSION_MAJOR=22",
+    "-DHALIDE_VERSION_MINOR=0",
+    "-DHALIDE_VERSION_PATCH=0",
+    "-DHALIDE_WITH_EXCEPTIONS",
+    "-DNDEBUG",
+    "-IPREFIX/include",
+    "-O3",
+    "-Wdeprecated-declarations",
+    "-std=c++17"
+   ],
+   "source": "SRC/generator/reaction_diffusion_generator.cpp",
+   "target": "reaction_diffusion_generator"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "-DNDEBUG",
+    "-I$BUILD/",
+    "-O3",
+    "-isystem PREFIX/include",
+    "-isystem PREFIX/share/tools",
+    "-std=c++17"
+   ],
+   "source": "$BUILD/reaction_diffusion_init.registration.cpp",
+   "target": "run"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "-DNDEBUG",
+    "-I$BUILD/",
+    "-O3",
+    "-isystem PREFIX/include",
+    "-isystem PREFIX/share/tools",
+    "-std=c++17"
+   ],
+   "source": "$BUILD/reaction_diffusion_render.registration.cpp",
+   "target": "run"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "-DNDEBUG",
+    "-I$BUILD/",
+    "-O3",
+    "-isystem PREFIX/include",
+    "-isystem PREFIX/share/tools",
+    "-std=c++17"
+   ],
+   "source": "$BUILD/reaction_diffusion_update.registration.cpp",
+   "target": "run"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "-DNDEBUG",
+    "-I$BUILD/",
+    "-O3",
+    "-isystem PREFIX/include",
+    "-isystem PREFIX/share/tools",
+    "-std=c++17"
+   ],
+   "source": "PREFIX/share/tools/RunGenMain.cpp",
+   "target": "run"
+  }
+ ],
+ "generate": [
+  {
+   "emit": "c_header,object,registration",
+   "function": "reaction_diffusion_init",
+   "generator": "reaction_diffusion_init",
+   "name": "reaction_diffusion_init",
+   "params": [
+    "threads=true"
+   ],
+   "target": "host-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "reaction_diffusion_init",
+   "generator": "reaction_diffusion_init",
+   "name": "reaction_diffusion_init",
+   "params": [
+    "threads=false"
+   ],
+   "target": "wasm-32-wasmrt-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "reaction_diffusion_init",
+   "generator": "reaction_diffusion_init",
+   "name": "reaction_diffusion_init",
+   "params": [
+    "threads=false"
+   ],
+   "target": "wasm-32-wasmrt-wasm_simd128-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "reaction_diffusion_init",
+   "generator": "reaction_diffusion_init",
+   "name": "reaction_diffusion_init",
+   "params": [
+    "threads=true"
+   ],
+   "target": "wasm-32-wasmrt-wasm_simd128-wasm_threads-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "reaction_diffusion_init",
+   "generator": "reaction_diffusion_init",
+   "name": "reaction_diffusion_init",
+   "params": [
+    "threads=true"
+   ],
+   "target": "wasm-32-wasmrt-wasm_threads-no_runtime"
+  },
+  {
+   "emit": "c_header,object,registration",
+   "function": "reaction_diffusion_render",
+   "generator": "reaction_diffusion_render",
+   "name": "reaction_diffusion_render",
+   "params": [
+    "threads=true"
+   ],
+   "target": "host-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "reaction_diffusion_render",
+   "generator": "reaction_diffusion_render",
+   "name": "reaction_diffusion_render",
+   "params": [
+    "threads=false"
+   ],
+   "target": "wasm-32-wasmrt-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "reaction_diffusion_render",
+   "generator": "reaction_diffusion_render",
+   "name": "reaction_diffusion_render",
+   "params": [
+    "threads=false"
+   ],
+   "target": "wasm-32-wasmrt-wasm_simd128-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "reaction_diffusion_render",
+   "generator": "reaction_diffusion_render",
+   "name": "reaction_diffusion_render",
+   "params": [
+    "threads=true"
+   ],
+   "target": "wasm-32-wasmrt-wasm_simd128-wasm_threads-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "reaction_diffusion_render",
+   "generator": "reaction_diffusion_render",
+   "name": "reaction_diffusion_render",
+   "params": [
+    "threads=true"
+   ],
+   "target": "wasm-32-wasmrt-wasm_threads-no_runtime"
+  },
+  {
+   "emit": "c_header,object,registration",
+   "function": "reaction_diffusion_update",
+   "generator": "reaction_diffusion_update",
+   "name": "reaction_diffusion_update",
+   "params": [
+    "threads=true"
+   ],
+   "target": "host-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "reaction_diffusion_update",
+   "generator": "reaction_diffusion_update",
+   "name": "reaction_diffusion_update",
+   "params": [
+    "threads=false"
+   ],
+   "target": "wasm-32-wasmrt-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "reaction_diffusion_update",
+   "generator": "reaction_diffusion_update",
+   "name": "reaction_diffusion_update",
+   "params": [
+    "threads=false"
+   ],
+   "target": "wasm-32-wasmrt-wasm_simd128-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "reaction_diffusion_update",
+   "generator": "reaction_diffusion_update",
+   "name": "reaction_diffusion_update",
+   "params": [
+    "threads=true"
+   ],
+   "target": "wasm-32-wasmrt-wasm_simd128-wasm_threads-no_runtime"
+  },
+  {
+   "emit": "c_header,object",
+   "function": "reaction_diffusion_update",
+   "generator": "reaction_diffusion_update",
+   "name": "reaction_diffusion_update",
+   "params": [
+    "threads=true"
+   ],
+   "target": "wasm-32-wasmrt-wasm_threads-no_runtime"
+  }
+ ],
+ "link": [
+  {
+   "compiler": "em++",
+   "flags": [
+    "--use-port=sdl2",
+    "-DNDEBUG",
+    "-O3",
+    "-O3",
+    "-sTOTAL_MEMORY=512MB",
+    "-sWASM=1"
+   ],
+   "inputs": [
+    "core.cpp.o",
+    "libindex_init.a",
+    "libindex_init.runtime.a",
+    "libindex_render.a",
+    "libindex_render.runtime.a",
+    "libindex_update.a",
+    "libindex_update.runtime.a"
+   ],
+   "output": "index"
+  },
+  {
+   "compiler": "em++",
+   "flags": [
+    "--use-port=sdl2",
+    "-DNDEBUG",
+    "-O3",
+    "-O3",
+    "-sTOTAL_MEMORY=512MB",
+    "-sWASM=1"
+   ],
+   "inputs": [
+    "core.cpp.o",
+    "libindex_simd_init.a",
+    "libindex_simd_init.runtime.a",
+    "libindex_simd_render.a",
+    "libindex_simd_render.runtime.a",
+    "libindex_simd_update.a",
+    "libindex_simd_update.runtime.a"
+   ],
+   "output": "index_simd"
+  },
+  {
+   "compiler": "em++",
+   "flags": [
+    "--use-port=sdl2",
+    "-DNDEBUG",
+    "-O3",
+    "-O3",
+    "-matomics",
+    "-sTOTAL_MEMORY=512MB",
+    "-sWASM=1"
+   ],
+   "inputs": [
+    "core.cpp.o",
+    "libindex_simd_threads_init.a",
+    "libindex_simd_threads_init.runtime.a",
+    "libindex_simd_threads_render.a",
+    "libindex_simd_threads_render.runtime.a",
+    "libindex_simd_threads_update.a",
+    "libindex_simd_threads_update.runtime.a"
+   ],
+   "output": "index_simd_threads"
+  },
+  {
+   "compiler": "em++",
+   "flags": [
+    "--use-port=sdl2",
+    "-DNDEBUG",
+    "-O3",
+    "-O3",
+    "-matomics",
+    "-sTOTAL_MEMORY=512MB",
+    "-sWASM=1"
+   ],
+   "inputs": [
+    "core.cpp.o",
+    "libindex_threads_init.a",
+    "libindex_threads_init.runtime.a",
+    "libindex_threads_render.a",
+    "libindex_threads_render.runtime.a",
+    "libindex_threads_update.a",
+    "libindex_threads_update.runtime.a"
+   ],
+   "output": "index_threads"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "-DNDEBUG",
+    "-O3",
+    "-Wl,-rpath,PREFIX/lib",
+    "-Xlinker --dependency-file=CMakeFiles/reaction_diffusion_generator.dir/link.d",
+    "-Xlinker --pop-state",
+    "-Xlinker --push-state",
+    "-Xlinker --whole-archive",
+    "-ldl",
+    "PREFIX/lib/libHalide.so.22.0.0"
+   ],
+   "inputs": [
+    "libHalide_GenGen.a",
+    "reaction_diffusion_generator.cpp.o"
+   ],
+   "output": "reaction_diffusion_generator"
+  },
+  {
+   "compiler": "c++",
+   "flags": [
+    "-DNDEBUG",
+    "-O3",
+    "-Xlinker --dependency-file=CMakeFiles/run.dir/link.d",
+    "-ldl"
+   ],
+   "inputs": [
+    "RunGenMain.cpp.o",
+    "libjpeg.so",
+    "libpng.so",
+    "libreaction_diffusion_init.a",
+    "libreaction_diffusion_init.runtime.a",
+    "libreaction_diffusion_render.a",
+    "libreaction_diffusion_render.runtime.a",
+    "libreaction_diffusion_update.a",
+    "libreaction_diffusion_update.runtime.a",
+    "libz.so",
+    "reaction_diffusion_init.registration.cpp.o",
+    "reaction_diffusion_render.registration.cpp.o",
+    "reaction_diffusion_update.registration.cpp.o"
+   ],
+   "output": "run"
+  }
+ ],
+ "runtime": [
+  {
+   "name": "reaction_diffusion_init.runtime",
+   "target": "host"
+  },
+  {
+   "name": "reaction_diffusion_update.runtime",
+   "target": "host"
+  },
+  {
+   "name": "reaction_diffusion_render.runtime",
+   "target": "host"
+  },
+  {
+   "name": "reaction_diffusion_init.runtime",
+   "target": "wasm-32-wasmrt"
+  },
+  {
+   "name": "reaction_diffusion_render.runtime",
+   "target": "wasm-32-wasmrt"
+  },
+  {
+   "name": "reaction_diffusion_update.runtime",
+   "target": "wasm-32-wasmrt"
+  },
+  {
+   "name": "reaction_diffusion_init.runtime",
+   "target": "wasm-32-wasmrt-wasm_simd128"
+  },
+  {
+   "name": "reaction_diffusion_render.runtime",
+   "target": "wasm-32-wasmrt-wasm_simd128"
+  },
+  {
+   "name": "reaction_diffusion_update.runtime",
+   "target": "wasm-32-wasmrt-wasm_simd128"
+  },
+  {
+   "name": "reaction_diffusion_init.runtime",
+   "target": "wasm-32-wasmrt-wasm_simd128-wasm_threads"
+  },
+  {
+   "name": "reaction_diffusion_render.runtime",
+   "target": "wasm-32-wasmrt-wasm_simd128-wasm_threads"
+  },
+  {
+   "name": "reaction_diffusion_update.runtime",
+   "target": "wasm-32-wasmrt-wasm_simd128-wasm_threads"
+  },
+  {
+   "name": "reaction_diffusion_init.runtime",
+   "target": "wasm-32-wasmrt-wasm_threads"
+  },
+  {
+   "name": "reaction_diffusion_render.runtime",
+   "target": "wasm-32-wasmrt-wasm_threads"
+  },
+  {
+   "name": "reaction_diffusion_update.runtime",
+   "target": "wasm-32-wasmrt-wasm_threads"
+  }
+ ]
+}

@@ -1,0 +1,186 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# stdgpu (CMakeLists.txt, src/stdgpu, examples; v1.3.0) in the Release
+# configuration its baseline builds, CUDA backend, static library
+# (STDGPU_BUILD_SHARED_LIBS=OFF), 32-bit indices, contract checks off.
+config_decl = [["release", "arm64-linux"]]
+config_decl_setting = [["release", "native.opt", "release"], ["release", "cuda.arch", "ampere"]]
+request_all = [
+  "contract",
+  "createAndDestroyDeviceArray",
+  "createAndDestroyDeviceObject",
+  "atomic",
+  "bitset",
+  "deque",
+  "iterator",
+  "mutex_array",
+  "ranges",
+  "unordered_map",
+  "unordered_set",
+  "vector",
+]
+
+# CMAKE_CUDA_ARCHITECTURES=80: real SASS and PTX for compute capability 8.0.
+gpu_arch_set_code = [["ampere", "sm_80"], ["ampere", "compute_80"]]
+
+[target.stdgpu]
+kind = "library"
+default_linkage = "static"
+sources = [
+  "src/stdgpu/impl/device.cpp",
+  "src/stdgpu/impl/iterator.cpp",
+  "src/stdgpu/impl/memory.cpp",
+  "src/stdgpu/cuda/impl/device.cpp",
+  "src/stdgpu/cuda/impl/memory.cpp"
+]
+configure_file = "stdgpu/config.h"
+cc_configured_header = "stdgpu/config.h"
+
+# src/stdgpu/CMakeLists.txt configures config.h. Its template's
+# #cmakedefine01 lines (not in the dialect) are the #define lines they become.
+configure_file_lines = { "stdgpu/config.h" = [
+  [0, "src/stdgpu/config.h.in", 1, 71],
+  [2, "src/stdgpu/config.h.in", 73, 83],
+  [4, "src/stdgpu/config.h.in", 85, 0],
+] }
+configure_file_text = { "stdgpu/config.h" = [
+  [1, "#define STDGPU_ENABLE_CONTRACT_CHECKS @STDGPU_ENABLE_CONTRACT_CHECKS@"],
+  [3, "#define STDGPU_USE_32_BIT_INDEX @STDGPU_USE_32_BIT_INDEX@"],
+] }
+# include_local_dir (src) is the library's own include root; the config.h
+# directory is cc_configured_header's.
+public = { "cc.include_dir" = "src:src", "cc.define" = "THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA" }
+private = { "cxx.compile_flag" = [
+  "-Wall",
+  "-pedantic",
+  "-Wextra",
+  "-Wshadow",
+  "-Wsign-compare",
+  "-Wconversion",
+  "-Wfloat-equal",
+  "-Wundef",
+  "-Wdouble-promotion",
+  "-O3",
+], "configure.define" = [
+  "STDGPU_ENABLE_CONTRACT_CHECKS=0",
+  "STDGPU_USE_32_BIT_INDEX=1",
+  "stdgpu_VERSION_MAJOR=1",
+  "stdgpu_VERSION_MINOR=3",
+  "stdgpu_VERSION_PATCH=0",
+  "stdgpu_VERSION=1.3.0",
+  "STDGPU_BACKEND=STDGPU_BACKEND_CUDA",
+  "STDGPU_BACKEND_DIRECTORY=cuda",
+  "STDGPU_BACKEND_NAMESPACE=cuda",
+  "STDGPU_BACKEND_MACRO_NAMESPACE=CUDA",
+] }
+deps = { public = ["cuda::thrust", "cuda::cudart_static"] }
+
+# examples/CMakeLists.txt: each example is one executable linking stdgpu::stdgpu,
+# with STDGPU_HOST_FLAGS on its C++ source and STDGPU_DEVICE_FLAGS
+# (-Xcompiler=<the same warnings, less -pedantic and the other host-only ones>) on its CUDA source.
+
+[target.contract]
+kind = "executable"
+sources = ["examples/contract.cpp"]
+deps = { private = ["stdgpu"] }
+private = { "cxx.compile_flag" = [
+  "-Wall",
+  "-pedantic",
+  "-Wextra",
+  "-Wshadow",
+  "-Wsign-compare",
+  "-Wconversion",
+  "-Wfloat-equal",
+  "-Wundef",
+  "-Wdouble-promotion",
+  "-O3",
+] }
+
+[target.createAndDestroyDeviceArray]
+kind = "executable"
+sources = ["examples/createAndDestroyDeviceArray.cpp"]
+deps = { private = ["stdgpu"] }
+private = { "cxx.compile_flag" = [
+  "-Wall",
+  "-pedantic",
+  "-Wextra",
+  "-Wshadow",
+  "-Wsign-compare",
+  "-Wconversion",
+  "-Wfloat-equal",
+  "-Wundef",
+  "-Wdouble-promotion",
+  "-O3",
+] }
+
+[target.createAndDestroyDeviceObject]
+kind = "executable"
+sources = ["examples/createAndDestroyDeviceObject.cpp"]
+deps = { private = ["stdgpu"] }
+private = { "cxx.compile_flag" = [
+  "-Wall",
+  "-pedantic",
+  "-Wextra",
+  "-Wshadow",
+  "-Wsign-compare",
+  "-Wconversion",
+  "-Wfloat-equal",
+  "-Wundef",
+  "-Wdouble-promotion",
+  "-O3",
+] }
+
+[target.atomic]
+kind = "executable"
+sources = ["examples/cuda/atomic.cu"]
+deps = { private = ["stdgpu"] }
+private = { "cuda.compile_flag" = "-Xcompiler=-Wall,-Wextra,-Wshadow,-Wsign-compare,-Wconversion,-Wfloat-equal" }
+
+[target.bitset]
+kind = "executable"
+sources = ["examples/cuda/bitset.cu"]
+deps = { private = ["stdgpu"] }
+private = { "cuda.compile_flag" = "-Xcompiler=-Wall,-Wextra,-Wshadow,-Wsign-compare,-Wconversion,-Wfloat-equal" }
+
+[target.deque]
+kind = "executable"
+sources = ["examples/cuda/deque.cu"]
+deps = { private = ["stdgpu"] }
+private = { "cuda.compile_flag" = "-Xcompiler=-Wall,-Wextra,-Wshadow,-Wsign-compare,-Wconversion,-Wfloat-equal" }
+
+[target.iterator]
+kind = "executable"
+sources = ["examples/cuda/iterator.cu"]
+deps = { private = ["stdgpu"] }
+private = { "cuda.compile_flag" = "-Xcompiler=-Wall,-Wextra,-Wshadow,-Wsign-compare,-Wconversion,-Wfloat-equal" }
+
+[target.mutex_array]
+kind = "executable"
+sources = ["examples/cuda/mutex_array.cu"]
+deps = { private = ["stdgpu"] }
+private = { "cuda.compile_flag" = "-Xcompiler=-Wall,-Wextra,-Wshadow,-Wsign-compare,-Wconversion,-Wfloat-equal" }
+
+[target.ranges]
+kind = "executable"
+sources = ["examples/cuda/ranges.cu"]
+deps = { private = ["stdgpu"] }
+private = { "cuda.compile_flag" = "-Xcompiler=-Wall,-Wextra,-Wshadow,-Wsign-compare,-Wconversion,-Wfloat-equal" }
+
+[target.unordered_map]
+kind = "executable"
+sources = ["examples/cuda/unordered_map.cu"]
+deps = { private = ["stdgpu"] }
+private = { "cuda.compile_flag" = "-Xcompiler=-Wall,-Wextra,-Wshadow,-Wsign-compare,-Wconversion,-Wfloat-equal" }
+
+[target.unordered_set]
+kind = "executable"
+sources = ["examples/cuda/unordered_set.cu"]
+deps = { private = ["stdgpu"] }
+private = { "cuda.compile_flag" = "-Xcompiler=-Wall,-Wextra,-Wshadow,-Wsign-compare,-Wconversion,-Wfloat-equal" }
+
+[target.vector]
+kind = "executable"
+sources = ["examples/cuda/vector.cu"]
+deps = { private = ["stdgpu"] }
+private = { "cuda.compile_flag" = "-Xcompiler=-Wall,-Wextra,-Wshadow,-Wsign-compare,-Wconversion,-Wfloat-equal" }

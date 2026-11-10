@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# stdgpu 1.3.0 (CUDA backend), as its CMakeLists.txt builds it in the Release
+# configuration on arm64 Linux with CUDA 13.4: compile and link only (the
+# programs need a GPU to run; see ../README.md). Configure in the CUDA image
+# (linux/cuda/Dockerfile) with a user file:
+#   uv run --frozen buildlog configure -C BUILD \
+#     --user case-studies/stdgpu/project/presets/gcc-ampere.toml \
+#     case-studies/stdgpu/project
+uses = ["buildlog-cpp", "buildlog-cuda"]
+source_root = "${STDGPU_SRC}"
+spec = ["spec.toml"]
+
+[vars]
+# The pinned checkout the CMake baseline builds (503c63af; see
+# baseline/run-cmake.sh).
+STDGPU_SRC = "${REPO_ROOT}/case-studies/stdgpu/upstream"

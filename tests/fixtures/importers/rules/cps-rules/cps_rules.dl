@@ -1,0 +1,6 @@
+.decl cps_rules_marker(o:symbol)
+cps_rules_marker("out:cps-rules/marker").
+action(o, "CPS_RULES") :- cps_rules_marker(o).
+action_arg(o, 0, "", "touch") :- cps_rules_marker(o).
+action_arg(o, 1, "", o) :- cps_rules_marker(o).
+default_output(o) :- cps_rules_marker(o).

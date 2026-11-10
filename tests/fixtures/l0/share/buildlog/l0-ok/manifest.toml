@@ -1,0 +1,6 @@
+# L0 integrity fixture: well-formed actions; no integrity error
+name = "l0-ok"
+version = "0.1.0"
+rank = 1
+layers = ["l0.dl"]
+extends = ["action", "action_in", "action_arg", "action_arg_set", "default_output"]

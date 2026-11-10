@@ -1,0 +1,980 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L3: native code. Objects, archives, executables, link closure and link
+// order. Language-neutral: C, C++, Rust staticlibs, DSL generators, ... all lower into
+// native_object / link_item / link_file. Links use the "native-link"
+// toolchain's "link" tool; the family plugin (F) spells the flags.
+
+// static_library | shared_library | module_library | object_library | executable.
+// A module library is a loadable plugin, never linked (CMake's MODULE); an
+// object library's objects are linked by each target that depends on it
+// directly (CMake's OBJECT library), and it has no artifact of its own.
+.decl native_kind(t:symbol, kind:symbol)
+// Shared libraries: a version and an ABI version (soversion), the file of
+// symbols to export, and prebuilt objects linked in.
+.decl native_version(t:symbol, version:symbol, soversion:symbol)
+.decl native_exported_symbols(t:symbol, file:symbol)
+.decl native_version_script(t:symbol, file:symbol)
+// The author's reason a library's export lists may apply on only some
+// platforms (zlib's version script is CMake's UNIX AND NOT APPLE).
+.decl native_export_list_optional(t:symbol, why:symbol)
+.decl native_external_object(t:symbol, path:symbol)
+// The artifact's base name, when it is not the target's (CMake's
+// OUTPUT_NAME): a shared and a static variant of one library both named z
+// are libz.dylib and libz.a. At most one per target.
+.decl native_output_name(t:symbol, name:symbol)
+.decl native_name(t:symbol, name:symbol)
+.decl has_native_output_name(t:symbol)
+has_native_output_name(t) :- native_output_name(t, _).
+native_name(t, n) :- native_output_name(t, n).
+native_name(t, t) :- native_kind(t, _), !has_native_output_name(t), !is_linkage_twin(t).
+native_name(i, n) :- linkage_twin(i, t), native_name(t, n).
+error("target has two output names", cat(t, ": ", x, " / ", y)) :-
+  native_output_name(t, x), native_output_name(t, y), x < y.
+error("output name of a target without a native artifact", t) :- native_output_name(t, _), !native_kind(t, _).
+error("output name of a target without a native artifact", t) :- native_output_name(t, _),
+  native_kind(t, "object_library").
+// A library's kind is its linkage in a configuration (two libraries named z,
+// one static and one shared, coexist).
+error("targets of one kind share an output name", cat(k, " ", n, ": ", t, " / ", u)) :-
+  native_name_in(t, c, n), native_name_in(u, c, n), t < u, native_kind_in(t, c, k), native_kind_in(u, c, k),
+  k != "object_library".
+.decl import_file(l:symbol, path:symbol)            // accepted and open: an imported target's files
+
+set_key("native.link_flag").
+// Link options of a linked artifact (-headerpad, ...), a set: private ones
+// are its own; public and interface ones also reach whatever links it (CMake's
+// INTERFACE_LINK_OPTIONS), through the usual prop visibility.
+set_key("native.link_option").
+// The configuration's standard compile flags (family_setting_arg, "compile"; CMake's
+// CMAKE_<LANG>_FLAGS_<CONFIG>) are per target: native.wipe_config_flag is a
+// regular expression over the family's spelling of one (CMake's
+// wipe_standard_flags), and a target that uses it compiles without the flags
+// it matches. native.link_config_flags=on puts the flags the target keeps on
+// its link line, as CMake does when the compiler driver links. Both are
+// opt-in: with neither, a target compiles with all of them and links with none.
+set_key("native.wipe_config_flag"). set_key("native.link_config_flags").
+.decl config_flag_wiped(t:symbol, c:Cfg, a:symbol)
+config_flag_wiped(t, c, a) :- use(t, c, "native.wipe_config_flag", re, _), tc_setting_arg(_, c, "compile", a), match(re, a).
+
+// Settings owned by the native layer (L1 only knows the generic mechanism).
+setting_key("native.opt", 0).
+setting_value("native.opt", "debug"). setting_value("native.opt", "release").
+setting_default("native.opt", "debug").
+setting_exec_value("native.opt", "release").           // build tools run optimized
+setting_key("native.sanitize", 1).
+setting_value("native.sanitize", "none"). setting_value("native.sanitize", "address").
+setting_default("native.sanitize", "none").
+setting_exec_value("native.sanitize", "none").         // build tools run uninstrumented
+// The user's global linkage default (CMake's BUILD_SHARED_LIBS, Meson's
+// default_library): "default" leaves each library to the author. It is
+// left out of configuration names, so builds without it keep their names.
+setting_key("native.linkage", 2).
+setting_value("native.linkage", "default"). setting_value("native.linkage", "static").
+setting_value("native.linkage", "shared").
+setting_default("native.linkage", "default").
+setting_exec_inherit("native.linkage").
+setting_name_elide("native.linkage", "default").
+
+// ---- linkage: a derived choice per (library, configuration) ----
+// A built library's kind is "library": its linkage is a choice, static,
+// shared or both. library_linkage_by(t, c,
+// l, level) says which level chose l, highest first (two rows when it chose
+// both):
+//   1. "author requirement": the author's linkage_require(t, v, why);
+//   2. "downstream pin": a dependent's dep_linkage(t', t, l, why) on its edge;
+//   3. "user per-library": the user's library_linkage(t, v);
+//   4. "user global": the configuration's native.linkage;
+//   5. "author default": the author's default_linkage(t, v);
+//   6. "static": nothing stated (CMake's add_library without
+//      BUILD_SHARED_LIBS).
+// v is static, shared or both (a pin and native.linkage are one linkage).
+// A pin is satisfied by a library built both ways, so it does not narrow a
+// lower level's both. The two constraints (1, 2) never silently override
+// the user (3, 4): a user's choice they contradict is an error naming both,
+// with the fix, and a constraint carries its reason, which errors and why
+// show. Authors are meant to leave linkage to the user; a constraint has to
+// say why it can't. Pins are read from declarations, not from the needed
+// closure: the closure's actions depend on the choice, so the choice cannot
+// depend on the closure. A pin therefore holds wherever this build builds
+// the library, and two different pins are an error in the build unless it
+// builds the library both ways.
+.decl linkage_require(t:symbol, linkage:symbol, why:symbol)          // accepted: t only works so
+.decl dep_linkage(t:symbol, d:symbol, linkage:symbol, why:symbol)    // accepted: t needs d linked so
+.decl library_linkage(t:symbol, linkage:symbol)         // user
+.decl default_linkage(t:symbol, linkage:symbol)         // accepted: the author's default
+.decl linkage_value(l:symbol)
+linkage_value("static"). linkage_value("shared").
+.decl linkage_choice(v:symbol)
+linkage_choice("static"). linkage_choice("shared"). linkage_choice("both").
+.decl choice_linkage(v:symbol, l:symbol)                // choice v builds linkage l
+choice_linkage(l, l) :- linkage_value(l).
+choice_linkage("both", l) :- linkage_value(l).
+.decl library_required(t:symbol)
+library_required(t) :- linkage_require(t, v, _), native_kind(t, "library"), linkage_choice(v).
+.decl library_pin(t:symbol, linkage:symbol, by:symbol)
+library_pin(d, l, t) :- dep_linkage(t, r, l, _), dep_resolves(t, r, d), native_kind(d, "library"), linkage_value(l).
+.decl library_pinned(t:symbol)
+library_pinned(t) :- library_pin(t, _, _).
+.decl has_library_linkage(t:symbol)
+has_library_linkage(t) :- library_linkage(t, _).
+.decl has_default_linkage(t:symbol)
+has_default_linkage(t) :- default_linkage(t, _).
+.decl library_cfg(t:symbol, c:Cfg)
+library_cfg(t, c) :- native_kind(t, "library"), !is_linkage_twin(t), config(c).
+// lower_both(t, c): a level below the pins chooses both.
+.decl lower_both(t:symbol, c:Cfg)
+lower_both(t, c) :- library_cfg(t, c), library_linkage(t, "both").
+lower_both(t, c) :- library_cfg(t, c), !has_library_linkage(t), config_setting(c, "native.linkage", "default"),
+  default_linkage(t, "both").
+.decl pin_decides(t:symbol, c:Cfg)
+pin_decides(t, c) :- library_cfg(t, c), library_pinned(t), !lower_both(t, c).
+.decl library_choice_by(t:symbol, c:Cfg, choice:symbol, level:symbol)
+library_choice_by(t, c, v, "author requirement") :- library_cfg(t, c), linkage_require(t, v, _), linkage_choice(v).
+library_choice_by(t, c, l, "downstream pin") :- library_cfg(t, c), !library_required(t), pin_decides(t, c),
+  library_pin(t, l, _).
+library_choice_by(t, c, v, "user per-library") :- library_cfg(t, c), !library_required(t), !pin_decides(t, c),
+  library_linkage(t, v), linkage_choice(v).
+library_choice_by(t, c, l, "user global") :- library_cfg(t, c), !library_required(t), !pin_decides(t, c),
+  !has_library_linkage(t), config_setting(c, "native.linkage", l), l != "default".
+library_choice_by(t, c, v, "author default") :- library_cfg(t, c), !library_required(t), !pin_decides(t, c),
+  !has_library_linkage(t), config_setting(c, "native.linkage", "default"), default_linkage(t, v), linkage_choice(v).
+library_choice_by(t, c, "static", "static") :- library_cfg(t, c), !library_required(t), !pin_decides(t, c),
+  !has_library_linkage(t), config_setting(c, "native.linkage", "default"), !has_default_linkage(t).
+.decl library_linkage_by(t:symbol, c:Cfg, linkage:symbol, level:symbol)
+library_linkage_by(t, c, l, x) :- library_choice_by(t, c, v, x), choice_linkage(v, l).
+.decl library_linkage_in(t:symbol, c:Cfg, linkage:symbol)
+library_linkage_in(t, c, l) :- library_linkage_by(t, c, l, _).
+
+// ---- build instances: a library built both ways ----
+// Where c builds t both ways, t has two build instances in c: t itself is
+// the static one, and its linkage twin t@shared the shared one. Elsewhere t
+// is its only instance. The twin exists wherever some level may choose both
+// (a declaration, so target ids stay below the choice) and is needed only
+// where one does. It has t's rows: core copies its target-keyed inputs
+// below, and a plugin copies its own (as for template instances).
+.decl may_build_both(t:symbol)
+may_build_both(t) :- default_linkage(t, "both").
+may_build_both(t) :- linkage_require(t, "both", _).
+may_build_both(t) :- library_linkage(t, "both").
+.decl linkage_twin(twin:symbol, t:symbol)               // exported
+linkage_twin(cat(t, "@shared"), t) :- may_build_both(t), native_kind(t, "library").
+.decl is_linkage_twin(t:symbol)
+is_linkage_twin(t) :- linkage_twin(t, _).
+.decl library_both(t:symbol, c:Cfg)                     // exported
+library_both(t, c) :- linkage_twin(_, t), library_linkage_in(t, c, "static"), library_linkage_in(t, c, "shared").
+linkage_split(t, c) :- library_both(t, c).
+// inst_linkage(i, c, l): build instance i is linked l in c.
+.decl inst_linkage(i:symbol, c:Cfg, linkage:symbol)     // exported
+inst_linkage(t, c, l) :- library_linkage_in(t, c, l), !library_both(t, c).
+inst_linkage(t, c, "static") :- library_both(t, c).
+inst_linkage(i, c, "shared") :- linkage_twin(i, t), library_both(t, c).
+// inst_of(t, c, l, i): t's instance of linkage l in c, where c builds both.
+.decl inst_of(t:symbol, c:Cfg, linkage:symbol, i:symbol)
+inst_of(t, c, "static", t) :- library_both(t, c).
+inst_of(t, c, "shared", i) :- linkage_twin(i, t), library_both(t, c).
+// The library an instance belongs to.
+.decl library_of(i:symbol, t:symbol)                    // exported
+library_of(t, t) :- native_kind(t, "library"), !is_linkage_twin(t).
+library_of(i, t) :- linkage_twin(i, t).
+// native_kind_in(t, c, k): t's kind in c; a library instance's is its linkage's.
+.decl native_kind_in(t:symbol, c:Cfg, kind:symbol)
+native_kind_in(t, c, k) :- native_kind(t, k), k != "library", config(c).
+native_kind_in(t, c, "static_library") :- inst_linkage(t, c, "static").
+native_kind_in(t, c, "shared_library") :- inst_linkage(t, c, "shared").
+// linkage_prop(t, l, key, value, vis): a property t has only when it is
+// linked l (an export header's STATIC_DEFINE, fribidi's FRIBIDI_LIB_STATIC).
+.decl linkage_prop(t:symbol, linkage:symbol, key:symbol, value:symbol, vis:symbol)   // accepted
+prop_in(t, c, k, v, vis) :- linkage_prop(t, l, k, v, vis), native_kind_in(t, c, cat(l, "_library")),
+  linkage_value(l).
+// linkage_output_name(t, l, name): the artifact's base name when t is
+// linked l, alone or beside the other (SPIRV-Tools' SPIRV-Tools-shared).
+.decl linkage_output_name(t:symbol, linkage:symbol, name:symbol)    // accepted
+.decl linkage_named_in(i:symbol, c:Cfg)
+linkage_named_in(i, c) :- inst_linkage(i, c, l), library_of(i, t), linkage_output_name(t, l, _).
+// native_name_in(t, c, o): t's artifact base name in c.
+.decl native_name_in(t:symbol, c:Cfg, name:symbol)
+native_name_in(i, c, o) :- inst_linkage(i, c, l), library_of(i, t), linkage_output_name(t, l, o).
+native_name_in(t, c, o) :- native_name(t, o), config(c), !linkage_named_in(t, c).
+
+// Requests: asking for t asks for each of its instances.
+needed(i, c) :- linkage_twin(i, t), request(t, n), config_active(n), decl_cfg(n, c), config(c), library_both(t, c).
+needed(i, c) :- linkage_twin(i, t), request(t, n), config_active(n), decl_cfg(n, u), config_slice(u, c),
+  library_both(t, c).
+split_request(i, u) :- linkage_twin(i, t), split_request(t, u), config_slice(u, c), library_both(t, c).
+// Edges (L1's eff_dep): an edge to a library c builds both ways goes to the
+// instance the dependent's pin on it names, else to the dependent's own
+// linkage (a library instance links the instance of its linkage, Meson's
+// default_both_libraries=auto), else nowhere: "ambiguous linkage".
+.decl pin_on(x:symbol, d:symbol, linkage:symbol)
+pin_on(x, d, l) :- dep_linkage(x, d, l, _), linkage_value(l).
+pin_on(i, d, l) :- linkage_twin(i, t), dep_linkage(t, d, l, _), linkage_value(l).
+.decl pinned_edge(x:symbol, d:symbol)
+pinned_edge(x, d) :- pin_on(x, d, _).
+edge_instance(x, c, d, id, i) :- eff_ref(x, c, d, _), dep_resolves(x, d, id), library_both(id, c), pin_on(x, d, l),
+  inst_of(id, c, l, i).
+edge_instance(x, c, d, id, i) :- eff_ref(x, c, d, _), dep_resolves(x, d, id), library_both(id, c),
+  !pinned_edge(x, d), inst_linkage(x, c, l), inst_of(id, c, l, i).
+.decl has_inst_linkage(x:symbol, c:Cfg)
+has_inst_linkage(x, c) :- inst_linkage(x, c, _).
+error_at("ambiguous linkage", cat(x, " links ", id, ", which ", n, " builds static and shared; say which: ",
+    "dep_linkage = [[\"", x, "\", \"", d, "\", \"static\" or \"shared\", \"why\"]]"), x, c) :-
+  eff_ref(x, c, d, _), dep_resolves(x, d, id), library_both(id, c), !pinned_edge(x, d), !has_inst_linkage(x, c),
+  cfg_name(c, n).
+error("dependency on a linkage instance", cat(x, " -> ", d, ": depend on ", t, " and pin shared (dep_linkage)")) :-
+  dep_ref(x, d), dep_resolves(x, d, i), linkage_twin(i, t), !linkage_twin(x, _).
+// The twin's rows: core's target-keyed inputs. Not its kind's choice
+// (linkage_require, default_linkage: the twin's linkage is shared), its pins
+// (pin_on reads t's) or its name (native_name below).
+target(i), native_kind(i, "library") :- linkage_twin(i, _).
+source_target(i) :- linkage_twin(i, _).
+dep(i, d, v) :- linkage_twin(i, t), dep(t, d, v).
+dep_when(i, d, v, n) :- linkage_twin(i, t), dep_when(t, d, v, n).
+runtime_dep(i, m, p) :- linkage_twin(i, t), runtime_dep(t, m, p).
+runtime_dep_when(i, m, p, n) :- linkage_twin(i, t), runtime_dep_when(t, m, p, n).
+runtime_dep_optional(i, m, p) :- linkage_twin(i, t), runtime_dep_optional(t, m, p).
+runtime_dep_optional_when(i, m, p, n) :- linkage_twin(i, t), runtime_dep_optional_when(t, m, p, n).
+prop(i, k, v, vis) :- linkage_twin(i, t), prop(t, k, v, vis).
+prop_when(i, k, v, vis, n) :- linkage_twin(i, t), prop_when(t, k, v, vis, n).
+linkage_prop(i, l, k, v, vis) :- linkage_twin(i, t), linkage_prop(t, l, k, v, vis).
+native_version(i, v, s) :- linkage_twin(i, t), native_version(t, v, s).
+native_exported_symbols(i, f) :- linkage_twin(i, t), native_exported_symbols(t, f).
+native_version_script(i, f) :- linkage_twin(i, t), native_version_script(t, f).
+native_export_list_optional(i, w) :- linkage_twin(i, t), native_export_list_optional(t, w).
+native_external_object(i, o) :- linkage_twin(i, t), native_external_object(t, o).
+whole_archive(i, l) :- linkage_twin(i, t), whole_archive(t, l).
+gen_user(i, o) :- linkage_twin(i, t), gen_user(t, o).
+install_map(i, f, d, s) :- linkage_twin(i, t), install_map(t, f, d, s).
+// The twin compiles against t's configured files.
+owner_member(g, i) :- linkage_twin(i, t), configure_member(g, t), configure_file(g, _).
+owner_member(t, t) :- linkage_twin(_, t), configure_file(t, _).
+error("a library built both ways owns generators (not supported yet)", t) :- linkage_twin(_, t), generator_owner(_, t).
+
+// Kinds: static_library and shared_library are what an instance is in a
+// configuration (native_kind_in), and an import's files (imported_kind);
+// an author writes library.
+error("fixed library kind", cat(t, ": kind \"", k, "\" was removed; write kind = \"library\" (the user chooses ",
+    "static or shared), plus linkage = { require = \"", l, "\", why = \"...\" } only if ", t,
+    " cannot be built the other way")) :-
+  native_kind(t, k), linkage_value(l), k = cat(l, "_library").
+error("fixed library kind", cat(t, ": kind \"", k, "\" was removed; write kind = \"library\", plus ",
+    "linkage = { require = \"", l, "\", why = \"...\" } only if ", t, " cannot be built the other way")) :-
+  target_kind_when(t, k, _), linkage_value(l), k = cat(l, "_library").
+
+error("unknown linkage", cat(t, " -> ", d, ": ", l, " (static or shared)")) :- dep_linkage(t, d, l, _), !linkage_value(l).
+error("unknown linkage", cat(t, ": ", l, " (static, shared or both)")) :- library_linkage(t, l), !linkage_choice(l).
+error("unknown linkage", cat(t, ": ", l, " (static, shared or both)")) :- default_linkage(t, l), !linkage_choice(l).
+error("unknown linkage", cat(t, ": ", l, " (static, shared or both)")) :- linkage_require(t, l, _), !linkage_choice(l).
+error("unknown linkage", cat(t, ": ", l, " (static or shared)")) :- linkage_prop(t, l, _, _, _), !linkage_value(l).
+error("unknown linkage", cat(t, ": ", l, " (static or shared)")) :- linkage_output_name(t, l, _), !linkage_value(l).
+// The loader rejects a constraint without a reason; this catches rules and
+// .dl facts that state one.
+error("linkage constraint without a reason", cat(t, " requires ", l, "; say why (linkage = { require, why })")) :-
+  linkage_require(t, l, ""), linkage_choice(l).
+error("linkage constraint without a reason", cat(t, " -> ", d, " pins ", l, "; say why (dep_linkage's why column)")) :-
+  dep_linkage(t, d, l, ""), linkage_value(l).
+error("linkage pinned on an edge that does not exist", cat(t, " -> ", d)) :- dep_linkage(t, d, _, _), !dep_ref(t, d).
+.decl library_required_both(t:symbol)
+library_required_both(t) :- linkage_require(t, "both", _).
+error("conflicting linkage pins", cat(d, ": ", a, " (", ta, ": ", wa, ") and ", b, " (", tb, ": ", wb, ")")) :-
+  library_pin(d, a, ta), library_pin(d, b, tb), a < b, library_cfg(d, c), !lower_both(d, c), !library_required_both(d),
+  dep_linkage(ta, ra, a, wa), dep_resolves(ta, ra, d), dep_linkage(tb, rb, b, wb), dep_resolves(tb, rb, d).
+error("linkage pin contradicts the library's kind", cat(t, " -> ", d, ": ", l, ", but ", d, " is a ", k)) :-
+  dep_linkage(t, r, l, _), dep_resolves(t, r, d), native_kind(d, k), linkage_value(l), k != "library",
+  k != cat(l, "_library").
+error("linkage requirement given twice", cat(t, ": ", a, " and ", b)) :- linkage_require(t, a, _), linkage_require(t, b, _), a < b.
+error("linkage requirement of a target whose kind is not library", cat(t, " is a ", k, ", which fixes its linkage already; drop linkage.require")) :-
+  linkage_require(t, _, _), native_kind(t, k), k != "library".
+// Constraint against constraint: the author's requirement and a dependent's pin.
+error("linkage pin contradicts the library's requirement", cat(a, " -> ", t, " pins ", p, " (", wp, "), but ", t, "'s author requires ", l, " (", w, "); make them agree or drop one")) :-
+  linkage_require(t, l, w), library_pin(t, p, a), !choice_linkage(l, p), dep_linkage(a, r, p, wp), dep_resolves(a, r, t).
+// Constraint against the user: never a silent override.
+error("user linkage contradicts the library's requirement", cat(t, ": the user's library_linkage asks for ", u, ", but its author requires ", l, " (", w, "); fix: drop library_linkage(", t, ", ", u, ") or state ", l)) :-
+  library_required(t), linkage_require(t, l, w), library_linkage(t, u), linkage_choice(u), u != l.
+error("user linkage contradicts the library's requirement", cat(t, " in ", n, ": the user's native.linkage asks for ", g, ", but its author requires ", l, " (", w, "); fix: state library_linkage(", t, ", ", l, ") to accept it, or drop native.linkage")) :-
+  library_required(t), linkage_require(t, l, w), !has_library_linkage(t), library_cfg(t, c),
+  config_setting(c, "native.linkage", g), linkage_value(g), g != l, cfg_name(c, n).
+error("linkage pin contradicts the user's choice", cat(a, " -> ", t, " pins ", p, " (", wp, "), but the user's library_linkage asks for ", u, "; fix: drop library_linkage(", t, ", ", u, ") or the pin")) :-
+  !library_required(t), library_pin(t, p, a), library_linkage(t, u), linkage_choice(u), !choice_linkage(u, p),
+  dep_linkage(a, r, p, wp), dep_resolves(a, r, t).
+error("linkage pin contradicts the user's choice", cat(a, " -> ", t, " pins ", p, " (", wp, "), but in ", n, " the user's native.linkage asks for ", g, "; fix: state library_linkage(", t, ", ", p, ") to accept it, or drop native.linkage or the pin")) :-
+  !library_required(t), library_pin(t, p, a), !has_library_linkage(t), library_cfg(t, c),
+  config_setting(c, "native.linkage", g), linkage_value(g), g != p, cfg_name(c, n),
+  dep_linkage(a, r, p, wp), dep_resolves(a, r, t).
+.decl import_linkage_choice(t:symbol)
+import_linkage_choice(t) :- import_linkage_dep(_, _, t, _, _).
+error("linkage pin on an imported target that offers no linkage choice", cat(t, " -> ", d)) :-
+  dep_linkage(t, r, _, _), dep_resolves(t, r, d), imported(d), !import_linkage_choice(d).
+error("library_linkage given twice", cat(t, ": ", a, " and ", b)) :- library_linkage(t, a), library_linkage(t, b), a < b.
+error("default_linkage given twice", cat(t, ": ", a, " and ", b)) :- default_linkage(t, a), default_linkage(t, b), a < b.
+error("library_linkage of a target whose kind is not library", cat(t, ": the user's library_linkage asks for ", l, ", but it is a ", k, "; fix: drop library_linkage(", t, ", ", l, ")")) :-
+  library_linkage(t, l), native_kind(t, k), k != "library".
+error("library_linkage of a target whose kind is not library", cat(t, ": not a native library")) :-
+  library_linkage(t, _), !native_kind(t, _).
+error("default_linkage of a target whose kind is not library", t) :- default_linkage(t, _), !native_kind(t, "library").
+error("linkage_prop of a target whose kind is not library", t) :- linkage_prop(t, _, _, _, _), !native_kind(t, "library").
+error("linkage_output_name of a target whose kind is not library", t) :- linkage_output_name(t, _, _),
+  !native_kind(t, "library").
+
+// Which of a prebuilt package's own configurations (CMake's
+// IMPORTED_CONFIGURATIONS, CPS configurations) a configuration uses: an
+// attribute, native.opt unless the invoker maps it. A Debug
+// build against Release-only installed packages states
+// package_config_map("debug", "release") (CMake's
+// CMAKE_MAP_IMPORTED_CONFIG_DEBUG); nothing falls back on its own.
+.decl package_config_map(opt:symbol, config:symbol)    // spec
+.decl package_config_mapped(opt:symbol)
+package_config_mapped(o) :- package_config_map(o, _).
+config_attr(c, "native.package_config", v) :- config_setting(c, "native.opt", o), package_config_map(o, v).
+config_attr(c, "native.package_config", o) :- config_setting(c, "native.opt", o), !package_config_mapped(o).
+attr_value("native.package_config", v) :- setting_value("native.opt", v).
+error("unknown package configuration map", cat(o, " -> ", v, " (native.opt values)")) :-
+  package_config_map(o, v), !setting_value("native.opt", o).
+error("unknown package configuration map", cat(o, " -> ", v, " (native.opt values)")) :-
+  package_config_map(o, v), !setting_value("native.opt", v).
+
+.decl native_object(t:symbol, c:Cfg, obj:symbol)   // open: languages add objects
+.decl link_item(t:symbol, c:Cfg, item:symbol)      // open: what t contributes to a link line
+.decl link_file(t:symbol, c:Cfg, path:symbol)      // open: link items that are artifacts
+
+// native_file_name(t, c, f): t's artifact in c is the file f, prefix and
+// suffix included, instead of the family's lib<o><suffix> spelling: a name
+// the loading host decides per configuration (a Python extension's
+// <module>.abi3.so, a plugin's). The link writes it directly; the directory
+// stays bin/<cfg>/ or lib/<cfg>/. native_file_named(t) says that t's name
+// is so decided: declaration-level, like a linkage pin, since artifacts
+// share needed's stratum (a tool is an artifact) and the name may not.
+// Both open: a plugin derives them.
+.decl native_file_named(t:symbol)                      // open
+.decl native_file_name(t:symbol, c:Cfg, file:symbol)   // open
+.decl has_native_file_name(t:symbol, c:Cfg)
+has_native_file_name(t, c) :- native_file_name(t, c, _).
+error_at("no native file name", cat(t, " in ", n, " (native_file_named, but no native_file_name)"), t, c) :-
+  native_file_named(t), needed(t, c), !has_native_file_name(t, c), cfg_name(c, n).
+error_at("native file name of a target not so named", cat(t, " in ", n, ": ", f, " (state native_file_named)"), t, c) :-
+  native_file_name(t, c, f), !native_file_named(t), cfg_name(c, n).
+error_at("two native file names", cat(t, " in ", n, ": ", a, ", ", b), t, c) :-
+  native_file_name(t, c, a), native_file_name(t, c, b), a < b, cfg_name(c, n).
+error_at("native file name is a path", cat(t, " in ", n, ": ", f), t, c) :-
+  native_file_name(t, c, f), contains("/", f), cfg_name(c, n).
+// A shared library's names follow its version (below), and the other kinds
+// have no file of their own.
+error_at("native file name for a kind without one file", cat(t, " (", k, ") in ", n, ": ", f), t, c) :-
+  native_file_name(t, c, f), needed(t, c), native_kind_in(t, c, k), k != "executable", k != "static_library",
+  k != "module_library", cfg_name(c, n).
+
+// A template's instances (L1) take its kind, version, output name and
+// linkage rows; the output name and linkage properties expand placeholders.
+native_kind(t, k) :- instance_of(t, b), native_kind(b, k).
+native_version(t, v, s) :- instance_of(t, b), native_version(b, v, s).
+default_linkage(t, l) :- instance_of(t, b), default_linkage(b, l).
+tmpl_want(b, o) :- target_template(b), native_output_name(b, o).
+native_output_name(t, x) :- instance_of(t, b), native_output_name(b, o), tmpl_value(t, b, o, x).
+tmpl_want(b, o) :- target_template(b), linkage_output_name(b, _, o).
+linkage_output_name(t, l, x) :- instance_of(t, b), linkage_output_name(b, l, o), tmpl_value(t, b, o, x).
+ptmpl_want(b, v) :- target_template(b), linkage_prop(b, _, _, v, _).
+linkage_prop(t, l, k, x, vis) :- instance_of(t, b), linkage_prop(b, l, k, v, vis), ptmpl_value(t, b, v, x).
+
+.decl archive(t:symbol, c:Cfg, path:symbol)
+archive(t, c, cat("out:lib/", n, "/lib", o, ".a")) :- needed(t, c), native_kind_in(t, c, "static_library"),
+  native_name_in(t, c, o), cfg_name(c, n), !native_file_named(t).
+archive(t, c, cat("out:lib/", n, "/", f)) :- needed(t, c), native_kind_in(t, c, "static_library"),
+  native_file_name(t, c, f), cfg_name(c, n).
+.decl executable(t:symbol, c:Cfg, path:symbol)
+// A platform may give its programs a suffix (a platform plugin states it:
+// Emscripten's programs are .js) and the files the link writes beside them.
+.decl platform_executable_suffix(p:symbol, suffix:symbol)   // open
+.decl platform_link_side_file(p:symbol, suffix:symbol)      // open
+.decl has_executable_suffix(p:symbol)
+has_executable_suffix(p) :- platform_executable_suffix(p, _).
+executable(t, c, cat("out:bin/", n, "/", o)) :- needed(t, c), native_kind_in(t, c, "executable"), native_name(t, o),
+  cfg_name(c, n), !native_file_named(t), config_platform(c, p), !has_executable_suffix(p).
+executable(t, c, cat("out:bin/", n, "/", o, x)) :- needed(t, c), native_kind_in(t, c, "executable"), native_name(t, o),
+  cfg_name(c, n), !native_file_named(t), config_platform(c, p), platform_executable_suffix(p, x).
+executable(t, c, cat("out:bin/", n, "/", f)) :- needed(t, c), native_kind_in(t, c, "executable"),
+  native_file_name(t, c, f), cfg_name(c, n).
+action_out(e, cat("out:bin/", n, "/", o, x)) :- executable(t, c, e), native_name(t, o), cfg_name(c, n),
+  config_platform(c, p), platform_link_side_file(p, x).
+// A shared library is lib<o>.<version><suffix> (lib<o><suffix> without a
+// version), installed as @rpath/lib<o>.<soversion><suffix>, where <o> is its
+// native_name; the suffix and spellings are the toolchain family's (F layer).
+// A family that spells "version_after_suffix" (ELF) puts the versions last:
+// lib<o><suffix>.<version>, soname lib<o><suffix>.<soversion>.
+.decl shared_library(t:symbol, c:Cfg, path:symbol)
+.decl shared_spell(t:symbol, c:Cfg, what:symbol, spelling:symbol)
+shared_spell(t, c, w, x) :- needed(t, c), native_kind_in(t, c, "shared_library"), tc_of(t, "native-link", c, tc),
+  config_platform(c, p), shared_link_spelling(tc, p, w, x).
+.decl has_native_version(t:symbol)
+has_native_version(t) :- native_version(t, _, _).
+.decl shared_file(t:symbol, c:Cfg, file:symbol, soname:symbol)
+.decl version_after_suffix(tc:symbol, p:symbol)
+version_after_suffix(tc, p) :- shared_link_spelling(tc, p, "version_after_suffix", _).
+shared_file(t, c, cat("lib", o, ".", v, x), cat("lib", o, ".", s, x)) :- native_version(t, v, s),
+  shared_spell(t, c, "suffix", x), native_name_in(t, c, o), tc_of(t, "native-link", c, tc), config_platform(c, p),
+  !version_after_suffix(tc, p).
+shared_file(t, c, cat("lib", o, x, ".", v), cat("lib", o, x, ".", s)) :- native_version(t, v, s),
+  shared_spell(t, c, "suffix", x), native_name_in(t, c, o), tc_of(t, "native-link", c, tc), config_platform(c, p),
+  version_after_suffix(tc, p).
+shared_file(t, c, cat("lib", o, x), cat("lib", o, x)) :- shared_spell(t, c, "suffix", x),
+  !has_native_version(t), native_name_in(t, c, o).
+shared_library(t, c, cat("out:lib/", n, "/", f)) :- shared_file(t, c, f, _), cfg_name(c, n).
+.decl has_shared_suffix(t:symbol, c:Cfg)
+has_shared_suffix(t, c) :- shared_spell(t, c, "suffix", _).
+error_at("toolchain cannot link a shared library", cat(t, " in ", n), t, c) :- needed(t, c),
+  native_kind_in(t, c, "shared_library"), !has_shared_suffix(t, c), cfg_name(c, n).
+// A module library is lib<o><suffix>, in the family's module spelling.
+.decl module_library(t:symbol, c:Cfg, path:symbol)
+.decl module_spell(t:symbol, c:Cfg, what:symbol, spelling:symbol)
+module_spell(t, c, w, x) :- needed(t, c), native_kind_in(t, c, "module_library"), tc_of(t, "native-link", c, tc),
+  config_platform(c, p), module_link_spelling(tc, p, w, x).
+.decl module_file(t:symbol, c:Cfg, file:symbol)
+module_file(t, c, cat("lib", o, x)) :- module_spell(t, c, "suffix", x), native_name_in(t, c, o), !native_file_named(t).
+module_file(t, c, f) :- module_spell(t, c, "suffix", _), native_file_name(t, c, f).
+module_library(t, c, cat("out:lib/", n, "/", f)) :- module_file(t, c, f), cfg_name(c, n).
+.decl has_module_suffix(t:symbol, c:Cfg)
+has_module_suffix(t, c) :- module_spell(t, c, "suffix", _).
+error_at("toolchain cannot link a module library", cat(t, " in ", n), t, c) :- needed(t, c),
+  native_kind_in(t, c, "module_library"), !has_module_suffix(t, c), cfg_name(c, n).
+
+target_action(t, c, a) :- archive(t, c, a).
+target_action(t, c, e) :- executable(t, c, e).
+target_action(t, c, a) :- shared_library(t, c, a).
+target_action(t, c, a) :- module_library(t, c, a).
+
+tc_required("native-link", c) :- archive(_, c, _).
+tc_required("native-link", c) :- executable(_, c, _).
+tc_required("native-link", c) :- needed(t, c), native_kind_in(t, c, "shared_library").
+tc_required("native-link", c) :- needed(t, c), native_kind_in(t, c, "module_library").
+
+native_object(t, c, o) :- needed(t, c), native_external_object(t, o).
+// An object library's objects, in each target that depends on it directly.
+native_object(t, c, o) :- eff_dep(t, c, l, _), native_kind(l, "object_library"), native_object(l, c, o),
+  native_kind(t, k), k != "object_library".
+
+link_file(t, c, a) :- archive(t, c, a).
+link_file(t, c, a) :- shared_library(t, c, a).
+link_item(t, c, f) :- link_file(t, c, f).
+// Own (not propagated) link flags: an imported library contributes its flag
+// once, positioned by the dep graph like any other library.
+link_item(t, c, v) :- eff_prop(t, c, "native.link_flag", v, _).
+
+// Coverage (core L1): what this layer builds covers its configuration's
+// platform; what an imported file covers is discovered (below). An import
+// needs its file on every platform it is needed for, and an executable
+// needs every link file of its closure.
+artifact_covers(a, p) :- archive(_, c, a), config_platform(c, p).
+artifact_covers(e, p) :- executable(_, c, e), config_platform(c, p).
+artifact_covers(a, p) :- shared_library(_, c, a), config_platform(c, p).
+artifact_covers(a, p) :- module_library(_, c, a), config_platform(c, p).
+coverage_need(l, c, f) :- import_file_in(l, c, f), !file_archs_known(f).
+coverage_need(t, c, f) :- linked(t, c, _, _), link_closure(t, c, l), link_file(l, c, f).
+
+// ---- which platforms a prebuilt file covers () ----
+// One probe per file of a needed import (buildlog.objfile): its object
+// headers, read in-process (Mach-O thin and fat, ELF, COFF, ar archives),
+// give the file's architectures; it covers every platform whose cpu is one
+// of them, so a fat file covers each of its slices' platforms (a universal
+// configuration needs all of them, core L1). The demand reads the files of
+// needed imports (import_file_in), never coverage, so it stratifies below
+// the coverage check. Cached by the file's stat.
+// A file in a platform's sysroot is read as the target's linker reads it: the
+// absolute paths of a linker script name files in the sysroot (the root,
+// core L3 platform_sysroot, comes with the request).
+.decl req_file_archs(id:symbol, file:symbol, root:symbol)
+.decl domain_file_archs(id:symbol, file:symbol, root:symbol)
+.decl file_root_cand(f:symbol, root:symbol)
+file_root_cand(f, root) :- import_file_in(_, _, f), platform_sysroot(_, root), strlen(root) > 0,
+  substr(f, 0, strlen(root) + 1) = cat(root, "/").
+.decl file_root(f:symbol, root:symbol)
+file_root(f, root) :- file_root_cand(f, root), strlen(root) = max n : { file_root_cand(f, r), n = strlen(r) }.
+file_root(f, "") :- import_file_in(_, _, f), !file_root_cand(f, _).
+domain_file_archs(cat("file-archs:", f), f, root) :- import_file_in(_, _, f), file_root(f, root).
+req_file_archs(id, f, root) :- domain_file_archs(id, f, root).
+.decl res_file_format(req:symbol, file:symbol, format:symbol)   // macho | fat | elf | coff | ar | ...
+.decl res_file_arch(req:symbol, file:symbol, arch:symbol)
+artifact_covers(f, p) :- res_file_arch(r, f, a), req_file_archs(r, f, _), platform_constraint(p, "cpu", a).
+.decl file_archs_known(f:symbol)
+file_archs_known(f) :- res_file_format(r, f, fmt), fmt != "unknown", req_file_archs(r, f, _).
+// An imported file whose architectures were read is checked here, by name
+// (the generic check above keeps files the probe could not read): the
+// bound file has no slice for the configuration's cpu (a universal2 or
+// x86_64 configuration against an arm64-only install), so the error comes
+// at configure time, before any link fails on it.
+error_at("imported file lacks the platform's architecture",
+  cat("no ", a, " slice of ", l, ": ", f, " (", n, ")"), l, c) :-
+  import_file_in(l, c, f), config_platform(c, p), platform_constraint(p, "cpu", a),
+  file_archs_known(f), !artifact_covers(f, p), cfg_name(c, n).
+
+// ---- archive action ----
+action(a, "AR") :- archive(_, _, a).
+action_toolchain(a, "native-link", c) :- archive(_, c, a).
+action_tc_tool(a, tc, "ar") :- archive(t, c, a), tc_of(t, "native-link", c, tc).
+action_arg(a, 2, "", "rcs") :- archive(_, _, a).
+action_arg(a, 3, "", a) :- archive(_, _, a).
+action_arg(a, 4, "", o) :- archive(t, c, a), native_object(t, c, o).
+action_in(a, o, "explicit") :- archive(t, c, a), native_object(t, c, o).
+action_arg_set(a, 4) :- archive(_, _, a).                  // members
+
+// ---- link action ----
+// Linked artifacts (executables, shared libraries) and the argv position of
+// their ordered link-item segment.
+.decl linked(t:symbol, c:Cfg, e:symbol, seq:number)
+linked(t, c, e, 4) :- executable(t, c, e).
+linked(t, c, e, 10) :- shared_library(t, c, e).
+linked(t, c, e, 10) :- module_library(t, c, e).
+// The link closure follows dependency edges, except a linked artifact's own
+// interface edges (for its consumers only) and a shared or module library's
+// private ones (linked into it, hidden from its consumers).
+.decl link_closure(t:symbol, c:Cfg, l:symbol)
+.decl link_hides(m:symbol, c:Cfg, vis:symbol)
+link_hides(m, c, "private") :- native_kind_in(m, c, "shared_library").
+link_hides(m, c, "private") :- native_kind_in(m, c, "module_library").
+link_closure(t, c, l) :- linked(t, c, _, _), eff_dep(t, c, l, v), v != "interface".
+link_closure(t, c, l) :- link_closure(t, c, m), eff_dep(m, c, l, v), !link_hides(m, c, v).
+
+// Cycles among libraries: strongly connected components of the dep graph
+// restricted to the closure. L3 states the grouping; the linker plugin says
+// whether the backend needs delimiters. As for action cycles (L0), the
+// dependency graph of each configuration is first trimmed, in both
+// directions, of the targets that reach no cycle or that no cycle reaches;
+// mutual reachability is then decided inside the remaining core, which is
+// empty for an acyclic graph (no closure per linked target).
+// dep_adj(d, c, a, b): d = 0 follows eff_dep, d = 1 runs against it.
+.decl dep_adj(d:number, c:Cfg, a:symbol, b:symbol)
+dep_adj(0, c, a, b) :- eff_dep(a, c, b, _).
+dep_adj(1, c, b, a) :- eff_dep(a, c, b, _).
+// Edge ranks by ord(b), as action_adj_rank (L0): a count for at most 16
+// edges, a binary trie above.
+.decl dep_adj_from(d:number, c:Cfg, a:symbol)
+dep_adj_from(d, c, a) :- dep_adj(d, c, a, _).
+.decl dep_adj_degree(d:number, c:Cfg, a:symbol, n:number)
+dep_adj_degree(d, c, a, n) :- dep_adj_from(d, c, a), n = count : { dep_adj(d, c, a, _) }.
+.decl dep_adj_rank(d:number, c:Cfg, a:symbol, i:number, b:symbol)
+dep_adj_rank(d, c, a, i, b) :- dep_adj_degree(d, c, a, n), n <= 16, dep_adj(d, c, a, b),
+  i = count : { dep_adj(d, c, a, x), ord(x) < ord(b) }.
+.decl dep_adj_bit(d:number, c:Cfg, a:symbol, b:symbol, l:number, k:number)
+dep_adj_bit(d, c, a, b, l, (ord(b) bshr l)) :- dep_adj_degree(d, c, a, n), n > 16, dep_adj(d, c, a, b),
+  l = range(0, 32).
+.decl dep_adj_key(d:number, c:Cfg, a:symbol, l:number, k:number)
+dep_adj_key(d, c, a, l, k) :- dep_adj_bit(d, c, a, _, l, k).
+.decl dep_adj_count(d:number, c:Cfg, a:symbol, l:number, k:number, n:number)
+dep_adj_count(d, c, a, l, k, n) :- dep_adj_key(d, c, a, l, k), n = count : { dep_adj_bit(d, c, a, _, l, k) }.
+.decl dep_adj_left(d:number, c:Cfg, a:symbol, b:symbol, l:number, n:number)
+dep_adj_left(d, c, a, b, l, n) :- dep_adj_bit(d, c, a, b, l, k), k % 2 = 1, dep_adj_count(d, c, a, l, k - 1, n).
+dep_adj_rank(d, c, a, i, b) :- dep_adj_degree(d, c, a, n), n > 16, dep_adj(d, c, a, b),
+  i = sum m : { dep_adj_left(d, c, a, b, _, m) }.
+.decl dep_node(c:Cfg, a:symbol)
+dep_node(c, a) :- dep_adj(_, c, a, _).
+.decl dep_trim_upto(d:number, c:Cfg, a:symbol, i:number)   // edges 0..i-1 trimmed
+.decl dep_trimmed(d:number, c:Cfg, a:symbol)
+dep_trim_upto(d, c, a, 0) :- dep_node(c, a), (d = 0 ; d = 1).
+dep_trim_upto(d, c, a, i + 1) :- dep_trim_upto(d, c, a, i), dep_adj_rank(d, c, a, i, b), dep_trimmed(d, c, b).
+.plan 1:(3,2,1)
+dep_trimmed(d, c, a) :- dep_trim_upto(d, c, a, n), dep_adj_degree(d, c, a, n).
+dep_trimmed(d, c, a) :- dep_node(c, a), (d = 0 ; d = 1), !dep_adj_from(d, c, a).
+.decl dep_core(c:Cfg, a:symbol)
+dep_core(c, a) :- dep_node(c, a), !dep_trimmed(0, c, a), !dep_trimmed(1, c, a).
+.decl dep_core_reach(c:Cfg, a:symbol, b:symbol)
+dep_core_reach(c, a, b) :- dep_core(c, a), eff_dep(a, c, b, _), dep_core(c, b).
+dep_core_reach(c, a, b) :- dep_core_reach(c, a, m), eff_dep(m, c, b, _), dep_core(c, b).
+.decl link_scc(t:symbol, c:Cfg, a:symbol, b:symbol)          // a, b in one cycle
+link_scc(t, c, a, b) :- link_closure(t, c, a), dep_core_reach(c, a, b), dep_core_reach(c, b, a),
+  link_closure(t, c, b).
+.decl link_has_cycle(t:symbol, c:Cfg)
+link_has_cycle(t, c) :- link_scc(t, c, _, _).
+
+action(e, "LINK") :- executable(_, _, e).
+action(a, "LINK_SHARED") :- shared_library(_, _, a).
+action(a, "LINK_MODULE") :- module_library(_, _, a).
+action_toolchain(e, "native-link", c) :- linked(_, c, e, _).
+// The driver is the native-link toolchain's "link" tool, unless a language
+// layer names another of its tools for t's link (CMake's linker language:
+// a C-only program links with the C driver, not the C++ one).
+.decl link_role(t:symbol, c:Cfg, role:symbol)   // open
+.decl has_link_role(t:symbol, c:Cfg)
+has_link_role(t, c) :- link_role(t, c, _).
+action_tc_tool(e, tc, "link") :- linked(t, c, e, _), !has_link_role(t, c), tc_of(t, "native-link", c, tc).
+action_tc_tool(e, tc, r) :- linked(t, c, e, _), link_role(t, c, r), tc_of(t, "native-link", c, tc).
+error_at("two link drivers", cat(t, ": ", x, " / ", y), t, c) :- link_role(t, c, x), link_role(t, c, y), x < y.
+error_at("link driver role missing from the toolchain", cat(t, ": ", r, " of ", tc), t, c) :-
+  linked(t, c, _, _), link_role(t, c, r), tc_of(t, "native-link", c, tc), !toolchain_tool(tc, r, _),
+  !toolchain_tool_target(tc, r, _).
+action_arg(e, 1, pre, v) :- linked(t, c, e, _), tc_of(t, "native-link", c, tc), config_platform(c, p),
+  tc_platform_arg(tc, p, pre, v).
+action_arg(e, 2, "-o ", e) :- executable(_, _, e).
+action_arg(e, 3, "", o) :- executable(t, c, e), native_object(t, c, o).
+action_in(e, o, "explicit") :- linked(t, c, e, _), native_object(t, c, o).
+action_seq(e, k, i) :- linked(t, c, e, k), link_item_in(t, c, _, i).
+// A runtime search path two libraries both contribute (the one rpath each Qt
+// framework states) has no link order: positioned by each, it would be both
+// before and after a library between them.
+.decl link_item_shared(t:symbol, c:Cfg, i:symbol)
+link_item_shared(t, c, i) :- link_item_in(t, c, a, i), link_item_in(t, c, b, i), a < b,
+  match("-Wl,-rpath,.*", i).
+action_seq_before(e, k, i, j) :- linked(t, c, e, k), link_closure(t, c, a), link_closure(t, c, b),
+  eff_dep(a, c, b, _), link_item_in(t, c, a, i), link_item_in(t, c, b, j),
+  !link_item_shared(t, c, i), !link_item_shared(t, c, j).
+action_seq_same_group(e, k, i, j) :- linked(t, c, e, k), link_scc(t, c, a, b),
+  link_item_in(t, c, a, i), link_item_in(t, c, b, j), i != j.
+action_seq_group_delims(e, k, o, cl) :- linked(t, c, e, k), link_has_cycle(t, c),
+  tc_of(t, "native-link", c, tc), config_platform(c, p), linker_group_delims(tc, p, o, cl).
+// Shared library: the family's spellings, own link options, versions,
+// output, install name, objects, then the ordered link items.
+action_arg(a, 2, "", x) :- shared_library(t, c, a), shared_spell(t, c, "shared", x).
+action_arg(a, 3, "", v) :- shared_library(t, c, a), use(t, c, "native.link_option", v, _).
+action_arg(e, 5, "", v) :- executable(t, c, e), use(t, c, "native.link_option", v, _).
+// The export list is stated once per object-file format (CMake's
+// target_export_script: APPLE_LD, GNU_LD): an exported-symbols list (ld64)
+// or a version script (GNU ld and the others on ELF). Each applies where its
+// platform's driver spells it.
+action_arg(a, 4, x, f) :- shared_library(t, c, a), native_exported_symbols(t, f),
+  shared_spell(t, c, "exported_symbols", x).
+action_arg(a, 4, x, f) :- shared_library(t, c, a), native_version_script(t, f),
+  shared_spell(t, c, "version_script", x).
+action_in(a, f, "implicit") :- shared_library(t, c, a), native_exported_symbols(t, f),
+  shared_spell(t, c, "exported_symbols", _).
+action_in(a, f, "implicit") :- shared_library(t, c, a), native_version_script(t, f),
+  shared_spell(t, c, "version_script", _).
+// Versions in the loader's X.Y.Z form (Mach-O): the compatibility version is
+// the ABI version (soversion), the current version the full one, each padded
+// with ".0" to three components as CMake spells them (SOVERSION 1 is
+// -compatibility_version 1.0.0; VERSION 1.3.2 is -current_version 1.3.2).
+action_arg(a, 5, x, w) :- shared_library(t, c, a), native_version(t, _, s), version_xyz(s, w),
+  shared_spell(t, c, "compatibility_version", x).
+action_arg(a, 6, x, w) :- shared_library(t, c, a), native_version(t, v, _), version_xyz(v, w),
+  shared_spell(t, c, "current_version", x).
+action_arg(a, 7, "-o ", a) :- shared_library(_, _, a).
+action_arg(a, 8, x, cat(d, s)) :- shared_library(t, c, a), shared_file(t, c, _, s),
+  shared_spell(t, c, "install_name", x), shared_spell(t, c, "install_name_dir", d).
+action_arg(a, 9, "", o) :- shared_library(t, c, a), native_object(t, c, o).
+action_arg_set(a, 1), action_arg_set(a, 3), action_arg_set(a, 9) :- shared_library(_, _, a).
+// Module library: the family's spelling, own link options, output, objects,
+// then the ordered link items (no install name, no versions).
+action_arg(a, 2, "", x) :- module_library(t, c, a), module_spell(t, c, "module", x).
+action_arg(a, 3, "", v) :- module_library(t, c, a), use(t, c, "native.link_option", v, _).
+action_arg(a, 7, "-o ", a) :- module_library(_, _, a).
+action_arg(a, 9, "", o) :- module_library(t, c, a), native_object(t, c, o).
+action_arg_set(a, 1), action_arg_set(a, 3), action_arg_set(a, 9) :- module_library(_, _, a).
+bad_native_extra(t, "native_version") :- native_version(t, _, _), native_kind(t, "module_library").
+// An export list is dropped silently nowhere: some stated list must apply,
+// unless the author says the lists are platform-specific.
+.decl export_list_applies(t:symbol, c:Cfg)
+export_list_applies(t, c) :- shared_library(t, c, _), native_exported_symbols(t, _), shared_spell(t, c, "exported_symbols", _).
+export_list_applies(t, c) :- shared_library(t, c, _), native_version_script(t, _), shared_spell(t, c, "version_script", _).
+error_at("export list but no spelling for it", cat(t, " in ", n), t, c) :-
+  shared_library(t, c, _), (native_exported_symbols(t, _) ; native_version_script(t, _)),
+  !export_list_applies(t, c), !native_export_list_optional(t, _), cfg_name(c, n).
+.decl version_str(v:symbol)
+version_str(v), version_str(s) :- native_version(_, v, s).
+.decl version_dot(v:symbol, i:number)
+version_dot(v, i) :- version_str(v), i = range(0, strlen(v)), substr(v, i, 1) = ".".
+.decl version_xyz(v:symbol, xyz:symbol)
+version_xyz(v, w) :- version_str(v), n = count : { version_dot(v, _) }, n = 0, w = cat(v, ".0.0").
+version_xyz(v, w) :- version_str(v), n = count : { version_dot(v, _) }, n = 1, w = cat(v, ".0").
+version_xyz(v, v) :- version_str(v), n = count : { version_dot(v, _) }, n = 2.
+// The library's ABI claim, derived from native_version: the
+// soversion is what a consumer's loader requires, so the versions that share
+// it are the compatible ones. Soversion = the version's major: same_major
+// (zlib 1.3.2/1: libz.1); = its major.minor: same_minor; = the whole version:
+// exact (flatbuffers 25.12.19). A 0.y version with soversion 0 claims
+// same_minor (0.y breaks between minors), which the soname cannot say
+// (warned where it is exported, L3_install.dl). Any other soversion
+// (libtool's numbering, unrelated to the version) derives no claim. The
+// Mach-O compatibility version (above) is the soversion padded to X.Y.Z,
+// which is this claim's lower bound in each of the three cases.
+.decl version_major(v:symbol, m:symbol)
+version_major(v, v) :- version_str(v), !version_dot(v, _).
+version_major(v, substr(v, 0, i)) :- version_str(v), i = min j : { version_dot(v, j) }.
+.decl version_major_minor(v:symbol, mm:symbol)
+version_major_minor(v, substr(v, 0, i)) :- version_str(v), n = count : { version_dot(v, _) }, n = 2,
+  i = max j : { version_dot(v, j) }.
+version_major_minor(v, v) :- version_str(v), n = count : { version_dot(v, _) }, n = 1.
+.decl native_abi_compat(t:symbol, policy:symbol)             // exported
+native_abi_compat(t, "same_major") :- native_version(t, v, s), version_major(v, s), s != "0".
+native_abi_compat(t, "same_minor") :- native_version(t, v, "0"), version_major(v, "0"), version_dot(v, _).
+native_abi_compat(t, "same_minor") :- native_version(t, v, s), version_major_minor(v, s).
+native_abi_compat(t, "exact") :- native_version(t, v, v), n = count : { version_dot(v, _) }, n = 2.
+native_abi_compat(t, "same_major") :- native_version(t, v, v), !version_dot(v, _), v != "0".
+// A family that spells versions takes at most X.Y.Z (a Mach-O field).
+error_at("shared library version has more than three components", cat(t, ": ", v), t, c) :-
+  shared_library(t, c, _), native_version(t, v, _), shared_spell(t, c, "current_version", _),
+  n = count : { version_dot(v, _) }, n > 2.
+error_at("shared library version has more than three components", cat(t, ": ", s), t, c) :-
+  shared_library(t, c, _), native_version(t, _, s), shared_spell(t, c, "compatibility_version", _),
+  n = count : { version_dot(s, _) }, n > 2.
+.decl bad_native_extra(t:symbol, what:symbol)
+bad_native_extra(t, "native_version") :- native_version(t, _, _), !native_kind(t, "library").
+bad_native_extra(t, "native_exported_symbols") :- native_exported_symbols(t, _), !native_kind(t, "library").
+bad_native_extra(t, "native_version_script") :- native_version_script(t, _), !native_kind(t, "library").
+error("only shared libraries take this", cat(w, " of ", t)) :- bad_native_extra(t, w).
+
+// The versioned file's links: lib<o>.<soversion><suffix> (the install name)
+// and lib<o><suffix> (what -l<o> finds), as symlinks to it.
+.decl shared_link(t:symbol, c:Cfg, link:symbol, to:symbol)
+shared_link(t, c, cat("out:lib/", n, "/", s), f) :- shared_file(t, c, f, s), f != s, cfg_name(c, n).
+shared_link(t, c, cat("out:lib/", n, "/lib", o, x), s) :- shared_file(t, c, f, s), f != s,
+  shared_spell(t, c, "suffix", x), native_name_in(t, c, o), cfg_name(c, n).
+action(l, "SYMLINK") :- shared_link(_, _, l, _).
+action_arg(l, 0, "", "ln"), action_arg(l, 1, "", "-sf") :- shared_link(_, _, l, _).
+action_program_core(l, "buildlog core's symlink command (ln -sf)") :- shared_link(_, _, l, _).
+action_arg(l, 2, "", to), action_arg(l, 3, "", l) :- shared_link(_, _, l, to).
+action_in(l, a, "explicit") :- shared_link(t, c, l, _), shared_library(t, c, a).
+// lib<t><suffix> points at the install-name link: building it alone must
+// not leave it dangling.
+action_in(l, m, "implicit") :- shared_link(t, c, l, to), shared_link(t, c, m, _), cfg_name(c, n),
+  m = cat("out:lib/", n, "/", to).
+target_action(t, c, l) :- shared_link(t, c, l, _).
+// What links a shared library loads it by its install name at run time.
+action_in(e, l, "implicit") :- linked(t, c, e, _), link_closure(t, c, x), shared_link(x, c, l, _).
+
+// ---- run-time dependencies (L1's runtime_dep) ----
+// runtime_reach(t, c, m, place): t loads m, directly or through what it
+// loads. A loaded file is a module's, a shared library's (its versioned
+// file) or an executable's.
+.decl runtime_reach(t:symbol, c:Cfg, m:symbol, place:symbol)
+runtime_reach(t, c, m, p) :- eff_runtime_dep(t, c, m, p).
+runtime_reach(t, c, m2, p) :- runtime_reach(t, c, m, _), eff_runtime_dep(m, c, m2, p).
+// runtime_required(t, c, m, place): the same through required edges only.
+// What an install and an export of t carry (L3_install); an optional edge
+// reaches nothing here, so what hangs off an optional module is carried
+// only if that module is itself installed.
+.decl runtime_required(t:symbol, c:Cfg, m:symbol, place:symbol)
+runtime_required(t, c, m, p) :- eff_runtime_edge(t, c, m, p, "required").
+runtime_required(t, c, m2, p) :- runtime_required(t, c, m, _), eff_runtime_edge(m, c, m2, p, "required").
+.decl runtime_place(place:symbol)
+runtime_place("beside_loader"). runtime_place("beside_executables").
+error("unknown run-time dependency place", cat(t, " -> ", m, ": ", p)) :- runtime_dep(t, m, p), !runtime_place(p).
+error("unknown run-time dependency place", cat(t, " -> ", m, ": ", p)) :-
+  runtime_dep_when(t, m, p, _), !runtime_place(p).
+error("unknown run-time dependency place", cat(t, " -> ", m, ": ", p)) :- runtime_dep_optional(t, m, p), !runtime_place(p).
+error("unknown run-time dependency place", cat(t, " -> ", m, ": ", p)) :-
+  runtime_dep_optional_when(t, m, p, _), !runtime_place(p).
+error_at("run-time dependency is also linked", cat(t, " -> ", m, " in ", n), t, c) :-
+  eff_runtime_dep(t, c, m, _), eff_dep(t, c, m, _), cfg_name(c, n).
+.decl runtime_file(m:symbol, c:Cfg, dir:symbol, file:symbol)
+runtime_file(m, c, "lib", f) :- module_file(m, c, f).
+runtime_file(m, c, "lib", f) :- shared_file(m, c, f, _).
+// An imported module's file name is its package's (the importer's "file" attribute).
+runtime_file(m, c, "lib", f) :- imported_kind(m, "module"), needed(m, c), config_platform(c, p), package_attr(m, p, "file", f).
+runtime_file(m, c, "bin", o) :- executable(m, c, e), cfg_name(c, n), o = substr(e, strlen(n) + 9, strlen(e) - strlen(n) - 9).
+.decl has_runtime_file(m:symbol, c:Cfg)
+has_runtime_file(m, c) :- runtime_file(m, c, _, _).
+error_at("run-time dependency has no file to load", cat(t, " -> ", m, " (", k, ") in ", n), t, c) :-
+  eff_runtime_dep(t, c, m, _), native_kind_in(m, c, k), !has_runtime_file(m, c), cfg_name(c, n).
+// 1. Building the loader builds what it loads (CMake's add_dependencies).
+action_in(a, f, "order_only") :- runtime_reach(t, c, m, _), target_action(t, c, a), run_artifact(t, c, a),
+  run_artifact(m, c, f).
+action_in(a, f, "order_only") :- runtime_reach(t, c, m, _), archive(t, c, a), run_artifact(m, c, f).
+// 2. It sits where the loader looks, in the build tree: beside the loader's
+// own file, or beside every executable that is or links the loader; a
+// symlink bin/<cfg>/<file> -> ../../lib/<cfg>/<file> where it is not there
+// already (libraries sit in lib/<cfg>/, executables in bin/<cfg>/).
+.decl runtime_loaded_by(x:symbol, c:Cfg, m:symbol)
+runtime_loaded_by(x, c, m) :- executable(x, c, _), runtime_reach(x, c, m, _).
+runtime_loaded_by(x, c, m) :- executable(x, c, _), link_closure(x, c, l), runtime_reach(l, c, m, "beside_executables").
+// ... and the executables a required module is placed beside: those that
+// load it through required edges alone (what install puts beside them).
+.decl runtime_required_by(x:symbol, c:Cfg, m:symbol)
+runtime_required_by(x, c, m) :- executable(x, c, _), runtime_required(x, c, m, _).
+runtime_required_by(x, c, m) :- executable(x, c, _), link_closure(x, c, l), runtime_required(l, c, m, "beside_executables").
+.decl runtime_link(c:Cfg, link:symbol, to:symbol, m:symbol)
+runtime_link(c, cat("out:bin/", n, "/", f), cat("../../lib/", n, "/", f), m) :- runtime_loaded_by(_, c, m),
+  runtime_file(m, c, "lib", f), cfg_name(c, n), !imported(m).
+// An imported module (a package's, installed) is linked to from where it is.
+runtime_link(c, cat("out:bin/", n, "/", f), p, m) :- runtime_loaded_by(_, c, m), imported(m),
+  runtime_file(m, c, "lib", f), imported_location(m, c, p), cfg_name(c, n).
+error_at("run-time dependency beside a library loader is not in its directory",
+         cat(t, " -> ", m, " in ", n, " (an executable sits in bin/<cfg>/)"), t, c) :-
+  runtime_reach(t, c, m, "beside_loader"), runtime_file(t, c, "lib", _), runtime_file(m, c, "bin", _), cfg_name(c, n).
+action(l, "SYMLINK"), action_arg(l, 0, "", "ln"), action_arg(l, 1, "", "-sf"), action_arg(l, 2, "", to),
+action_arg(l, 3, "", l), action_in(l, a, "implicit") :- runtime_link(c, l, to, m), run_artifact(m, c, a).
+action_program_core(l, "buildlog core's symlink command (ln -sf)") :- runtime_link(_, l, _, _).
+target_action(m, c, l) :- runtime_link(c, l, _, m).
+action_in(e, l, "order_only") :- runtime_loaded_by(x, c, m), executable(x, c, e), runtime_link(c, l, _, m).
+.decl has_cycle_policy(tc:symbol, p:symbol)
+has_cycle_policy(tc, p) :- linker_cycle_policy(tc, p, _).
+error_at("library cycle but linker has no cycle policy", cat(t, " in ", n), t, c) :-
+  link_has_cycle(t, c), tc_of(t, "native-link", c, tc), config_platform(c, p), !has_cycle_policy(tc, p), cfg_name(c, n).
+action_arg(e, 1, "", a) :- linked(t, c, e, _), tc_of(t, "native-link", c, tc), tc_setting_arg(tc, c, "link", a).
+action_arg(e, 1, "", a) :- linked(t, c, e, _), use(t, c, "native.link_config_flags", "on", _),
+  tc_of(t, "native-link", c, tc), tc_setting_arg(tc, c, "compile", a), !config_flag_wiped(t, c, a).
+// What a toolchain always passes at a link and not at a compile (the NDK's
+// linker defaults: --no-undefined, --gc-sections, the static C++ runtime).
+.decl tc_link_arg(tc:symbol, p:symbol, arg:symbol)    // open
+action_arg(e, 1, "", a) :- linked(t, c, e, _), tc_of(t, "native-link", c, tc), config_platform(c, p), tc_link_arg(tc, p, a).
+// Build-tree run path: what links a built shared library finds it at run
+// time (its install name is @rpath/...) through an rpath to the library's
+// directory, relative to its own; every linked artifact sits two levels
+// below the build directory (bin/<cfg>/, lib/<cfg>/). The family spells the
+// origin-relative rpath.
+.decl build_rpath(e:symbol, c:Cfg, dir:symbol)
+build_rpath(e, c, cat("../../lib/", n)) :- linked(t, c, e, _), link_closure(t, c, l),
+  native_kind_in(l, c, "shared_library"), cfg_name(c, n).
+action_arg(e, 12, pre, d) :- build_rpath(e, c, d), linked(t, c, e, _), tc_of(t, "native-link", c, tc), config_platform(c, p),
+  rpath_origin_prefix(tc, p, pre).
+.decl has_rpath_origin_prefix(tc:symbol, p:symbol)
+has_rpath_origin_prefix(tc, p) :- rpath_origin_prefix(tc, p, _).
+error_at("toolchain cannot spell a build-tree rpath", cat(e, " with ", tc), t, c) :- build_rpath(e, c, _),
+  linked(t, c, e, _), tc_of(t, "native-link", c, tc), config_platform(c, p), !has_rpath_origin_prefix(tc, p).
+action_in(e, f, "implicit") :- linked(t, c, e, _), link_closure(t, c, l), link_file(l, c, f).
+action_arg_set(e, 1), action_arg_set(e, 3), action_arg_set(e, 5) :- executable(_, _, e).  // flags; objects; options
+
+// What `ninja` builds by default: the artifacts of what was asked for. A
+// test asks for its program (L1). A requested target with no artifact of its
+// own (an aggregate, CMake's `all`) stands for what it depends on.
+.decl default_target(t:symbol, c:Cfg)
+default_target(t, c) :- request(t, n), decl_cfg(n, c).
+default_target(t, c) :- test(n, t), test_in(n, c).
+default_target(d, c) :- default_target(t, c), !native_kind(t, _), !imported(t), eff_dep(t, c, d, _).
+default_target(i, c) :- default_target(t, c), linkage_twin(i, t), library_both(t, c).
+default_target(i, u) :- default_target(t, u), linkage_twin(i, t), split_request(i, u).
+default_output(e) :- default_target(t, c), executable(t, c, e).
+default_output(a) :- default_target(t, c), archive(t, c, a).
+default_output(a) :- default_target(t, c), shared_library(t, c, a).
+default_output(a) :- default_target(t, c), module_library(t, c, a).
+default_output(l) :- default_target(t, c), shared_link(t, c, l, _).
+
+// ---- multi-platform (fat) artifacts ----
+// Merging slices is a property of the object format of the universal platform,
+// so the merge tool is a platform tool (lipo), not a toolchain tool.
+.decl platform_tool(u:symbol, role:symbol, path:symbol)   // open: a platform plugin states it
+.decl slice_artifact(t:symbol, u:Cfg, s:Cfg, path:symbol)
+slice_artifact(t, u, s, e) :- split_request(t, u), config_slice(u, s), executable(t, s, e).
+slice_artifact(t, u, s, a) :- split_request(t, u), config_slice(u, s), archive(t, s, a).
+.decl fat_artifact(t:symbol, u:Cfg, path:symbol)
+// A slice shares the multi-platform configuration's settings, so every
+// slice gives a library the same linkage.
+.decl fat_kind(t:symbol, u:Cfg, kind:symbol)
+fat_kind(t, u, k) :- split_request(t, u), config_slice(u, s), native_kind_in(t, s, k).
+fat_artifact(t, u, cat("out:bin/", n, "/", o)) :- fat_kind(t, u, "executable"),
+  native_name(t, o), cfg_name(u, n).
+fat_artifact(t, u, cat("out:lib/", n, "/lib", o, ".a")) :- fat_kind(t, u, "static_library"),
+  config_slice(u, s), native_name_in(t, s, o), cfg_name(u, n).
+target_action(t, u, f) :- fat_artifact(t, u, f).
+
+action(f, "LIPO") :- fat_artifact(_, _, f).
+.decl mconfig_platform(u:Cfg, p:symbol)
+mconfig_platform([p, s], p) :- mconfig([p, s]).
+action_arg(f, 0, "", lipo) :- fat_artifact(_, u, f), mconfig_platform(u, p), platform_tool(p, "lipo", lipo).
+action_platform_tool(f, p, "lipo", lipo) :- fat_artifact(_, u, f), mconfig_platform(u, p), platform_tool(p, "lipo", lipo).
+action_arg(f, 1, "", "-create") :- fat_artifact(_, _, f).
+action_arg(f, 2, "-output ", f) :- fat_artifact(_, _, f).
+action_arg(f, 3, "", a) :- fat_artifact(t, u, f), slice_artifact(t, u, _, a).
+action_in(f, a, "explicit") :- fat_artifact(t, u, f), slice_artifact(t, u, _, a).
+action_arg_set(f, 3) :- fat_artifact(_, _, f).             // slices
+default_output(f) :- fat_artifact(_, _, f).
+artifact_covers(f, p) :- fat_artifact(_, u, f), coverage_platform(u, p).
+
+.decl has_platform_tool(u:symbol, role:symbol)
+has_platform_tool(u, r) :- platform_tool(u, r, _).
+error_at("no merge tool for multi-platform", n, t, u) :- fat_artifact(t, u, _), mconfig_platform(u, p), cfg_name(u, n),
+  !has_platform_tool(p, "lipo").
+.decl has_slice_artifact(t:symbol, u:Cfg, s:Cfg)
+has_slice_artifact(t, u, s) :- slice_artifact(t, u, s, _).
+error_at("slice missing for multi-platform request", cat(t, " ", nu, " ", ns), t, u) :-
+  split_request(t, u), native_kind(t, _), config_slice(u, s), !has_slice_artifact(t, u, s), cfg_name(u, nu),
+  cfg_name(s, ns).
+
+// A fat shared library (zlib-ng case study). Its slices share the file
+// name and install name (the family spells them per platform; the slices
+// of one universal platform agree), and the merged file gets the same
+// links.
+slice_artifact(t, u, s, a) :- split_request(t, u), config_slice(u, s), shared_library(t, s, a).
+fat_artifact(t, u, cat("out:lib/", n, "/", f)) :- fat_kind(t, u, "shared_library"),
+  config_slice(u, s), shared_file(t, s, f, _), cfg_name(u, n).
+shared_link(t, u, cat("out:lib/", n, "/", so), f) :- split_request(t, u), config_slice(u, s),
+  shared_file(t, s, f, so), f != so, cfg_name(u, n).
+shared_link(t, u, cat("out:lib/", n, "/lib", o, x), so) :- split_request(t, u), config_slice(u, s),
+  shared_file(t, s, f, so), f != so, shared_spell(t, s, "suffix", x), native_name_in(t, s, o), cfg_name(u, n).
+action_in(l, a, "explicit") :- shared_link(t, u, l, _), fat_artifact(t, u, a), fat_kind(t, u, "shared_library").
+
+// ---- imported artifacts ----
+// What a binding source (a discovery provider's results, a binding package)
+// states about the files of an imported target: its own location (own = 1)
+// and extra link libraries (own = 0), each under an optional named
+// condition; the target's kind (library | interface | executable | module);
+// and whole-archive edges (t links every member of lib's archive). A library's own location
+// and its extra link libraries are link files (implicit inputs of the link,
+// in link order via the dep graph); every artifact is an import_file, so
+// coverage checks it.
+.decl import_artifact(t:symbol, path:symbol, cond:symbol, own:number)   // open
+.decl imported_kind(t:symbol, kind:symbol)                              // open
+.decl imported_whole_archive(t:symbol, lib:symbol, cond:symbol)         // open
+.decl import_linkable(t:symbol)
+import_linkable(t) :- imported_kind(t, "library").
+.decl import_artifact_in(t:symbol, c:Cfg, path:symbol, own:number)
+import_artifact_in(t, c, p, o) :- import_artifact(t, p, "", o), needed(t, c).
+import_artifact_in(t, c, p, o) :- import_artifact(t, p, n, o), n != "", needed(t, c), cond_holds(c, n).
+// The files of a needed import in a configuration: its artifacts whose
+// condition holds there (a per-platform binding's hold only on that
+// platform, L3_discovery.dl) and the files a binding package states.
+.decl import_file_in(l:symbol, c:Cfg, path:symbol)
+import_file_in(l, c, p) :- import_artifact_in(l, c, p, _).
+import_file_in(l, c, p) :- needed(l, c), imported(l), import_file(l, p).
+link_file(t, c, p) :- import_artifact_in(t, c, p, 0).
+link_file(t, c, p) :- import_artifact_in(t, c, p, 1), import_linkable(t).
+
+// An executable or module is used by path, not linked (e.g. a DSL tool).
+.decl imported_location(t:symbol, c:Cfg, path:symbol)
+imported_location(t, c, p) :- import_artifact_in(t, c, p, 1).
+
+.decl import_located(t:symbol, c:Cfg)
+import_located(t, c) :- import_artifact_in(t, c, _, 1).
+.decl import_needs_location(t:symbol)
+import_needs_location(t) :- imported_kind(t, k), k != "interface".
+error("imported target has no location for configuration", cat(t, " in ", n)) :-
+  needed(t, c), import_needs_location(t), !import_located(t, c), cfg_name(c, n).
+.decl import_ambiguous_location(t:symbol, c:Cfg)
+import_ambiguous_location(t, c) :- import_artifact_in(t, c, a, 1), import_artifact_in(t, c, b, 1), a != b.
+error("imported target has two locations for configuration", cat(t, " in ", n)) :-
+  import_ambiguous_location(t, c), cfg_name(c, n).
+error("imported target is also built", t) :- imported_kind(t, _), native_kind(t, _).
+
+// Whole-archive edges: t links every member of lib's archive, stated by a
+// binding source for imports or by a spec for built targets (whole_archive,
+// CMake's $<LINK_LIBRARY:WHOLE_ARCHIVE,lib>; t is typically an interface
+// target that also depends on lib). The spelling belongs to the toolchain
+// family (F layer). A link whose closure forces an archive lists it once,
+// forced, where lib sits in the link order.
+.decl whole_archive(t:symbol, lib:symbol)                                // open
+.decl whole_archive_in(t:symbol, c:Cfg, lib:symbol)
+whole_archive_in(t, c, l) :- imported_whole_archive(t, l, ""), needed(t, c).
+whole_archive_in(t, c, l) :- imported_whole_archive(t, l, n), n != "", needed(t, c), cond_holds(c, n).
+whole_archive_in(t, c, l) :- whole_archive(t, l), needed(t, c).
+// What each library of t's closure contributes to t's link line: its link
+// items, except that a forced archive is spelled forced, in its place.
+.decl link_forced(t:symbol, c:Cfg, lib:symbol)
+link_forced(t, c, l) :- link_closure(t, c, x), whole_archive_in(x, c, l).
+link_closure(t, c, l) :- link_forced(t, c, l).
+.decl link_forced_file(t:symbol, c:Cfg, f:symbol)
+link_forced_file(t, c, f) :- link_forced(t, c, l), link_file(l, c, f).
+.decl link_item_in(t:symbol, c:Cfg, l:symbol, item:symbol)
+link_item_in(t, c, l, i) :- link_closure(t, c, l), link_item(l, c, i), !link_forced_file(t, c, i).
+.decl forced_spelling(t:symbol, c:Cfg, l:symbol, f:symbol, pre:symbol, item:symbol)
+forced_spelling(t, c, l, f, pre, cat(pre, f)) :- link_forced(t, c, l), link_file(l, c, f),
+  tc_of(t, "native-link", c, tc), config_platform(c, p), whole_archive_prefix(tc, p, pre),
+  !has_whole_archive_suffix(tc, p).
+forced_spelling(t, c, l, f, pre, cat(pre, f, suf)) :- link_forced(t, c, l), link_file(l, c, f),
+  tc_of(t, "native-link", c, tc), config_platform(c, p), whole_archive_prefix(tc, p, pre),
+  whole_archive_suffix(tc, p, suf).
+.decl has_whole_archive_suffix(tc:symbol, p:symbol)
+has_whole_archive_suffix(tc, p) :- whole_archive_suffix(tc, p, _).
+link_item_in(t, c, l, i) :- forced_spelling(t, c, l, _, _, i).
+action_seq_spelled(e, k, i, pre, f) :- linked(t, c, e, k), forced_spelling(t, c, l, f, pre, i).
+action_seq_spelled_suffix(e, k, i, suf) :- linked(t, c, e, k), forced_spelling(t, c, l, f, _, i),
+  tc_of(t, "native-link", c, tc), config_platform(c, p), whole_archive_suffix(tc, p, suf).
+.decl has_whole_archive_prefix(tc:symbol, p:symbol)
+has_whole_archive_prefix(tc, p) :- whole_archive_prefix(tc, p, _).
+error("toolchain cannot link a whole archive", cat(t, " links ", l, " with ", tc)) :-
+  whole_archive_in(t, c, l), tc_of(t, "native-link", c, tc), config_platform(c, p),
+  !has_whole_archive_prefix(tc, p).
+
+// ---- what runs when a command uses a target (core L1 action_run) ----
+// An executable runs; a shared library, or an imported executable or module,
+// is the file at its location. Each in the configuration asked for (L1 asks
+// for the exec configuration).
+run_artifact(t, c, e) :- executable(t, c, e).
+run_artifact(t, c, a) :- shared_library(t, c, a).
+run_artifact(t, c, a) :- module_library(t, c, a).
+run_artifact(t, c, p) :- imported_location(t, c, p), imported_kind(t, k), k != "library".

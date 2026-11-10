@@ -1,0 +1,7 @@
+# A platform with no settings and no toolchain, so core L1 can be exercised
+# without buildlog-cpp or any probe.
+name = "toy-platform"
+version = "0.1.0"
+rank = 1
+layers = ["toy_platform.dl"]
+extends = ["host_platform", "platform", "platform_slice"]

@@ -1,0 +1,58 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// [M3 phase 6] Halide's tests (cmake/HalideTestHelpers.cmake's
+// add_halide_test) over core's typed tests. halide_build_test(name,
+// program): ctest's test name runs program (add_halide_test's COMMAND
+// defaults to the target itself); halide_build_test_group(name, g) its
+// GROUPS; halide_build_test_exit_code_only(name) USE_EXIT_CODE_ONLY;
+// halide_build_test_environment(name, k, v) a later set_tests_properties
+// ENVIRONMENT, which replaces add_halide_test's default. Arguments are
+// core's test_arg / test_arg_ref.
+//
+// What add_halide_test sets: LABELS = the groups; ENVIRONMENT HL_TARGET =
+// HL_JIT_TARGET = Halide_TARGET, whose default "host" is only right where
+// the test runs on the platform it was built for (a cross configuration's
+// tests are not run; its Halide target is spelled for the record); the
+// [SKIP] regex; RUN_SERIAL for "multithreaded"; PASS_REGULAR_EXPRESSION
+// "Success!" unless USE_EXIT_CODE_ONLY. EXPECT_FAILURE (WILL_FAIL) is not
+// modeled: no sampled test uses it.
+.decl halide_build_test(name:symbol, program:symbol)
+.decl halide_build_test_group(name:symbol, group:symbol)
+.decl halide_build_test_exit_code_only(name:symbol)
+// A plain add_test (the tutorials): no [SKIP] regex and no pass regex.
+.decl halide_build_test_plain(name:symbol)
+.decl halide_build_test_environment(name:symbol, key:symbol, value:symbol)
+// A later set_tests_properties PASS_REGULAR_EXPRESSION (the warning tests
+// look for "Warning:") replaces add_halide_test's "Success!".
+.decl halide_build_test_pass(name:symbol, re:symbol)
+
+test(n, p) :- halide_build_test(n, p).
+test_label(n, g) :- halide_build_test_group(n, g).
+test_serial(n) :- halide_build_test_group(n, "multithreaded").
+test_regex(n, "skip", "\\[SKIP(-WITH-ISSUE(-[0-9]+)?)?\\]") :- halide_build_test(n, _), !halide_build_test_plain(n).
+.decl halide_build_test_has_pass(name:symbol)
+halide_build_test_has_pass(n) :- halide_build_test_pass(n, _).
+test_regex(n, "pass", "Success!") :-
+  halide_build_test(n, _), !halide_build_test_exit_code_only(n), !halide_build_test_has_pass(n),
+  !halide_build_test_plain(n).
+test_regex(n, "pass", re) :- halide_build_test_pass(n, re).
+test_env(n, k, v) :- halide_build_test_environment(n, k, v).
+
+.decl halide_build_test_has_environment(name:symbol)
+halide_build_test_has_environment(n) :- halide_build_test_environment(n, _, _).
+.decl halide_build_test_target(n:symbol, c:Cfg, t:symbol)
+halide_build_test_target(n, c, "host") :- halide_build_test(n, p), needed(p, c), halide_build_same_platform(c).
+halide_build_test_target(n, c, t) :- halide_build_test(n, p), needed(p, c), !halide_build_same_platform(c),
+  halide_build_target(c, t).
+test_config_env(n, c, "HL_TARGET", t), test_config_env(n, c, "HL_JIT_TARGET", t) :-
+  halide_build_test_target(n, c, t), !halide_build_test_has_environment(n).
+
+.decl halide_build_test_known(name:symbol)
+halide_build_test_known(n) :- halide_build_test(n, _).
+error("Halide test setting for an unknown test", n) :- halide_build_test_group(n, _), !halide_build_test_known(n).
+error("Halide test setting for an unknown test", n) :- halide_build_test_exit_code_only(n), !halide_build_test_known(n).
+error("Halide test setting for an unknown test", n) :- halide_build_test_plain(n), !halide_build_test_known(n).
+error("Halide test setting for an unknown test", n) :- halide_build_test_pass(n, _), !halide_build_test_known(n).
+error("Halide test setting for an unknown test", n) :-
+  halide_build_test_environment(n, _, _), !halide_build_test_known(n).

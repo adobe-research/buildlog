@@ -1,0 +1,26 @@
+# A pure (tier-2) rule package: Datalog only, no probes of its own. It asks
+# buildlog-cpp's generic cc_capability probe whether each generator host
+# toolchain compiles C.
+name = "blurgen"
+version = "0.1.0"
+rank = 5
+namespace = "blurgen"
+layers = ["L5_blurgen.dl"]
+requires = { buildlog-cpp = ">=0.1" }
+extends = [
+  "target",
+  "action_run",
+  "tc_required",
+  "req_cc_capability",
+  "link_file",
+  "iface",
+  "action",
+  "action_out",
+  "action_arg",
+  "action_in",
+  "artifact_covers",
+  "error",
+  "error_at",
+  "target_action",
+]
+accepts = ["blurgen_library"]

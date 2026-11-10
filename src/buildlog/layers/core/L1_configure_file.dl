@@ -1,0 +1,115 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L1: configured files (zlib case study). A target generates a text file
+// from a template by substituting variables, CMake's configure_file() in the
+// dialect projects use:
+//   @VAR@          VAR's value
+//   ${VAR}         VAR's value, unless the file is at-only (CMake's @ONLY)
+//   #cmakedefine VAR rest
+//                  "#define VAR rest" where VAR is defined, and
+//                  "/* #undef VAR */" where it is undefined
+// A variable the template uses must be stated, either defined or undefined.
+// CMake substitutes an unset variable as empty, which is an implicit choice,
+// so here it is an error. #cmakedefine01 is not supported (no project here
+// needs it); the builtin rejects it, and a variable both defined and
+// undefined, or defined twice with different values.
+//
+// The variables are the owner's targets' own properties (not their
+// dependencies' interfaces: a variable belongs to the file that uses it),
+// with set keys configure.define ("NAME=value") and configure.undefine
+// ("NAME"). Because
+// they are properties, a condition can set them (prop_when on a configure
+// check's answer, for example), and `why` explains each substituted value
+// through its property. The template is a sequence of pieces, not only a
+// file, because projects assemble templates too: zlib's CMakeLists.txt
+// splices three #cmakedefine lines into its zconf.h. A piece is either a
+// range of a source file's lines or one line of text.
+//
+// Language-neutral: zlib.pc is not C. What a language makes of the file
+// (an include dir, for example) is the language layer's business; it reads
+// configured_file.
+//
+// Ownership. A configured file belongs to an owner, not necessarily one
+// target: a library built as several author-fixed variants (zlib-ng's
+// shared and static targets) has one configured header per configuration
+// that every variant compiles against. owner_member(owner, t) says t is one of owner's
+// targets; a target is always an owner of itself (a one-member owner), so
+// configure_file(t, f) on a target still means what it did. The file is
+// generated once per configuration in which any member is needed, under
+// gen/<config>/<owner>/, and its variables are the members' own
+// configure.* properties: every member needed in the configuration must
+// have the same ones (an error otherwise), since one file serves them all.
+// Why an owner and not a "library": a library with variants is an
+// authoring abstraction (a project's rules, zlib-ng's rules.dl); what core
+// must know is only which targets share a generated file.
+.decl owner_member(owner:symbol, t:symbol)                     // open: t is one of owner's targets
+.decl configure_member(owner:symbol, t:symbol)                 // exported: owner_member, plus every target itself
+configure_member(g, t) :- owner_member(g, t).
+configure_member(t, t) :- configure_file(t, _), target_id(t).
+.decl configure_file(t:symbol, file:symbol)                    // owner t generates file (a relative path)
+.decl configure_file_at_only(t:symbol, file:symbol)            // only @VAR@ is substituted
+.decl configure_file_lines(t:symbol, file:symbol, i:number, src:symbol, first:number, last:number)
+.decl configure_file_text(t:symbol, file:symbol, i:number, line:symbol)
+// configure_file_lines: piece i is lines first..last (1-based, inclusive; last 0 means to the
+// end) of src, a path relative to the source root. configure_file_text: piece i is one line.
+
+set_key("configure.define"). set_key("configure.undefine").
+
+.decl configured_file(t:symbol, c:Cfg, file:symbol, path:symbol)   // exported
+configured_file(g, c, f, cat("out:gen/", n, "/", g, "/", f)) :- configure_file(g, f), configure_member(g, t),
+  needed(t, c), cfg_name(c, n).
+.decl configured_member(o:symbol, t:symbol, c:Cfg)   // member t, needed in c, compiles against file o
+configured_member(o, t, c) :- configured_file(g, c, _, o), configure_member(g, t), needed(t, c).
+
+default_output(o) :- request(t, n), decl_cfg(n, c), configure_member(g, t), configured_file(g, c, _, o).
+
+.decl configure_var(o:symbol, t:symbol, key:symbol, value:symbol)
+configure_var(o, t, k, v) :- configured_member(o, t, c), eff_prop(t, c, k, v, vis), used(vis),
+  (k = "configure.define" ; k = "configure.undefine").
+error("owner members disagree on a configured file's variable", cat(o, ": ", t, " has ", k, " ", v, ", ", u, " not")) :-
+  configure_var(o, t, k, v), configured_member(o, u, _), !configure_var(o, u, k, v).
+error("configured file owner has no targets", cat(g, ": ", f)) :- configure_file(g, f), !configure_member(g, _).
+error("owner member is not a target", cat(g, ": ", t)) :- owner_member(g, t), !target_id(t).
+// An owner name shares the target-id namespace. A target of the same name is
+// one of its own members (configure_member(t, t)). That is harmless when the
+// owner has no other members (a single target is its own owner) or lists the
+// target among them (an owner `z` with variants `z` and `zstatic`). An owner that
+// groups other targets and leaves out the target it is named after is
+// ambiguous: the name says both "in" and "out", so it is an error. An
+// imported target is not an owner: it generates nothing.
+error("configured file owner is also a target outside its own members", g) :-
+  configure_file(g, _), owner_member(g, _), target_id(g), !owner_member(g, g).
+error("configured file owner is an imported target", g) :- configure_file(g, _), imported(g).
+
+action(o, "CONFIGURE_FILE"), action_builtin(o, "configure_file"), action_restat(o),
+action_arg(o, 1, "-o ", o) :- configured_file(_, _, _, o).
+action_arg(o, 2, "", "--at-only") :- configured_file(t, _, f, o), configure_file_at_only(t, f).
+action_arg(o, 3, "-D", v) :- configure_var(o, _, "configure.define", v).
+action_arg(o, 4, "-U", v) :- configure_var(o, _, "configure.undefine", v).
+action_arg_set(o, 3), action_arg_set(o, 4) :- configured_file(_, _, _, o).
+action_arg(o, 10 + i, cat("--lines=", to_string(a), ":", to_string(b), ":"), cat("src:", s)),
+action_in(o, cat("src:", s), "explicit") :- configured_file(t, _, f, o), configure_file_lines(t, f, i, s, a, b).
+action_arg(o, 10 + i, "--text=", x) :- configured_file(t, _, f, o), configure_file_text(t, f, i, x).
+
+.decl configure_piece(t:symbol, file:symbol, i:number)
+configure_piece(t, f, i) :- configure_file_lines(t, f, i, _, _, _).
+configure_piece(t, f, i) :- configure_file_text(t, f, i, _).
+.decl configure_file_named(t:symbol, file:symbol)
+configure_file_named(t, f) :- configure_file(t, f).
+error("configured file has no template", cat(t, ": ", f)) :- configure_file(t, f), !configure_piece(t, f, _).
+error("template piece of an unstated configured file", cat(t, ": ", f)) :- configure_piece(t, f, _),
+  !configure_file_named(t, f).
+error("at-only of an unstated configured file", cat(t, ": ", f)) :- configure_file_at_only(t, f),
+  !configure_file_named(t, f).
+.decl configure_piece_says(t:symbol, file:symbol, i:number, what:symbol)
+configure_piece_says(t, f, i, cat("lines ", s, ":", to_string(a), ":", to_string(b))) :-
+  configure_file_lines(t, f, i, s, a, b).
+configure_piece_says(t, f, i, cat("text ", x)) :- configure_file_text(t, f, i, x).
+error("template piece position used twice", cat(t, ": ", f, " ", to_string(i))) :-
+  configure_piece_says(t, f, i, x), configure_piece_says(t, f, i, y), x < y.
+error("template line range is not first <= last (or last 0)", cat(t, ": ", f, " ", to_string(i))) :-
+  configure_file_lines(t, f, i, _, a, b), (a < 1 ; (b != 0, b < a)).
+error("template piece position is negative", cat(t, ": ", f, " ", to_string(i))) :- configure_piece(t, f, i), i < 0.
+error("configured file path is not relative", cat(t, ": ", f)) :- configure_file(t, f),
+  (substr(f, 0, 1) = "/" ; match(".*(^|/)\\.\\.(/|$).*", f) ; f = "").

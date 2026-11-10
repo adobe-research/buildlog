@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# A Qt consumer: a QObject with a signal, a slot and a property, and a
+# headless test. Qt's packages (../share/buildlog/Qt6*, installed into Qt's
+# prefix as Qt would ship them: imports of Qt's own Qt6*Targets.cmake) run moc
+# and rcc; nothing here asks for them. Configure (README.md):
+#   uv run --frozen buildlog configure --package-path QT_PREFIX -D QT_PREFIX=QT_PREFIX \
+#     --user presets/apple-clang.toml -C BUILD .
+uses = ["buildlog-cpp", "Qt6Core"]
+source_root = "."
+config_decl = [
+  ["debug", "arm64-macos"],
+  ["release", "arm64-macos"],
+  ["x86_64", "x86_64-macos"],
+  ["universal2", "universal2-macos"]
+]
+config_decl_setting = [
+  ["debug", "native.opt", "debug"],
+  ["release", "native.opt", "release"],
+  ["x86_64", "native.opt", "release"],
+  ["universal2", "native.opt", "release"],
+]
+# universal2 merges its slices with lipo; tests run per slice.
+request_all = [["counter_test"]]
+
+[target.counter]
+kind = "library"
+linkage = { require = "static", why = "the CMake build it mirrors is add_library(counter STATIC); its Q_OBJECT symbols are not exported for a shared build" }
+sources = ["src/counter.cpp", "src/counter.h", "src/version.h"]
+public = { "cc.include_dir" = "src:src" }
+deps = { public = ["Qt6::Core"] }
+
+[target.counter_test]
+kind = "executable"
+sources = ["tests/counter_test.cpp", "tests/greeting.qrc"]
+deps = { private = ["counter", "Qt6::Widgets"] }
+test = true

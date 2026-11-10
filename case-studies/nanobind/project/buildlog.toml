@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# nanobind_example (wjakob/nanobind_example 03bd872), as its CMakeLists.txt
+# and pyproject.toml ([tool.scikit-build]) build it, for the interpreters a
+# user file names (the nanobind case study; case-studies/nanobind/README.md):
+#   uv run --frozen buildlog configure --package-path case-studies/nanobind \
+#     --user case-studies/nanobind/project/presets/apple-clang-arm64.toml \
+#     --user case-studies/nanobind/project/presets/interpreters.toml \
+#     -C BUILD case-studies/nanobind/project
+# The nanobind rule package is ../share/buildlog/nanobind (as nanobind
+# would install it).
+uses = ["buildlog-cpp", "buildlog-python", "nanobind"]
+source_root = "${NANOBIND_EXAMPLE_SRC}"
+spec = ["spec.toml"]
+
+[vars]
+NANOBIND_EXAMPLE_SRC = "${REPO_ROOT}/case-studies/nanobind/upstream"
+# Where interpreters.toml finds the venvs (baseline/run-baseline.sh makes them).
+NANOBIND_VENVS = "${REPO_ROOT}/build/case-nanobind"

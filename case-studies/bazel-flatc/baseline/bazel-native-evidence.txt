@@ -1,0 +1,57 @@
+# bazel 8.8.1, flags: (none)
+
+## cquery 'deps(//:sample_binary)': the slice's targets and their configurations
+@com_github_google_flatbuffers//:flatbuffers (7f8856b)
+@com_github_google_flatbuffers//:flatbuffers (f50cc19)
+@com_github_google_flatbuffers//:flatc (f50cc19)
+@com_github_google_flatbuffers//:runtime_cc (7f8856b)
+@com_github_google_flatbuffers//:runtime_cc (f50cc19)
+@com_github_google_flatbuffers//src:flatbuffers (7f8856b)
+@com_github_google_flatbuffers//src:flatbuffers (f50cc19)
+@com_github_google_flatbuffers//src:flatc (f50cc19)
+//:monster_fbs (7f8856b)
+//:monster_fbs_srcs (7f8856b)
+//:monster.fbs (null)
+//:sample_binary (7f8856b)
+//:sample_binary.cpp (null)
+
+## cquery --transitions=lite 'deps(//:monster_fbs_srcs, 1)': the genrule's tools edge
+NoTransition -> //:monster_fbs_srcs (7f8856b)
+  srcs#//:monster.fbs#(null transition) -> 
+  tools#@com_github_google_flatbuffers//:flatc#(exec + (TestTrimmingTransition + ConfigFeatureFlagTaggedTrimmingTransition)) -> f50cc19
+  $genrule_setup#@bazel_tools//tools/genrule:genrule-setup.sh#(null transition) -> 
+
+## bazel config 7f8856b f50cc19: what the exec transition changed
+Displaying diff between configs 7f8856b and f50cc19
+FragmentOptions com.google.devtools.build.lib.analysis.PlatformOptions {
+  platforms: [@@bazel_tools//tools:host_platform], [@@platforms//host:host]
+}
+FragmentOptions com.google.devtools.build.lib.analysis.config.CoreOptions {
+  compilation_mode: fastbuild, opt
+  is exec configuration: false, true
+  platform_suffix: null, exec
+}
+FragmentOptions com.google.devtools.build.lib.rules.cpp.CppOptions {
+  copt: [], [-g0]
+  crosstool_top: @@bazel_tools//tools/cpp:toolchain, @bazel_tools//tools/cpp:toolchain
+  cxxopt: [], [-g0]
+  strip: sometimes, always
+}
+FragmentOptions com.google.devtools.build.lib.rules.java.JavaOptions {
+  java_runtime_version: local_jdk, remotejdk_11
+  jvmopt: [], [-XX:ErrorFile=/dev/stderr]
+}
+
+## toolchain resolution (--toolchain_resolution_debug=@bazel_tools//tools/cpp:toolchain_type)
+ToolchainResolution:   Toolchain @@apple_support++apple_cc_configure_extension+local_config_apple_cc//:cc-compiler-darwin_arm64 is compatible with target platform, searching for execution platforms:
+ToolchainResolution: Target platform @@platforms//host:host: Selected execution platform @@platforms//host:host, type @@bazel_tools//tools/cpp:toolchain_type -> toolchain @@apple_support++apple_cc_configure_extension+local_config_apple_cc//:cc-compiler-darwin_arm64
+
+## artifacts
+sample_binary: Mach-O 64-bit executable arm64
+flatc: Mach-O 64-bit executable arm64
+sample_binary: darwin_arm64-fastbuild
+flatc: darwin_arm64-opt-exec-ST-d57f47055a04
+monster_generated.h sha256: b735c911b19b778f954531add4978e49894627793c465da8d4b84f84de2bb8ac
+
+## run
+The FlatBuffer was successfully created and verified!

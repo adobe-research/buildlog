@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The Linux counterpart of homebrew-python.toml: the distribution's python3
+# (/usr/bin/python3) as the interpreter the generators run.
+package_file = [["cps", "${REPO_ROOT}/case-studies/spirv-tools/project/presets/linux/Python3.cps"]]
+alias = [["python3", "Python3:Interpreter"]]

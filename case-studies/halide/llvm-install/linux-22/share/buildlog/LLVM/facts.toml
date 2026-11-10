@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+llvm_version = [["22", "1", "8"]]
+llvm_define = [
+  ["_GNU_SOURCE"],
+  ["_GLIBCXX_USE_CXX11_ABI=1"],
+  ["__STDC_CONSTANT_MACROS"],
+  ["__STDC_FORMAT_MACROS"],
+  ["__STDC_LIMIT_MACROS"],
+]
+llvm_include_dir = "${PACKAGE_PREFIX}/include"
+llvm_enable_rtti = "on"
+llvm_enable_eh = "off"
+llvm_target = [
+  ["AArch64"],
+  ["AMDGPU"],
+  ["ARM"],
+  ["AVR"],
+  ["BPF"],
+  ["Hexagon"],
+  ["Lanai"],
+  ["LoongArch"],
+  ["Mips"],
+  ["MSP430"],
+  ["NVPTX"],
+  ["PowerPC"],
+  ["RISCV"],
+  ["Sparc"],
+  ["SPIRV"],
+  ["SystemZ"],
+  ["VE"],
+  ["WebAssembly"],
+  ["X86"],
+  ["XCore"],
+  ["M68k"],
+  ["Xtensa"],
+]

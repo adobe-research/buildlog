@@ -1,0 +1,5 @@
+toolchain_pin = [
+  ["c", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["cxx", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "arm64-macos", "apple-clang"]
+]

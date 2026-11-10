@@ -1,0 +1,5 @@
+toolchain("tcz", "toy", "1").
+toolchain_runs_on("tcz", "toy").
+toolchain_can_target("tcz", "toy", "toy").
+toolchain_can_target("tcz", "toy", "toy-a").
+toolchain_tool("tcz", "cc", "tcz-cp").

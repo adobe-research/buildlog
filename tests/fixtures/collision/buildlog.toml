@@ -1,0 +1,4 @@
+# Two independently authored project-local packages (packages/alpha and
+# packages/beta) whose private helpers share a name.
+uses = ["alpha", "beta"]
+spec = ["spec.toml"]

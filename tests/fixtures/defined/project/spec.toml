@@ -1,0 +1,14 @@
+# $Defined(t) holds for declared targets and fails for undeclared names.
+target = [["app"], ["present"], ["fallback"]]
+config_decl = [["toy", "toy"]]
+request = [["app", "toy"]]
+condition = [
+  ["has_present", "$Defined(present)"],
+  ["has_absent", "$Defined(absent)"],
+  ["lacks_absent", "$Not($Defined(absent))"],
+]
+dep_when = [
+  ["app", "present", "public", "has_present"],
+  ["app", "absent", "public", "has_absent"],
+  ["app", "fallback", "public", "lacks_absent"],
+]

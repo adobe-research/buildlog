@@ -1,0 +1,2 @@
+export_unspelled("pc", "cc.define", "claimed unspellable").
+export_unspelled("cps", "cxx.std", "claimed unspellable").

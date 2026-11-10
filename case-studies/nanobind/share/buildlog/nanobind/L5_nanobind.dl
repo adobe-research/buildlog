@@ -1,0 +1,105 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// nanobind_add_module, as nanobind-config.cmake (3.1.x) states it, for the
+// linked mode with NB_STATIC on macOS/clang. What CMake spells with
+// generator expressions on the configuration ($<CONFIG:Release> and the
+// others in NB_OPT / NB_OPT_SIZE) is native.opt = release here.
+//
+// nanobind_module(t): t is a nanobind extension module (a module library).
+// nanobind_module_option(t, opt): STABLE_ABI or NB_STATIC (the default);
+// other options are not ported. STABLE_ABI is a request that must agree
+// with the project's python_py_api (buildlog-python), which decides the
+// ABI of every extension of the wheel: nanobind's own STABLE_ABI and
+// scikit-build-core's wheel.py-api can disagree under CMake; here the
+// disagreement is an error.
+.decl nanobind_module(t:symbol)
+.decl nanobind_module_option(t:symbol, opt:symbol)
+error("nanobind module option not ported", cat(t, ": ", o)) :- nanobind_module_option(t, o),
+  o != "STABLE_ABI", o != "NB_STATIC".
+error("nanobind option of a target that is not a nanobind module", t) :- nanobind_module_option(t, _),
+  !nanobind_module(t).
+.decl nanobind_py_api()
+nanobind_py_api() :- python_py_api(_).
+error("nanobind STABLE_ABI without a project stable-ABI policy (python_py_api)", t) :-
+  nanobind_module_option(t, "STABLE_ABI"), !nanobind_py_api().
+
+// ---- where nanobind is: per configuration, in its interpreter's environment ----
+.decl nanobind_dir(c:Cfg, dir:symbol)
+nanobind_dir(c, d) :- python_package_dir(c, "nanobind", d).
+// This port states 3.1's file list and flags.
+error_at("nanobind version not covered by this port", cat(v, " (the port is of 3.1.x)"), "nanobind::nanobind-static", c) :-
+  needed("nanobind::nanobind-static", c), python_package_info(c, "nanobind", "version", v), !match("3[.]1[.].*", v).
+
+// ---- libnanobind (nanobind_build_library), one static library ----
+// CMake names a flavour per ABI (nanobind-static, nanobind-static-abi3):
+// here the configuration carries the interpreter, so one target is
+// compiled per configuration with that configuration's ABI. Static target
+// facts are in spec.toml; rules below depend on the interpreter.
+prop_in("nanobind::nanobind-static", c, "cc.include_dir", cat(d, "/include"), "public") :-
+  nanobind_dir(c, d), needed("nanobind::nanobind-static", c).
+prop_in("nanobind::robin_map", c, "cc.include_dir", cat(d, "/ext/robin_map/include"), "interface") :-
+  nanobind_dir(c, d), needed("nanobind::robin_map", c).
+// NB_OPT_SIZE: compact assertions; NB_OPT: no stack protector.
+prop_in("nanobind::nanobind-static", c, "cc.define", "NB_COMPACT_ASSERTIONS", "private"),
+prop_in("nanobind::nanobind-static", c, "cc.compile_flag", "-fno-stack-protector", "private") :-
+  needed("nanobind::nanobind-static", c), config_setting(c, "native.opt", "release").
+
+.decl nanobind_source(f:symbol)
+nanobind_source("nb_internals.cpp"). nanobind_source("nb_func.cpp"). nanobind_source("nb_type.cpp").
+nanobind_source("nb_enum.cpp"). nanobind_source("nb_ndarray.cpp"). nanobind_source("nb_static_property.cpp").
+nanobind_source("nb_datetime.cpp"). nanobind_source("common.cpp"). nanobind_source("error.cpp").
+nanobind_source("trampoline.cpp"). nanobind_source("implicit.cpp").
+.decl nanobind_private_header(f:symbol)
+nanobind_private_header("buffer.h"). nanobind_private_header("hash.h").
+nanobind_private_header("nb_internals.h"). nanobind_private_header("nb_ft.h").
+// Workaround (README, design input): buildlog compiles sources under the
+// project's one source root, or generated ones under out:. nanobind's live
+// in site-packages, per configuration, so each is copied under
+// out:nanobind/<cfg>/src/ (with the private headers its sources include
+// by relative name) and compiled from there.
+.decl nanobind_copy(c:Cfg, f:symbol, from:symbol, to:symbol)
+nanobind_copy(c, f, cat(d, "/src/", f), cat("out:nanobind/", n, "/src/", f)) :-
+  needed("nanobind::nanobind-static", c), nanobind_dir(c, d), cfg_name(c, n),
+  (nanobind_source(f) ; nanobind_private_header(f)).
+action(o, "NANOBIND_SOURCE"), action_builtin(o, "copy_if_different"), action_restat(o),
+action_arg(o, 1, "", s), action_arg(o, 2, "", o), action_in(o, s, "explicit") :- nanobind_copy(_, _, s, o).
+cxx_generated_source("nanobind::nanobind-static", c, o) :- nanobind_copy(c, f, _, o), nanobind_source(f).
+prop_in("nanobind::nanobind-static", c, "cc.generated_header", o, "private") :-
+  nanobind_copy(c, f, _, o), nanobind_private_header(f).
+
+// ---- the module (nanobind_add_module) ----
+native_kind(t, "module_library") :- nanobind_module(t).
+dep(t, "nanobind::nanobind-static", "private") :- nanobind_module(t).
+prop(t, "cc.compile_flag", "-fvisibility=hidden", "private") :- nanobind_module(t).
+// NB_OPT: no stack protector, strip; NB_OPT_SIZE: -Os.
+prop_in(t, c, "cc.compile_flag", "-fno-stack-protector", "private"),
+prop_in(t, c, "cc.compile_flag", "-Os", "private") :-
+  nanobind_module(t), needed(t, c), config_setting(c, "native.opt", "release").
+// nanobind_strip: Mach-O's three flags; ELF's one (-Wl,-s).
+prop_in(t, c, "native.link_option", "-Wl,-dead_strip", "private"),
+prop_in(t, c, "native.link_option", "-Wl,-x", "private"),
+prop_in(t, c, "native.link_option", "-Wl,-S", "private") :-
+  nanobind_module(t), needed(t, c), config_setting(c, "native.opt", "release"),
+  config_platform(c, p), platform_constraint(p, "os", "macos").
+prop_in(t, c, "native.link_option", "-Wl,-s", "private") :-
+  nanobind_module(t), needed(t, c), config_setting(c, "native.opt", "release"),
+  config_platform(c, p), !platform_constraint(p, "os", "macos").
+// nanobind_build_library, neither shared nor on macOS/Windows: the library's
+// sections are collected, and the link drops the unused ones.
+prop_in("nanobind::nanobind-static", c, "cc.compile_flag", "-ffunction-sections", "public"),
+prop_in("nanobind::nanobind-static", c, "cc.compile_flag", "-fdata-sections", "public"),
+prop_in("nanobind::nanobind-static", c, "native.link_option", "-Wl,--gc-sections", "public") :-
+  needed("nanobind::nanobind-static", c), config_setting(c, "native.opt", "release"),
+  config_platform(c, p), !platform_constraint(p, "os", "macos").
+// nanobind_link_options: the Python API symbols the module may leave
+// undefined, listed (a linker response file of -U lines), rather than
+// -undefined dynamic_lookup for every symbol. The file is an input of the
+// link: a -Wl,@file flag is not one by itself. macOS only (nanobind_link_options).
+.decl nanobind_symbols(t:symbol, c:Cfg, file:symbol)
+nanobind_symbols(t, c, cat(d, "/cmake/", f)) :- nanobind_module(t), needed(t, c), nanobind_dir(c, d),
+  config_platform(c, p), platform_constraint(p, "os", "macos"),
+  python_info(c, "implementation", i),
+  ((i = "cpython", f = "darwin-ld-cpython.sym") ; (i = "pypy", f = "darwin-ld-pypy.sym")).
+prop_in(t, c, "native.link_option", cat("-Wl,@", s), "private") :- nanobind_symbols(t, c, s).
+action_in(a, s, "implicit") :- nanobind_symbols(t, c, s), target_action(t, c, a), action(a, "LINK_MODULE").

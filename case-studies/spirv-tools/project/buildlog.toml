@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# SPIRV-Tools v2026.3, as its CMake build states it, with SPIRV-Headers
+# imported as an installed package (the SPIRV-Tools case study;
+# case-studies/spirv-tools/README.md). Configure with user files that pin the
+# toolchain, bind the Python interpreter and say where SPIRV-Headers is:
+#   uv run --frozen buildlog configure \
+#     --user case-studies/spirv-tools/project/presets/apple-clang-arm64.toml \
+#     --user case-studies/spirv-tools/project/presets/homebrew-python.toml \
+#     --user case-studies/spirv-tools/project/presets/spirv-headers-prefix.toml \
+#     -D SPIRV_HEADERS_PREFIX=$SPIRV_HEADERS_PREFIX \
+#     -C BUILD case-studies/spirv-tools/project
+uses = ["buildlog-cpp"]
+source_root = "${SPIRV_TOOLS_SRC}"
+spec = ["spec.toml", "generators.toml", "sources.toml", "targets.toml", "tests.toml", "rules.dl"]
+
+[vars]
+# The pinned checkout the CMake baseline builds (tag v2026.3, b707790a; see
+# baseline/run-cmake.sh).
+SPIRV_TOOLS_SRC = "${REPO_ROOT}/case-studies/spirv-tools/upstream"

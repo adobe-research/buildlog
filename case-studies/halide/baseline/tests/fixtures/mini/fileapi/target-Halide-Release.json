@@ -1,0 +1,36 @@
+{
+ "artifacts": [
+  {
+   "path": "src/libHalide.22.0.0.dylib"
+  }
+ ],
+ "backtrace": 0,
+ "backtraceGraph": {
+  "commands": [],
+  "files": [
+   "src/CMakeLists.txt"
+  ],
+  "nodes": [
+   {
+    "file": 0
+   }
+  ]
+ },
+ "dependencies": [
+  {
+   "id": "Halide_initmod::@2"
+  }
+ ],
+ "id": "Halide::@1",
+ "name": "Halide",
+ "paths": {
+  "build": "src",
+  "source": "src"
+ },
+ "sources": [
+  {
+   "path": "src/Func.cpp"
+  }
+ ],
+ "type": "SHARED_LIBRARY"
+}

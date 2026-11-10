@@ -1,0 +1,64 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# test/CMakeLists.txt's add_spvtools_unittest for the four unit tests that
+# need only googletest (no effcee): spirv_unit_tests (the assembler,
+# disassembler, binary parser and friends, sources.toml), c_interface,
+# c_interface_shared and cpp_interface. Upstream builds tests only when a
+# gmock_main target exists; here GTest::gmock_main is an imported package
+# (Homebrew googletest's CMake export, presets/homebrew-googletest.toml).
+# Every test program is a SPIRV-Tools target, gets the generated tables'
+# directory like the libraries (${spirv-tools_BINARY_DIR}) and test/, and
+# turns -Wshadow and -Wundef off (-Wno-undef -Wno-shadow after them).
+
+# add_test(NAME spirv-tools-${target} COMMAND ${target}); a test requests
+# its program (core), only where the tests are built (SPIRV_SKIP_TESTS).
+test = [
+  ["spirv-tools-test_spirv_unit_tests", "test_spirv_unit_tests"],
+  ["spirv-tools-test_c_interface", "test_c_interface"],
+  ["spirv-tools-test_c_interface_shared", "test_c_interface_shared"],
+  ["spirv-tools-test_cpp_interface", "test_cpp_interface"],
+]
+test_when = [
+  ["spirv-tools-test_spirv_unit_tests", "!SPIRV_SKIP_EXECUTABLES & !SPIRV_SKIP_TESTS"],
+  ["spirv-tools-test_c_interface", "!SPIRV_SKIP_EXECUTABLES & !SPIRV_SKIP_TESTS"],
+  ["spirv-tools-test_c_interface_shared", "!SPIRV_SKIP_EXECUTABLES & !SPIRV_SKIP_TESTS"],
+  ["spirv-tools-test_cpp_interface", "!SPIRV_SKIP_EXECUTABLES & !SPIRV_SKIP_TESTS"],
+]
+
+# googletest's exported targets link Threads::Threads, which CMake's
+# FindThreads defines (on macOS: nothing to add, pthreads are in libSystem).
+[target."Threads::Threads"]
+
+# LIBS ${SPIRV_TOOLS_FULL_VISIBILITY} (SPIRV-Tools static).
+[target.test_spirv_unit_tests]
+kind = "executable"
+private = { "cc.include_dir" = "src:test" }
+deps = { private = ["SPIRV-Tools", "SPIRV-Headers::SPIRV-Headers", "GTest::gmock_main"] }
+dep_linkage = [["SPIRV-Tools", "static", "upstream: SPIRV_TOOLS_FULL_VISIBILITY, the static one"]]
+
+[target.test_c_interface]
+kind = "executable"
+sources = "test/c_interface_test.cpp"
+private = { "cc.include_dir" = "src:test" }
+deps = { private = ["SPIRV-Tools", "SPIRV-Headers::SPIRV-Headers", "GTest::gmock_main"] }
+dep_linkage = [["SPIRV-Tools", "static", "upstream: SPIRV_TOOLS_FULL_VISIBILITY, the static one"]]
+
+# LIBS ${SPIRV_TOOLS}-shared: the same test against the shared library.
+[target.test_c_interface_shared]
+kind = "executable"
+sources = "test/c_interface_test.cpp"
+private = { "cc.include_dir" = "src:test" }
+deps = { private = ["SPIRV-Tools", "SPIRV-Headers::SPIRV-Headers", "GTest::gmock_main"] }
+dep_linkage = [["SPIRV-Tools", "shared", "upstream: LIBS SPIRV-Tools-shared"]]
+
+# LIBS SPIRV-Tools-opt.
+[target.test_cpp_interface]
+kind = "executable"
+sources = "test/cpp_interface_test.cpp"
+private = { "cc.include_dir" = "src:test" }
+deps = { private = ["SPIRV-Tools-opt", "SPIRV-Headers::SPIRV-Headers", "GTest::gmock_main"] }
+
+[defaults.target]
+profile = "spvtools-test"
+gen_user = "spirv-tools-tables"

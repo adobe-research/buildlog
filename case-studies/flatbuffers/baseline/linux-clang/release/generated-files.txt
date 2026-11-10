@@ -1,0 +1,11 @@
+./tests/64bit/evolution/v1_generated.h
+./tests/64bit/evolution/v2_generated.h
+./tests/64bit/test_64bit_bfbs_generated.h
+./tests/64bit/test_64bit_generated.h
+./tests/alignment_test_generated.h
+./tests/arrays_test_generated.h
+./tests/default_vectors_strings_test.fbs.h
+./tests/key_field/key_field_sample_generated.h
+./tests/native_inline_table_test_generated.h
+./tests/native_type_test_generated.h
+./tests/union_underlying_type_test_generated.h

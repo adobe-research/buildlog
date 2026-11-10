@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# python_bindings/halide/apps/CMakeLists.txt (python_apps.dl).
+halide_py_test = [
+  ["bilateral_grid_app", "python_bindings/halide/apps/bilateral_grid_app.py", "python_apps"],
+  ["blur_app", "python_bindings/halide/apps/blur_app.py", "python_apps"],
+  ["identity_app", "python_bindings/halide/apps/identity_app.py", "python_apps"],
+  ["interpolate_app", "python_bindings/halide/apps/interpolate_app.py", "python_apps"],
+  ["local_laplacian_app", "python_bindings/halide/apps/local_laplacian_app.py", "python_apps"],
+]
+# (library generator, app): app_aot_<generator> from app_gen_<app>
+halide_py_app_lib = [
+  ["bilateral_grid", "bilateral_grid"],
+  ["bilateral_grid_Adams2019", "bilateral_grid"],
+  ["bilateral_grid_Li2018", "bilateral_grid"],
+  ["bilateral_grid_Mullapudi2016", "bilateral_grid"],
+  ["blur", "blur"],
+  ["identity", "identity"],
+  ["interpolate", "interpolate"],
+  ["interpolate_Mullapudi2016", "interpolate"],
+  ["local_laplacian", "local_laplacian"],
+  ["local_laplacian_Mullapudi2016", "local_laplacian"],
+]
+halide_py_app_arg = [
+  ["bilateral_grid", 1, "src:apps/images/gray.png"],
+  ["bilateral_grid", 2, "0.1"],
+  ["bilateral_grid", 3, "out.png"],
+  ["blur", 1, "src:apps/images/gray.png"],
+  ["blur", 2, "out.png"],
+  ["interpolate", 1, "src:apps/images/rgba.png"],
+  ["interpolate", 2, "out.png"],
+  ["local_laplacian", 1, "src:apps/images/rgba.png"],
+  ["local_laplacian", 2, "8"],
+  ["local_laplacian", 3, "1"],
+  ["local_laplacian", 4, "1"],
+  ["local_laplacian", 5, "out.png"],
+]

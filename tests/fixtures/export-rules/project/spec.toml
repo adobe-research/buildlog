@@ -1,0 +1,14 @@
+config_decl = [["release", "arm64-macos"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = [["rt"]]
+
+export_package = ["minidsl"]
+export_version = [["minidsl", "1.0.0"]]
+export_compat = [["minidsl", "same_major"]]
+export_component = [["minidsl", "rt", "rt"]]
+export_rules = [["minidsl", "src:packages/minidsl"]]
+
+[target.rt]
+prop = [["cc.include_dir", "src:include", "interface"], ["cc.define", "MINIDSL=1", "interface"]]
+install_map = [["src:include", "includedir", ""]]
+install_file = ["src:include/minidsl/rt.h"]

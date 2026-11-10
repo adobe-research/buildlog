@@ -1,0 +1,190 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L4: configure-time checks (zlib case study). A spec states what it needs
+// to know about the C-family toolchain of its configurations, in a small
+// fixed set of kinds. The answer is a discovered fact: a probe result with
+// provenance, which rules never derive.
+//   include   Does `#include <subject>` build, after the prelude?
+//   type      Does `sizeof(subject)` build, after the prelude? What is the size?
+//   function  Does a call of the C symbol `subject` link (no prelude)?
+//   compiles  Does the prelude, followed by the program text `subject`, build?
+//   runs      Does it build, and does the program then run on this machine and
+//             exit 0 (check_cxx_source_runs)? For what the machine can do, e.g.
+//             an instruction its CPU has; a target this machine does not run answers
+//             no, and the answer is keyed by the CPU as well.
+// "Build" means compile and link a program, as CMake's check_* modules do.
+// cc_check_headers is the prelude: headers included in order, space-separated.
+// cc_check_args holds the extra compile and link arguments, space-separated
+// (CMake's CMAKE_REQUIRED_DEFINITIONS and CMAKE_REQUIRED_FLAGS). A
+// configuration's answer is its attribute cc.check.<name> = yes | no, so a
+// spec reads it in ordinary conditions:
+//   condition = [["hidden", "$Eq(cc.check.HAVE_HIDDEN, yes)"]]
+//
+// The key. The answer depends on the toolchain, the exec and target
+// platforms, the language, and the check's content (kind, subject, prelude,
+// arguments). It depends on nothing else a spec states: a check sees no
+// target's properties and no configuration setting, as in CMake. So a
+// request is keyed by exactly that tuple, not by the check's name or the
+// configuration; names and configurations that ask the same question share
+// one probe run and one cached answer. The probe's fingerprint adds the
+// identity of the tools, the triple and the SDK, and the environment the
+// tools read (probes.py, cc_check_fingerprint).
+//
+// Stated answers. cc_check_known has the shape of cc_check_result. Where it
+// states an answer for a tuple, that tuple is not probed, and consumers read
+// cc_check_result either way. A user file can preseed an answer, as CMake's
+// -C cache does. A toolchain-knowledge package can derive the rows from its
+// facts about a toolchain and platform, and then nothing is probed.
+.decl cc_check(name:symbol, lang:symbol, kind:symbol, subject:symbol)
+.decl cc_check_headers(name:symbol, headers:symbol)
+.decl cc_check_args(name:symbol, args:symbol)
+// A toolchain family's own arguments for a check, instead of cc_check_args
+// (CMake's CMAKE_REQUIRED_FLAGS chosen by CMAKE_C_COMPILER_ID): a flag one
+// family spells and another rejects, like Clang's -Werror=unguarded-availability.
+.decl cc_check_args_family(name:symbol, family:symbol, args:symbol)
+.decl cc_check_known(tc:symbol, exec:symbol, target:symbol, lang:symbol, kind:symbol, subject:symbol, headers:symbol, args:symbol, result:symbol)
+
+// Compact tables: one row per check, the kind in the
+// relation's name, the language cc_check_lang's ("c" unless stated). They
+// are CMake's and Meson's built-in checks, so they are vocabulary, not
+// project rules; `why` cites the compact row.
+//   cc_check_include(n, header)           check_include_file, has_header
+//   cc_check_function(n, symbol)          check_function_exists, has_function
+//   cc_check_type(n, type)                check_type_size (prelude: cc_check_headers)
+//   cc_check_symbol(n, symbol, headers)   check_symbol_exists, for a function or
+//                                         variable (its non-macro program)
+//   cc_check_flag(n, args)                a trivial program builds with args
+//                                         (check_c_compiler_flag; -Werror is the row's)
+//   cc_check_compiles(n, program)         check_c_source_compiles
+.decl cc_check_lang(lang:symbol)
+.decl cc_check_include(n:symbol, header:symbol)
+.decl cc_check_function(n:symbol, symbol:symbol)
+.decl cc_check_type(n:symbol, type:symbol)
+.decl cc_check_symbol(n:symbol, symbol:symbol, headers:symbol)
+.decl cc_check_flag(n:symbol, args:symbol)
+.decl cc_check_compiles(n:symbol, program:symbol)
+.decl cc_check_lang_stated()
+cc_check_lang_stated() :- cc_check_lang(_).
+.decl cc_check_default_lang(lang:symbol)
+cc_check_default_lang(l) :- cc_check_lang(l).
+cc_check_default_lang("c") :- !cc_check_lang_stated().
+error("cc_check_lang stated twice", cat(a, " / ", b)) :- cc_check_lang(a), cc_check_lang(b), a < b.
+cc_check(n, l, "include", h) :- cc_check_include(n, h), cc_check_default_lang(l).
+cc_check(n, l, "function", s) :- cc_check_function(n, s), cc_check_default_lang(l).
+cc_check(n, l, "type", t) :- cc_check_type(n, t), cc_check_default_lang(l).
+cc_check(n, l, "compiles", p) :- cc_check_compiles(n, p), cc_check_default_lang(l).
+cc_check(n, l, "compiles", "int main(void) { return 0; }"), cc_check_args(n, a) :-
+  cc_check_flag(n, a), cc_check_default_lang(l).
+cc_check(n, l, "compiles", cat("int main(int argc, char** argv) { (void)argv; return ((int*)(&", s, "))[argc]; }")),
+cc_check_headers(n, h) :- cc_check_symbol(n, s, h), cc_check_default_lang(l).
+
+.decl cc_check_kind(kind:symbol)
+cc_check_kind("include"). cc_check_kind("type"). cc_check_kind("function"). cc_check_kind("compiles"). cc_check_kind("runs").
+.decl cc_check_named(n:symbol)
+cc_check_named(n) :- cc_check(n, _, _, _).
+error("unknown check kind", cat(n, ": ", k, " (include, type, function, compiles or runs)")) :-
+  cc_check(n, _, k, _), !cc_check_kind(k).
+error("check language is not c or cxx", cat(n, ": ", l)) :- cc_check(n, l, _, _), l != "c", l != "cxx".
+error("check stated twice", n) :- cc_check(n, l, _, _), cc_check(n, l2, _, _), l < l2.
+error("check stated twice", n) :- cc_check(n, _, k, _), cc_check(n, _, k2, _), k < k2.
+error("check stated twice", n) :- cc_check(n, _, _, s), cc_check(n, _, _, s2), s < s2.
+error("check prelude stated twice", n) :- cc_check_headers(n, a), cc_check_headers(n, b), a < b.
+error("check arguments stated twice", n) :- cc_check_args(n, a), cc_check_args(n, b), a < b.
+error("check prelude or arguments of an unstated check", n) :- cc_check_headers(n, _), !cc_check_named(n).
+error("check prelude or arguments of an unstated check", n) :- cc_check_args(n, _), !cc_check_named(n).
+error("check prelude or arguments of an unstated check", n) :- cc_check_args_family(n, _, _), !cc_check_named(n).
+error("check arguments stated twice for a family", cat(n, ": ", f)) :-
+  cc_check_args_family(n, f, a), cc_check_args_family(n, f, b), a < b.
+error("function check with a prelude (it links a prototype-free call)", n) :-
+  cc_check(n, _, "function", _), cc_check_headers(n, _).
+error("stated check result is not yes or no", r) :-
+  cc_check_known(_, _, _, _, _, _, _, _, r), r != "yes", r != "no".
+error("check result stated twice", cat(k, " ", s, " for ", tc)) :-
+  cc_check_known(tc, e, p, l, k, s, h, a, "yes"), cc_check_known(tc, e, p, l, k, s, h, a, "no").
+
+// The prelude and the arguments, "" when a check states none.
+.decl cc_check_has_headers(n:symbol)
+cc_check_has_headers(n) :- cc_check_headers(n, _).
+.decl cc_check_has_args(n:symbol)
+cc_check_has_args(n) :- cc_check_args(n, _).
+.decl cc_check_prelude(n:symbol, headers:symbol)
+cc_check_prelude(n, h) :- cc_check_headers(n, h).
+cc_check_prelude(n, "") :- cc_check_named(n), !cc_check_has_headers(n).
+.decl cc_check_flags(n:symbol, args:symbol)
+cc_check_flags(n, a) :- cc_check_args(n, a).
+cc_check_flags(n, "") :- cc_check_named(n), !cc_check_has_args(n).
+.decl cc_check_content(n:symbol, lang:symbol, kind:symbol, subject:symbol, headers:symbol, args:symbol)
+cc_check_content(n, l, k, s, h, a) :- cc_check(n, l, k, s), cc_check_kind(k), cc_check_prelude(n, h),
+  cc_check_flags(n, a).
+
+// A check needs its language's toolchain wherever something is built, even
+// in a project with no source of that language.
+tc_required(l, c) :- cc_check(_, l, _, _), needed(_, c).
+// Where a configuration asks check n: its toolchain for the check's
+// language, and its exec and target platforms.
+.decl cc_check_in(n:symbol, c:Cfg, tc:symbol, exec:symbol, target:symbol)
+cc_check_in(n, c, tc, e, p) :- cc_check(n, l, _, _), tc_for(l, c, tc), config_platform(c, p),
+  exec_config(c, x), config_platform(x, e).
+// The check as toolchain tc is asked it: the arguments are its family's where
+// the check states them for it (cc_check_args_family), else the check's own.
+.decl cc_check_family_args(n:symbol, tc:symbol, args:symbol)
+cc_check_family_args(n, tc, a) :- cc_check_args_family(n, f, a), toolchain(tc, f, _).
+.decl cc_check_has_family_args(n:symbol, tc:symbol)
+cc_check_has_family_args(n, tc) :- cc_check_family_args(n, tc, _).
+.decl cc_check_want(tc:symbol, exec:symbol, target:symbol, lang:symbol, kind:symbol, subject:symbol, headers:symbol, args:symbol)
+cc_check_want(tc, e, p, l, k, s, h, a) :- cc_check_content(n, l, k, s, h, a), cc_check_in(n, _, tc, e, p),
+  !cc_check_has_family_args(n, tc).
+cc_check_want(tc, e, p, l, k, s, h, a) :- cc_check(n, l, k, s), cc_check_kind(k), cc_check_prelude(n, h),
+  cc_check_in(n, _, tc, e, p), cc_check_family_args(n, tc, a).
+.decl cc_check_stated(tc:symbol, exec:symbol, target:symbol, lang:symbol, kind:symbol, subject:symbol, headers:symbol, args:symbol)
+cc_check_stated(tc, e, p, l, k, s, h, a) :- cc_check_known(tc, e, p, l, k, s, h, a, _).
+
+// The probe request. Its id is its content, so a cached answer (keyed by
+// the same content) carries the same id in every configure. Every field but
+// the last is length-prefixed (len:value:), so distinct arguments never
+// share an id whatever characters they hold.
+.decl domain_cc_check(id:symbol, tc:symbol, exec:symbol, target:symbol, lang:symbol, kind:symbol, subject:symbol, headers:symbol, args:symbol)
+domain_cc_check(cat("cc-check:", to_string(strlen(tc)), ":", tc, ":", to_string(strlen(e)), ":", e, ":", to_string(strlen(p)), ":", p, ":", to_string(strlen(l)), ":", l, ":", to_string(strlen(k)), ":", k, ":", to_string(strlen(s)), ":", s, ":", to_string(strlen(h)), ":", h, ":", a),
+  tc, e, p, l, k, s, h, a) :- cc_check_want(tc, e, p, l, k, s, h, a), !cc_check_stated(tc, e, p, l, k, s, h, a).
+.decl req_cc_check(id:symbol, tc:symbol, exec:symbol, target:symbol, lang:symbol, kind:symbol, subject:symbol, headers:symbol, args:symbol)
+req_cc_check(id, tc, e, p, l, k, s, h, a) :- domain_cc_check(id, tc, e, p, l, k, s, h, a).
+.decl res_cc_check(req:symbol, result:symbol)
+.decl res_cc_check_size(req:symbol, size:symbol)
+
+// Discovered or stated: one relation, whichever the source.
+.decl cc_check_result(tc:symbol, exec:symbol, target:symbol, lang:symbol, kind:symbol, subject:symbol, headers:symbol, args:symbol, result:symbol)
+cc_check_result(tc, e, p, l, k, s, h, a, r) :- req_cc_check(id, tc, e, p, l, k, s, h, a), res_cc_check(id, r).
+cc_check_result(tc, e, p, l, k, s, h, a, r) :- cc_check_known(tc, e, p, l, k, s, h, a, r).
+// The size of a type that exists (discovered only; no rule consumes it yet).
+.decl cc_check_type_size(tc:symbol, exec:symbol, target:symbol, lang:symbol, subject:symbol, headers:symbol, args:symbol, size:symbol)
+cc_check_type_size(tc, e, p, l, s, h, a, n) :- req_cc_check(id, tc, e, p, l, "type", s, h, a),
+  res_cc_check_size(id, n).
+
+// The configuration attribute, over the finite domain {yes, no}. It is
+// defined in every configuration that has a toolchain for the check's
+// language; core reports a condition that tests it where it is undefined.
+attr_value(cat("cc.check.", n), "yes"), attr_value(cat("cc.check.", n), "no"),
+attr_discovered(cat("cc.check.", n)) :- cc_check_named(n).
+config_attr(c, cat("cc.check.", n), r) :- cc_check_content(n, l, k, s, h, a), cc_check_in(n, c, tc, e, p),
+  !cc_check_has_family_args(n, tc), cc_check_result(tc, e, p, l, k, s, h, a, r).
+config_attr(c, cat("cc.check.", n), r) :- cc_check(n, l, k, s), cc_check_kind(k), cc_check_prelude(n, h),
+  cc_check_in(n, c, tc, e, p), cc_check_family_args(n, tc, a), cc_check_result(tc, e, p, l, k, s, h, a, r).
+// A check is also the condition of its attribute's name, holding where the
+// answer is yes: `prop_when = [["cc.define", "HAVE_FSEEKO=0", "private",
+// "!cc.check.HAVE_FSEEKO"]]` needs no condition row per check.
+condition(cat("cc.check.", n), $Eq(cat("cc.check.", n), "yes")) :- cc_check_named(n).
+
+// ---- a check's answer as a configured file's variable (zlib case study) ----
+// cc_check_configure(g, n): owner g's configured files (core's
+// configure_file; every target of g gets the variable) see check n's answer as the variable n, CMake's convention
+// (check_include_file(unistd.h HAVE_UNISTD_H), then #cmakedefine
+// HAVE_UNISTD_H): n=1 where the answer is yes, n undefined where it is no.
+// They are properties under conditions on cc.check.<n>, so `why` on a
+// substituted line leads through the property to the answer.
+.decl cc_check_configure(t:symbol, n:symbol)
+condition(cat("cc.check.", n, "=", r), $Eq(cat("cc.check.", n), r)) :- cc_check_configure(_, n), attr_value(cat("cc.check.", n), r).
+prop_when(t, "configure.define", cat(n, "=1"), "private", cat("cc.check.", n, "=yes")),
+prop_when(t, "configure.undefine", n, "private", cat("cc.check.", n, "=no")) :- cc_check_configure(g, n),
+  configure_member(g, t).
+error("configured variable from an unstated check", cat(t, ": ", n)) :- cc_check_configure(t, n), !cc_check_named(n).

@@ -1,0 +1,216 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Halide's runtime (M3 phase 3), as src/runtime/CMakeLists.txt builds
+// Halide_initmod: each runtime module is compiled to LLVM IR for a data
+// triple by the bound Clang, assembled by LLVM's llvm-as, and embedded as a
+// C++ byte array by the project's embed tool; the arrays compile into lib.
+// The tools are named by target reference (action_run): Clang::clang and
+// LLVM::llvm-as are imported executables of the bound LLVM (Clang's package
+// requires LLVM's exact version), binary2cpp is built. Core puts each
+// in lib's exec configuration: nothing here says where anything runs.
+//
+// Both tools must come from the package instance of the LLVM that lib links
+// (core's import_same_package, checked against the user's package
+// selection): the runtime is bitcode for that LLVM. This is what makes the
+// runtime's -Werror (CMake's RUNTIME_CXX_FLAGS) integrity, not policy: the
+// compiler is fixed by the library, not chosen by the user (buildlog-cpp's
+// -Werror check; notes.md, "Include-directory order").
+import_same_package("Clang::clang", "LLVM::LLVM").
+import_same_package("LLVM::llvm-as", "LLVM::LLVM").
+//
+// halide_build_runtime(lib, tool, dir, version, major, minor, patch): lib
+// embeds the runtime whose sources are under dir (source-relative), with
+// tool; the version defines of the runtime compiles.
+// halide_build_runtime_include(lib, dir): the system include dir of the
+// runtime compiles (the Vulkan headers; at most one).
+//
+// The modules (CMake's lists RUNTIME_CPP, RUNTIME_LL and
+// RUNTIME_HEADER_FILES, and two single files) are explicit facts below, no
+// glob (notes.md, "M3 phases 2-3"):
+//
+// - C++ module m, for bits j in {32, 64}, plain and debug:
+//   clang <flags> [-fpic] [-fshort-wchar] [-g -DDEBUG_RUNTIME]
+//     -DCOMPILING_HALIDE_RUNTIME -DBITS_j -DHALIDE_VERSION... -mj -target T
+//     -emit-llvm -S -MD -MF initmod.m_j.d -o initmod.m_j.ll dir/m.cpp
+//   llvm-as initmod.m_j.ll -o initmod.m_j.bc
+//   binary2cpp halide_internal_initmod_m_j < initmod.m_j.bc > _initmod_m_j.cpp
+//   (_debug appended to the name for debug). T follows the module's name.
+// - LLVM module m: copy dir/m.ll to m.ll.transformed.ll, llvm-as it to
+//   initmod.m.bc, embed that as _initmod_m.cpp (halide_internal_initmod_m_ll).
+// - Header h, halide_buffer_t.cpp and the PTX libdevice bitcode: embedded
+//   straight from the source tree.
+//
+// Everything lands in out:gen/<config>/<lib>/runtime/ (CMake's
+// build/src/runtime/), and the commands run there as CMake's do, except the
+// clang compile: its depfile names paths relative to its directory, and
+// Ninja reads them relative to the build directory (L0 forbids the pair;
+// CMake rewrites the depfile with cmake_transform_depfile).
+
+.decl halide_build_runtime(lib:symbol, tool:symbol, dir:symbol, version:symbol, major:symbol, minor:symbol, patch:symbol)
+.decl halide_build_runtime_include(lib:symbol, dir:symbol)
+
+.decl halide_build_runtime_cpp(m:symbol)
+.decl halide_build_runtime_ll(m:symbol)
+.decl halide_build_runtime_header(h:symbol, sym:symbol)
+.decl halide_build_runtime_flag(rank:number, flag:symbol)
+
+// RUNTIME_CXX_FLAGS (its -isystem is halide_build_runtime_include).
+halide_build_runtime_flag(0, "-O3"). halide_build_runtime_flag(1, "-std=c++17"). halide_build_runtime_flag(2, "-ffreestanding").
+halide_build_runtime_flag(3, "-fno-blocks"). halide_build_runtime_flag(4, "-fno-exceptions"). halide_build_runtime_flag(5, "-fno-unwind-tables").
+halide_build_runtime_flag(6, "-fno-vectorize"). halide_build_runtime_flag(7, "-fno-threadsafe-statics"). halide_build_runtime_flag(8, "-fno-rtti").
+halide_build_runtime_flag(9, "-fno-jump-tables"). halide_build_runtime_flag(10, "-Wall"). halide_build_runtime_flag(11, "-Wc++20-designator").
+halide_build_runtime_flag(12, "-Wcast-qual"). halide_build_runtime_flag(13, "-Werror"). halide_build_runtime_flag(14, "-Wignored-qualifiers").
+halide_build_runtime_flag(15, "-Wno-comment"). halide_build_runtime_flag(16, "-Wno-psabi"). halide_build_runtime_flag(17, "-Wno-unknown-warning-option").
+halide_build_runtime_flag(18, "-Wno-unused-function"). halide_build_runtime_flag(19, "-Wvla"). halide_build_runtime_flag(20, "-Wsign-compare").
+halide_build_runtime_flag(21, "-Wimplicit-fallthrough"). halide_build_runtime_flag(22, "-Wno-sync-alignment").
+
+// RUNTIME_CPP.
+halide_build_runtime_cpp("alignment_128"). halide_build_runtime_cpp("alignment_32"). halide_build_runtime_cpp("alignment_64").
+halide_build_runtime_cpp("allocation_cache"). halide_build_runtime_cpp("android_clock"). halide_build_runtime_cpp("android_host_cpu_count").
+halide_build_runtime_cpp("android_io"). halide_build_runtime_cpp("arm_cpu_features"). halide_build_runtime_cpp("cache").
+halide_build_runtime_cpp("can_use_target"). halide_build_runtime_cpp("cuda"). halide_build_runtime_cpp("destructors").
+halide_build_runtime_cpp("device_interface"). halide_build_runtime_cpp("errors"). halide_build_runtime_cpp("fake_get_symbol").
+halide_build_runtime_cpp("fake_thread_pool"). halide_build_runtime_cpp("float16_t"). halide_build_runtime_cpp("fopen").
+halide_build_runtime_cpp("fopen_lfs"). halide_build_runtime_cpp("force_include_types"). halide_build_runtime_cpp("fuchsia_clock").
+halide_build_runtime_cpp("fuchsia_host_cpu_count"). halide_build_runtime_cpp("fuchsia_thread_id"). halide_build_runtime_cpp("fuchsia_yield").
+halide_build_runtime_cpp("gpu_device_selection"). halide_build_runtime_cpp("halide_buffer_t"). halide_build_runtime_cpp("hexagon_cache_allocator").
+halide_build_runtime_cpp("hexagon_cpu_features"). halide_build_runtime_cpp("hexagon_dma"). halide_build_runtime_cpp("hexagon_dma_pool").
+halide_build_runtime_cpp("hexagon_host"). halide_build_runtime_cpp("ios_io"). halide_build_runtime_cpp("linux_arm_cpu_features").
+halide_build_runtime_cpp("linux_arm_thread_id"). halide_build_runtime_cpp("linux_clock"). halide_build_runtime_cpp("linux_host_cpu_count").
+halide_build_runtime_cpp("linux_powerpc_thread_id"). halide_build_runtime_cpp("linux_riscv_thread_id"). halide_build_runtime_cpp("linux_x86_cpu_features").
+halide_build_runtime_cpp("linux_x86_thread_id"). halide_build_runtime_cpp("linux_yield"). halide_build_runtime_cpp("metal").
+halide_build_runtime_cpp("metal_objc_arm"). halide_build_runtime_cpp("metal_objc_x86"). halide_build_runtime_cpp("module_aot_ref_count").
+halide_build_runtime_cpp("module_jit_ref_count"). halide_build_runtime_cpp("msan"). halide_build_runtime_cpp("msan_stubs").
+halide_build_runtime_cpp("opencl"). halide_build_runtime_cpp("osx_arm_cpu_features"). halide_build_runtime_cpp("osx_clock").
+halide_build_runtime_cpp("osx_get_symbol"). halide_build_runtime_cpp("osx_host_cpu_count"). halide_build_runtime_cpp("osx_thread_id").
+halide_build_runtime_cpp("osx_yield"). halide_build_runtime_cpp("posix_aligned_alloc"). halide_build_runtime_cpp("posix_allocator").
+halide_build_runtime_cpp("posix_clock"). halide_build_runtime_cpp("posix_error_handler"). halide_build_runtime_cpp("posix_get_symbol").
+halide_build_runtime_cpp("posix_io"). halide_build_runtime_cpp("posix_print"). halide_build_runtime_cpp("posix_threads").
+halide_build_runtime_cpp("posix_threads_tsan"). halide_build_runtime_cpp("posix_timer_profiler"). halide_build_runtime_cpp("powerpc_cpu_features").
+halide_build_runtime_cpp("prefetch"). halide_build_runtime_cpp("profiler"). halide_build_runtime_cpp("profiler_inlined").
+halide_build_runtime_cpp("pseudostack"). halide_build_runtime_cpp("qurt_allocator"). halide_build_runtime_cpp("qurt_hvx").
+halide_build_runtime_cpp("qurt_hvx_vtcm"). halide_build_runtime_cpp("qurt_threads"). halide_build_runtime_cpp("qurt_threads_tsan").
+halide_build_runtime_cpp("qurt_yield"). halide_build_runtime_cpp("riscv_cpu_features"). halide_build_runtime_cpp("runtime_api").
+halide_build_runtime_cpp("timer_profiler"). halide_build_runtime_cpp("to_string"). halide_build_runtime_cpp("trace_helper").
+halide_build_runtime_cpp("tracing"). halide_build_runtime_cpp("vulkan"). halide_build_runtime_cpp("wasm_cpu_features").
+halide_build_runtime_cpp("wasm_thread_id"). halide_build_runtime_cpp("webgpu_dawn"). halide_build_runtime_cpp("webgpu_emscripten").
+halide_build_runtime_cpp("windows_aarch64_cpu_features_arm"). halide_build_runtime_cpp("windows_clock"). halide_build_runtime_cpp("windows_cuda").
+halide_build_runtime_cpp("windows_d3d12compute_arm"). halide_build_runtime_cpp("windows_d3d12compute_x86"). halide_build_runtime_cpp("windows_get_symbol").
+halide_build_runtime_cpp("windows_io"). halide_build_runtime_cpp("windows_opencl"). halide_build_runtime_cpp("windows_profiler").
+halide_build_runtime_cpp("windows_threads"). halide_build_runtime_cpp("windows_threads_tsan"). halide_build_runtime_cpp("windows_vulkan").
+halide_build_runtime_cpp("windows_yield"). halide_build_runtime_cpp("write_debug_image"). halide_build_runtime_cpp("x86_cpu_features").
+
+// RUNTIME_LL.
+halide_build_runtime_ll("aarch64"). halide_build_runtime_ll("arm"). halide_build_runtime_ll("arm_no_neon").
+halide_build_runtime_ll("hvx_128"). halide_build_runtime_ll("posix_math"). halide_build_runtime_ll("powerpc").
+halide_build_runtime_ll("ptx_dev"). halide_build_runtime_ll("wasm_math"). halide_build_runtime_ll("win32_math").
+halide_build_runtime_ll("x86"). halide_build_runtime_ll("x86_amx"). halide_build_runtime_ll("x86_avx").
+halide_build_runtime_ll("x86_avx2"). halide_build_runtime_ll("x86_avx512"). halide_build_runtime_ll("x86_sse41").
+
+// RUNTIME_HEADER_FILES, with the symbol part CMake derives ('.' -> '_').
+halide_build_runtime_header("HalideBuffer.h", "HalideBuffer_h"). halide_build_runtime_header("HalidePyTorchCudaHelpers.h", "HalidePyTorchCudaHelpers_h").
+halide_build_runtime_header("HalidePyTorchHelpers.h", "HalidePyTorchHelpers_h"). halide_build_runtime_header("HalideRuntime.h", "HalideRuntime_h").
+halide_build_runtime_header("HalideRuntimeCuda.h", "HalideRuntimeCuda_h"). halide_build_runtime_header("HalideRuntimeD3D12Compute.h", "HalideRuntimeD3D12Compute_h").
+halide_build_runtime_header("HalideRuntimeHexagonDma.h", "HalideRuntimeHexagonDma_h"). halide_build_runtime_header("HalideRuntimeHexagonHost.h", "HalideRuntimeHexagonHost_h").
+halide_build_runtime_header("HalideRuntimeMetal.h", "HalideRuntimeMetal_h"). halide_build_runtime_header("HalideRuntimeOpenCL.h", "HalideRuntimeOpenCL_h").
+halide_build_runtime_header("HalideRuntimeQurt.h", "HalideRuntimeQurt_h"). halide_build_runtime_header("HalideRuntimeVulkan.h", "HalideRuntimeVulkan_h").
+halide_build_runtime_header("HalideRuntimeWebGPU.h", "HalideRuntimeWebGPU_h").
+
+// ---- data triples, by module name (CMake's MATCHES) ----
+.decl halide_build_rt_kind(m:symbol, kind:symbol)
+halide_build_rt_kind(m, "win_x86") :- halide_build_runtime_cpp(m), match("windows_.*_x86", m).
+halide_build_rt_kind(m, "win_arm") :- halide_build_runtime_cpp(m), match("windows_.*_arm", m).
+halide_build_rt_kind(m, "win") :- halide_build_runtime_cpp(m), match("windows_.*", m),
+  !match("windows_.*_x86", m), !match("windows_.*_arm", m).
+halide_build_rt_kind(m, "webgpu") :- halide_build_runtime_cpp(m), !match("windows_.*", m), match(".*webgpu.*", m).
+halide_build_rt_kind(m, "generic") :- halide_build_runtime_cpp(m), !match("windows_.*", m), !match(".*webgpu.*", m).
+
+.decl halide_build_rt_triple(kind:symbol, j:number, triple:symbol)
+halide_build_rt_triple("win_x86", 32, "i386-unknown-windows-unknown").
+halide_build_rt_triple("win_x86", 64, "x86_64-unknown-windows-unknown").
+halide_build_rt_triple("win", 32, "i386-unknown-windows-unknown").
+halide_build_rt_triple("win", 64, "x86_64-unknown-windows-unknown").
+halide_build_rt_triple("webgpu", 32, "wasm32-unknown-unknown-unknown").
+halide_build_rt_triple("webgpu", 64, "wasm64-unknown-unknown-unknown").
+halide_build_rt_triple("generic", 32, "i386-unknown-unknown-unknown").
+halide_build_rt_triple("generic", 64, "x86_64-unknown-unknown-unknown").
+// Windows on ARM only for the backends the build enables (CMake skips the rest).
+halide_build_rt_triple("win_arm", 32, "arm-unknown-windows-unknown") :- halide_build_llvm_backend("ARM", _).
+halide_build_rt_triple("win_arm", 64, "aarch64-unknown-windows-unknown") :- halide_build_llvm_backend("AArch64", _).
+
+.decl halide_build_rt_suffix(debug:number, suffix:symbol)
+halide_build_rt_suffix(0, ""). halide_build_rt_suffix(1, "_debug").
+
+.decl halide_build_rt_dir(lib:symbol, c:Cfg, d:symbol)
+halide_build_rt_dir(l, c, cat("out:gen/", n, "/", l, "/runtime")) :-
+  halide_build_runtime(l, _, _, _, _, _, _), needed(l, c), cfg_name(c, n).
+
+// ---- C++ modules: clang -> llvm-as -> embed ----
+// halide_build_rt_cc(lib, c, ll, m, j, debug, name, triple, dir): one compile
+// to dir/initmod.<name>.ll, name = m_j[_debug].
+.decl halide_build_rt_cc(lib:symbol, c:Cfg, ll:symbol, m:symbol, j:number, debug:number, name:symbol, triple:symbol, d:symbol)
+halide_build_rt_cc(l, c, cat(d, "/initmod.", x, ".ll"), m, j, g, x, t, d) :-
+  halide_build_rt_dir(l, c, d), halide_build_runtime_cpp(m), halide_build_rt_kind(m, k),
+  halide_build_rt_triple(k, j, t), halide_build_rt_suffix(g, s), x = cat(m, "_", to_string(j), s).
+action(o, "RUNTIME_CC"), target_action(l, c, o), action_run(o, 0, "", "Clang::clang", "run") :-
+  halide_build_rt_cc(l, c, o, _, _, _, _, _, _).
+action_arg(o, 10 + r, "", f) :- halide_build_rt_cc(_, _, o, _, _, _, _, _, _), halide_build_runtime_flag(r, f).
+action_arg(o, 60, "", "-isystem"), action_arg(o, 61, "", cat("src:", i)) :-
+  halide_build_rt_cc(l, _, o, _, _, _, _, _, _), halide_build_runtime_include(l, i).
+action_arg(o, 62, "", "-fpic") :- halide_build_rt_cc(_, _, o, m, _, _, _, _, _), !match("windows_.*", m).
+action_arg(o, 63, "", "-fshort-wchar") :- halide_build_rt_cc(_, _, o, m, 64, _, _, _, _), halide_build_rt_kind(m, "win").
+action_arg(o, 64, "", "-g"), action_arg(o, 65, "", "-DDEBUG_RUNTIME") :- halide_build_rt_cc(_, _, o, _, _, 1, _, _, _).
+action_arg(o, 66, "", "-DCOMPILING_HALIDE_RUNTIME"), action_arg(o, 67, "", cat("-DBITS_", to_string(j))),
+action_arg(o, 68, "", cat("-DHALIDE_VERSION=", v)), action_arg(o, 69, "", cat("-DHALIDE_VERSION_MAJOR=", x)),
+action_arg(o, 70, "", cat("-DHALIDE_VERSION_MINOR=", y)), action_arg(o, 71, "", cat("-DHALIDE_VERSION_PATCH=", z)),
+action_arg(o, 72, "", cat("-m", to_string(j))), action_arg(o, 73, "", "-target"), action_arg(o, 74, "", t),
+action_arg(o, 75, "", "-emit-llvm"), action_arg(o, 76, "", "-S"), action_arg(o, 77, "", "-MD"),
+action_arg(o, 78, "", "-MF"), action_arg(o, 79, "", f), action_depfile(o, f),
+action_arg(o, 80, "", "-o"), action_arg(o, 81, "", o), action_arg(o, 82, "", i), action_in(o, i, "explicit") :-
+  halide_build_rt_cc(l, _, o, m, j, _, n, t, d), halide_build_runtime(l, _, s, v, x, y, z),
+  f = cat(d, "/initmod.", n, ".d"), i = cat("src:", s, "/", m, ".cpp").
+
+// llvm-as: bitcode from each .ll (compiled or copied).
+.decl halide_build_rt_as(lib:symbol, c:Cfg, d:symbol, bc:symbol, ll:symbol)
+halide_build_rt_as(l, c, d, cat(d, "/initmod.", n, ".bc"), o) :- halide_build_rt_cc(l, c, o, _, _, _, n, _, d).
+action(b, "LLVM_AS"), target_action(l, c, b), action_run(b, 0, "", "LLVM::llvm-as", "run"),
+action_arg(b, 1, "", i), action_in(b, i, "explicit"), action_arg(b, 2, "", "-o"), action_arg(b, 3, "", b),
+action_cwd(b, d) :- halide_build_rt_as(l, c, d, b, i).
+
+// LLVM modules: a plain copy (CMake's "transformed" .ll), then llvm-as.
+.decl halide_build_rt_ll(lib:symbol, c:Cfg, d:symbol, m:symbol, t:symbol)
+halide_build_rt_ll(l, c, d, m, cat(d, "/", m, ".ll.transformed.ll")) :-
+  halide_build_rt_dir(l, c, d), halide_build_runtime_ll(m).
+action(t, "COPY"), target_action(l, c, t), action_builtin(t, "copy"), action_cwd(t, d),
+action_arg(t, 1, "", i), action_in(t, i, "explicit"), action_arg(t, 2, "", t) :-
+  halide_build_rt_ll(l, c, d, m, t), halide_build_runtime(l, _, s, _, _, _, _), i = cat("src:", s, "/", m, ".ll").
+halide_build_rt_as(l, c, d, cat(d, "/initmod.", m, ".bc"), t) :- halide_build_rt_ll(l, c, d, m, t).
+
+// ---- the embeds (halide_build_gen.dl makes the actions) ----
+halide_build_embed_file(l, c, d, cat(d, "/_initmod_", n, ".cpp"), g, cat("halide_internal_initmod_", n),
+  cat(d, "/initmod.", n, ".bc")) :-
+  halide_build_rt_cc(l, c, _, _, _, _, n, _, d), halide_build_runtime(l, g, _, _, _, _, _).
+halide_build_embed_file(l, c, d, cat(d, "/_initmod_", m, ".cpp"), g, cat("halide_internal_initmod_", m, "_ll"),
+  cat(d, "/initmod.", m, ".bc")) :-
+  halide_build_rt_ll(l, c, d, m, _), halide_build_runtime(l, g, _, _, _, _, _).
+halide_build_embed_file(l, c, d, cat(d, "/_initmod_ptx_libdevice.cpp"), g, "halide_internal_initmod_ptx_libdevice_ll",
+  cat("src:", s, "/nvidia_libdevice_bitcode/libdevice.10.bc")) :-
+  halide_build_rt_dir(l, c, d), halide_build_runtime(l, g, s, _, _, _, _).
+halide_build_embed_file(l, c, d, cat(d, "/_initmod_inlined_c.cpp"), g, "halide_internal_initmod_inlined_c",
+  cat("src:", s, "/halide_buffer_t.cpp")) :-
+  halide_build_rt_dir(l, c, d), halide_build_runtime(l, g, s, _, _, _, _).
+halide_build_embed_file(l, c, d, cat(d, "/_initmod_", y, ".cpp"), g, cat("halide_internal_runtime_header_", y),
+  cat("src:", s, "/", h)) :-
+  halide_build_rt_dir(l, c, d), halide_build_runtime(l, g, s, _, _, _, _), halide_build_runtime_header(h, y).
+
+// ---- checks ----
+error("Halide runtime stated twice", l) :-
+  halide_build_runtime(l, g1, s1, v1, _, _, _), halide_build_runtime(l, g2, s2, v2, _, _, _),
+  (g1 < g2 ; s1 < s2 ; v1 < v2).
+error("Halide runtime has two include dirs", l) :-
+  halide_build_runtime_include(l, x), halide_build_runtime_include(l, y), x < y.
+error("Halide runtime include dir without a runtime", l) :-
+  halide_build_runtime_include(l, _), !halide_build_has_runtime(l).
+.decl halide_build_has_runtime(l:symbol)
+halide_build_has_runtime(l) :- halide_build_runtime(l, _, _, _, _, _, _).

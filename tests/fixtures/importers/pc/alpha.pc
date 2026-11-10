@@ -1,0 +1,17 @@
+# Hand-written: every construct the pkg-config importer maps.
+prefix=${pcfiledir}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+flavor=plain
+
+Name: alpha
+Description: A test library \
+  described on two lines
+Version: 1.0
+URL: https://example.invalid/alpha
+Requires: beta >= 1.0, gamma
+Requires.private: delta
+Cflags: -I${includedir}/alpha -isystem ${includedir}/sys -DALPHA=1 -D ALPHA_FLAVOR=${flavor} -pthread
+Libs: -L${libdir} -lalpha -lmissing -framework CoreFoundation -Wl,-dead_strip
+Libs.private: -lm ${libdir}/libextra.a
+Provides: alpha-compat, alpha = 1.0

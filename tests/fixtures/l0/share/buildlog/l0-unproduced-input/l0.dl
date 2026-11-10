@@ -1,0 +1,4 @@
+action("out:a.o", "CC").
+action_in("out:a.o", "out:missing.h", "implicit").
+action_in("out:a.o", "a.c", "explicit").
+action_arg("out:a.o", 0, "", "/usr/bin/cc").

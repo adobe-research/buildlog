@@ -1,0 +1,1 @@
+error("has a C toolchain", tc) :- domain_cc_capability(_, tc, "c", _).

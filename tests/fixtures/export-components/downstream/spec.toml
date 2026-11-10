@@ -1,0 +1,8 @@
+config_decl = [["release", "arm64-macos"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = [["app"]]
+
+[target.app]
+native_kind = "executable"
+cxx_source = "main.cpp"
+dep = { "pkgx:a" = "private" }

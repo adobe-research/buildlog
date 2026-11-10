@@ -1,0 +1,8 @@
+# Rule package named by tests/fixtures/importers/pc/ruled.pc (buildlog_rules):
+# the outer loop loads it when the importer reads that file.
+name = "pc-rules"
+version = "0.1.0"
+rank = 5
+namespace = "pc_rules"
+layers = ["pc_rules.dl"]
+extends = ["action", "action_arg", "default_output"]

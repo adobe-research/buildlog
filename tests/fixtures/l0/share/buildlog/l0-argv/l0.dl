@@ -1,0 +1,8 @@
+action("out:a", "STEP").
+action("out:b", "STEP").
+action_arg("out:a", 2, "", "-v").
+action_arg("out:b", 0, "", "/bin/step").
+action_arg("out:b", 1, "", "-x").
+action_arg("out:b", 1, "", "-y").
+action_arg("out:b", 4, "", "-z").
+action_seq("out:b", 4, "item").

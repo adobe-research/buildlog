@@ -1,0 +1,7 @@
+# Rejected: reads buildlog-cpp's exported domain_cc_capability without requiring
+# buildlog-cpp (which is loaded only because the project uses it).
+name = "unrequired-read"
+version = "0.1.0"
+rank = 5
+layers = ["unrequired_read.dl"]
+extends = ["error"]

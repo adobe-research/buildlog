@@ -1,0 +1,74 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The files CMakeLists.txt configures. The four headers belong to the
+# library (rules.dl's owner_member): one copy per configuration (per slice),
+# shared by both variants and their source sets, and their directory is
+# every variant's own public include dir (target_include_directories(PUBLIC
+# ${CMAKE_CURRENT_BINARY_DIR} ...)). zlib-ng.pc belongs to the target that
+# generates it.
+request_all = [["zlib-ng_pc"]]
+
+[library.zlib-ng]
+configure_file = ["zconf-ng.h", "zlib-ng.h", "gzread_mangle.h", "zlib_name_mangling-ng.h"]
+cc_configured_header = ["zconf-ng.h", "zlib-ng.h", "gzread_mangle.h", "zlib_name_mangling-ng.h"]
+configure_file_at_only = ["zconf-ng.h", "zlib-ng.h", "gzread_mangle.h", "zlib_name_mangling-ng.h"]
+# generate_cmakein(): zconf-ng.h.in with its `#ifdef HAVE_UNISTD_H` (line
+# 113) and `#ifdef NEED_PTRDIFF_T` (line 117) lines replaced by
+# @ZCONF_UNISTD_LINE@ and @ZCONF_PTRDIFF_LINE@, which the HAVE_UNISTD_H and
+# HAVE_PTRDIFF_T checks decide (below). configure_file(... @ONLY) of
+# zlib-ng.h.in and gzread_mangle.h.in (ZLIB_SYMBOL_PREFIX empty), and
+# zlib_name_mangling.h.empty copied (no ZLIB_SYMBOL_PREFIX).
+configure_file_lines = { "zconf-ng.h" = [
+  [0, "zconf-ng.h.in", 1, 112],
+  [2, "zconf-ng.h.in", 114, 116],
+  [4, "zconf-ng.h.in", 118, 0],
+], "zlib-ng.h" = [[0, "zlib-ng.h.in", 1, 0]], "gzread_mangle.h" = [[0, "gzread_mangle.h.in", 1, 0]], "zlib_name_mangling-ng.h" = [
+  [0, "zlib_name_mangling.h.empty", 1, 0]
+] }
+configure_file_text = { "zconf-ng.h" = [[1, "@ZCONF_UNISTD_LINE@"], [3, "@ZCONF_PTRDIFF_LINE@"]] }
+library_prop = [["configure.define", "ZLIB_SYMBOL_PREFIX=", "private"]]
+library_prop_when = [
+  [
+    "configure.define",
+    "ZCONF_UNISTD_LINE=#if 1    /* was set to #if 1 by configure/cmake/etc */",
+    "private",
+    "cc.check.HAVE_UNISTD_H"
+  ],
+  [
+    "configure.define",
+    "ZCONF_UNISTD_LINE=#if 0    /* was set to #if 0 by configure/cmake/etc */",
+    "private",
+    "!cc.check.HAVE_UNISTD_H"
+  ],
+  [
+    "configure.define",
+    "ZCONF_PTRDIFF_LINE=#ifdef NEED_PTRDIFF_T    /* may be set to #if 1 by configure/cmake/etc */",
+    "private",
+    "cc.check.HAVE_PTRDIFF_T"
+  ],
+  [
+    "configure.define",
+    "ZCONF_PTRDIFF_LINE=#if 1    /* was set to #if 1 by configure/cmake/etc */",
+    "private",
+    "!cc.check.HAVE_PTRDIFF_T"
+  ],
+]
+
+# configure_file(zlib.pc.cmakein zlib-ng.pc @ONLY), with GNUInstallDirs'
+# defaults under INSTALL_PREFIX (a [vars] entry, CMAKE_INSTALL_PREFIX) and
+# the library's version (rules.dl) as ZLIB_FULL_VERSION.
+[target.zlib-ng_pc]
+configure_file = "zlib-ng.pc"
+configure_file_at_only = "zlib-ng.pc"
+configure_file_lines = { "zlib-ng.pc" = [[0, "zlib.pc.cmakein", 1, 0]] }
+library_version_variable = [["zlib-ng", "ZLIB_FULL_VERSION"]]
+prop = [
+  ["configure.define", "CMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}", "private"],
+  ["configure.define", "ZLIB_SYMBOL_PREFIX=", "private"],
+  ["configure.define", "PC_BIN_INSTALL_DIR=${exec_prefix}/bin", "private"],
+  ["configure.define", "PC_LIB_INSTALL_DIR=${exec_prefix}/lib", "private"],
+  ["configure.define", "PC_INC_INSTALL_DIR=${prefix}/include", "private"],
+  ["configure.define", "SUFFIX=-ng", "private"],
+  ["configure.define", "PKG_CONFIG_CFLAGS=-DWITH_GZFILEOP", "private"],
+]

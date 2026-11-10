@@ -1,0 +1,12 @@
+config_decl = [["release", "${EXAMPLE_PLATFORM}"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = [["rt"]]
+export_package = ["constgen"]
+export_version = [["constgen", "1.0.0"]]
+export_component = [["constgen", "rt", "rt"]]
+export_rules = [["constgen", "src:packages/constgen"]]
+
+[target.rt]
+prop = [["cc.include_dir", "src:include", "interface"]]
+install_map = [["src:include", "includedir", ""]]
+install_file = ["src:include/constgen/rt.h"]

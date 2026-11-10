@@ -1,0 +1,72 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// zlib-ng's ISA source sets. Each source set that requires an ISA
+// extension (isa.toml's isa_requires, isa_requires_when) is an ISA scope of
+// buildlog-cpp (step 4, design input §2), which knows what each cpu has and
+// how the toolchain family spells it. From that:
+//   isa_compatible(s, cpu)   cpu has every extension s needs (buildlog-cpp)
+// Here: a set is compiled only in configurations whose cpu it is compatible
+// with (universal2: per slice), each variant's group of the set compiles
+// with the scope's flags, and the kernels' roles and defines.
+
+// ---- the project ----
+.decl isa_role(set:symbol, role:symbol)             // kernel: reached only through the dispatcher
+.decl isa_define(set:symbol, def:symbol)            // directory-wide where the set is built
+.decl isa_isolation(flag:symbol, cond:symbol)       // a kernel's flag apart from LTO
+
+.decl isa_set(set:symbol)
+isa_set(s) :- isa_requires(s, _).
+isa_group(v, s, s) :- source_group(v, s), isa_set(s).
+
+error("ISA facts of a set that is not a source set", s) :- isa_requires(s, _), !source_set(s, _).
+error("ISA facts of a set that is not a source set", s) :- isa_requires_when(s, _, _), !source_set(s, _).
+error("ISA facts of a set that requires nothing", s) :- isa_role(s, _), !isa_set(s).
+error("ISA facts of a set that requires nothing", s) :- isa_define(s, _), !isa_set(s).
+error("unknown ISA set role (kernel)", cat(s, ": ", r)) :- isa_role(s, r), r != "kernel".
+
+// ---- where a set is built ----
+// Per configuration: isa.compatible.<s> (its cpu has the set's extensions)
+// and isa.<s> (compatible, and the set's own gate holds: its option, its
+// probe, its prerequisite sets). The variant depends on the set under
+// isa.<s> = on, so the set's objects exist exactly there. Both are
+// attributes, so gates of other sets read them ($Eq(isa.sse2, on)).
+source_set_refined(s) :- isa_set(s).
+source_set_cond(s, cat("isa:", s)) :- isa_set(s).
+.decl isa_gated(set:symbol)
+isa_gated(s) :- source_set_when(s, _).
+// A when names a condition ($Named), which may be another set's (isa:t). Sets
+// whose whens reach each other would make a condition that reaches itself, so
+// a cyclic set gets no condition (its own error below).
+.decl isa_when_uses(s:symbol, t:symbol)
+isa_when_uses(s, t) :- isa_set(s), isa_set(t), source_set_when(s, w), w = cat("isa:", t).
+isa_when_uses(s, u) :- isa_when_uses(s, t), isa_when_uses(t, u).
+.decl isa_when_cyclic(s:symbol)
+isa_when_cyclic(s) :- isa_when_uses(s, s).
+error("source set condition refers to itself", s) :- isa_when_cyclic(s).
+condition(cat("isa:", s), $And($Eq(cat("isa.compatible.", s), "yes"), $Named(w))) :- isa_set(s), !isa_when_cyclic(s),
+  source_set_when(s, w).
+condition(cat("isa:", s), $Eq(cat("isa.compatible.", s), "yes")) :- isa_set(s), !isa_gated(s).
+condition(cat("isa:", s, "=off"), $Not($Named(cat("isa:", s)))) :- isa_set(s), !isa_when_cyclic(s).
+
+attr_value(cat("isa.compatible.", s), "yes"), attr_value(cat("isa.compatible.", s), "no"),
+attr_discovered(cat("isa.compatible.", s)) :- isa_set(s).
+config_attr(c, cat("isa.compatible.", s), "yes") :- isa_set(s), config_attr(c, "platform.cpu", cpu),
+  isa_compatible(s, cpu).
+config_attr(c, cat("isa.compatible.", s), "no") :- isa_set(s), config_attr(c, "platform.cpu", cpu),
+  !isa_compatible(s, cpu).
+attr_value(cat("isa.", s), "on"), attr_value(cat("isa.", s), "off"), attr_discovered(cat("isa.", s)) :- isa_set(s).
+config_attr(c, cat("isa.", s), "on") :- isa_set(s), cond_holds(c, cat("isa:", s)).
+config_attr(c, cat("isa.", s), "off") :- isa_set(s), cond_holds(c, cat("isa:", s, "=off")).
+
+dir_prop_when("cc.define", d, cat("isa:", s)) :- isa_define(s, d).
+
+// A kernel with ISA flags is compiled apart from LTO.
+source_set_prop_when(s, "cc.compile_flag", f, n) :- isa_role(s, "kernel"), isa_scope_flag(s, _, _),
+  isa_isolation(f, n).
+
+// AVX512FLAG: an AVX-512 set compiles with the tuning HAVE_CASCADE_LAKE decides.
+.decl isa_avx512_tuned(set:symbol)
+condition("no_cascade_lake", $Not($Named("cc.check.HAVE_CASCADE_LAKE"))).
+source_set_prop_when(s, "cc.compile_flag", "-mtune=cascadelake", "cc.check.HAVE_CASCADE_LAKE") :- isa_avx512_tuned(s).
+source_set_prop_when(s, "cc.compile_flag", "-mtune=skylake-avx512", "no_cascade_lake") :- isa_avx512_tuned(s).

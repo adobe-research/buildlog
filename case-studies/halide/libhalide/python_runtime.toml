@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# python_bindings/halide-runtime/test/CMakeLists.txt (python_runtime.dl).
+halide_py_test = [
+  ["load_aot", "python_bindings/halide-runtime/test/load_aot.py", "python_runtime"],
+  [
+    "call_convention",
+    "python_bindings/halide-runtime/test/call_convention.py",
+    "python_runtime"
+  ],
+]
+halide_py_rt_generator = [
+  ["runtimeadd", "runtimeadd_generator.cpp"],
+  ["callconv", "callconv_generator.cpp"],
+]
+# (module, generator)
+halide_py_rt_kernel = [
+  ["runtimeadd", "runtimeadd"],
+  ["callconv", "callconv"],
+  ["callconv_xor", "callconv"],
+]
+halide_py_rt_kernel_param = [["callconv_xor", "combine=xor"]]
+halide_py_rt_test_module = [
+  ["load_aot", 1, "runtimeadd"],
+  ["call_convention", 1, "callconv"],
+  ["call_convention", 2, "callconv_xor"],
+]

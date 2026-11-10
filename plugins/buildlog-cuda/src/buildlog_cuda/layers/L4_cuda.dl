@@ -1,0 +1,181 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L4 (buildlog-cuda): CUDA sources as nvcc objects, RDC and the device link
+// derived over them, the runtime as a dependency. Everything is lowered to
+// the open relations of core and buildlog-cpp; the host link is theirs.
+
+set_key("cuda.compile_flag").
+
+// ==== objects ====
+.decl cuda_object(t:symbol, c:Cfg, src:symbol, obj:symbol)
+cuda_object(t, c, s, cat("out:obj/", n, "/", t, "/", s, ".o")) :- cuda_target(t, c), cuda_source(t, s),
+  cfg_name(c, n).
+native_object(t, c, o) :- cuda_object(t, c, _, o).
+target_action(t, c, o) :- cuda_object(t, c, _, o).
+action(o, "CUDA") :- cuda_object(_, _, _, o).
+action_toolchain(o, "cuda", c) :- cuda_object(_, c, _, o).
+action_tc_tool(o, tc, "nvcc") :- cuda_object(t, c, _, o), tc_of(t, "cuda", c, tc).
+
+// -ccbin, the host compiler, first.
+action_arg(o, 1, "-ccbin ", hp) :- cuda_object(_, c, _, o), cuda_host(c, tc), toolchain_tool(tc, "cxx", hp).
+// The configuration's standard flags, as CMake's CMAKE_CUDA_FLAGS_<CONFIG>.
+action_arg(o, 2, "", "-g") :- cuda_object(_, c, _, o), config_setting(c, "native.opt", "debug").
+action_arg(o, 2, "", "-O3") :- cuda_object(_, c, _, o), config_setting(c, "native.opt", "release").
+action_arg(o, 2, "", "-DNDEBUG") :- cuda_object(_, c, _, o), config_setting(c, "native.opt", "release").
+action_arg(o, 4, "-Xcompiler ", "-fsanitize=address") :- cuda_object(_, c, _, o),
+  config_setting(c, "native.sanitize", "address").
+action_arg_set(o, 2) :- cuda_object(_, _, _, o).
+action_arg(o, 3, "", "-rdc=true") :- rdc_object(_, _, o).
+action_arg(o, 6, "-Xcompiler ", "-fPIC") :- cuda_object(t, c, _, o), cuda_pic_in(t, c).
+action_arg(o, 10, "-std=c++", v) :- cuda_object(t, c, _, o), use_join(t, c, "cxx.std", v).
+action_arg(o, 15 + r, "", v) :- cuda_object(t, c, _, o), use(t, c, "cuda.compile_flag", v, r).
+action_arg_set(o, 15 + r) :- cuda_object(t, c, _, o), use(t, c, "cuda.compile_flag", _, r).
+action_arg(o, 20 + r, "-D", v) :- cuda_object(t, c, _, o), use(t, c, "cc.define", v, r).
+action_arg_set(o, 20 + r) :- cuda_object(t, c, _, o), use(t, c, "cc.define", _, r).
+action_arg(o, 25, "--generate-code=", g) :- cuda_object(t, c, _, o), cuda_arch_set(t, c, s), cuda_gencode(s, g).
+action_arg_set(o, 25) :- cuda_object(_, _, _, o).
+action_arg(o, 40, "-MD -MF ", cat(o, ".d")) :- cuda_object(_, _, _, o).
+action_arg(o, 41, "-x cu -c ", cat("src:", s)) :- cuda_object(_, _, s, o).
+action_arg(o, 42, "-o ", o) :- cuda_object(_, _, _, o).
+action_depfile(o, cat(o, ".d")) :- cuda_object(_, _, _, o).
+action_in(o, cat("src:", s), "explicit") :- cuda_object(_, _, s, o).
+action_in(o, h, "order_only") :- cuda_object(t, c, _, o), use(t, c, "cc.generated_header", h, _).
+
+// Include directories, through buildlog-cpp's own relations: its classes and
+// spellings (cc_include, cc_include_class: the target's own as -I, its
+// dependencies' and the toolkit's as -isystem), its priority facts
+// (cc_include_before), and its filter for the compiler's implicit
+// directories. nvcc passes -I and -isystem to the host compiler, so the
+// implicit directories that count are the host compiler's (C++).
+.decl cuda_inc_implicit(o:symbol, dir:symbol)
+cuda_inc_implicit(o, v) :- cuda_object(t, c, _, o), cc_include_cand(t, c, v, _), cuda_host(c, tc),
+  cc_implicit_include(tc, "cxx", v).
+cc_implicit_include_for(tc, "cxx") :- cuda_host(_, tc), toolchain_tool(tc, "cxx", _).
+action_seq(o, r, v), action_seq_spelled(o, r, v, s, v) :-
+  cuda_object(t, c, _, o), cc_include(t, c, v, k), cc_include_class(k, r, s), !cuda_inc_implicit(o, v).
+action_seq_before(o, r, x, y) :- cc_include_precedes(x, y), x != y, cc_include(t, c, x, k), cc_include(t, c, y, k),
+  cuda_object(t, c, _, o), cc_include_class(k, r, _), !cuda_inc_implicit(o, x), !cuda_inc_implicit(o, y).
+
+// Position-independent code: a shared or module library's objects, and a
+// target that asks for it (the author's cc.pic property).
+.decl cuda_pic_in(t:symbol, c:Cfg)
+cuda_pic_in(t, c) :- cuda_target(t, c), native_kind_in(t, c, "shared_library").
+cuda_pic_in(t, c) :- cuda_target(t, c), native_kind_in(t, c, "module_library").
+cuda_pic_in(t, c) :- cuda_target(t, c), use(t, c, "cc.pic", "on", _).
+
+// ==== RDC and the device link ====
+// Relocatable device code (CMake's CUDA_SEPARABLE_COMPILATION) leaves the
+// device symbols of a target's objects unresolved; a device link resolves
+// them and makes one more host object. cuda_rdc(t) says t's objects are RDC.
+.decl cuda_rdc(t:symbol)
+.decl cuda_resolve_device_symbols(t:symbol)
+.decl cuda_dlink_drops(t:symbol, code:symbol)
+.decl rdc_object(t:symbol, c:Cfg, o:symbol)
+rdc_object(t, c, o) :- cuda_object(t, c, _, o), cuda_rdc(t).
+// The device link's inputs are derived from the declared graph alone (a
+// target's RDC, its kind in each configuration, its dependencies): the
+// coverage below negates, and what is built (target_action) may not.
+// Only the link that is needed gets an action.
+.decl cuda_rdc_t(t:symbol)
+cuda_rdc_t(t) :- cuda_rdc(t), cuda_source(t, _).
+error("cuda_rdc names a target with no CUDA source", t) :- cuda_rdc(t), !cuda_source(t, _), target_id(t).
+
+// Where a device link may be: every linked target (executable, shared or
+// module library) with RDC code reaching it, and a static library the author
+// says resolves its device symbols (rules_cuda's style: the device link is
+// archived with the library).
+.decl cuda_dl_root(l:symbol, c:Cfg)
+cuda_dl_root(l, c) :- cuda_rdc_t(_), cfg_name(c, _), native_kind_in(l, c, k),
+  (k = "executable" ; k = "shared_library" ; k = "module_library").
+cuda_dl_root(l, c) :- cuda_rdc_t(_), cfg_name(c, _), cuda_resolve_device_symbols(l),
+  native_kind_in(l, c, "static_library").
+error_at("cuda_resolve_device_symbols names a target that is not a static library", l, l, c) :-
+  cuda_resolve_device_symbols(l), needed(l, c), !native_kind_in(l, c, "static_library").
+
+// What reaches the link of l: its dependencies, stopping at shared and
+// module libraries (their private edges are linked into them, hidden from
+// their users; device symbols do not cross a shared library; CMake's default).
+.decl cuda_hides(m:symbol, c:Cfg, vis:symbol)
+cuda_hides(m, c, "private") :- native_kind_in(m, c, "shared_library").
+cuda_hides(m, c, "private") :- native_kind_in(m, c, "module_library").
+.decl cuda_clo(l:symbol, c:Cfg, m:symbol)
+cuda_clo(l, c, m) :- cuda_dl_root(l, c), eff_dep(l, c, m, v), v != "interface".
+cuda_clo(l, c, m) :- cuda_clo(l, c, x), eff_dep(x, c, m, v), !cuda_hides(x, c, v).
+.decl cuda_static_rdc(m:symbol, c:Cfg)
+cuda_static_rdc(m, c) :- cuda_rdc_t(m), native_kind_in(m, c, "static_library").
+
+// The code a device link covers: l's own RDC objects and the RDC objects of
+// the static libraries of its closure, except those a resolving static
+// library already covers (that library's device link is in its archive).
+.decl cuda_dl_in(l:symbol, c:Cfg, x:symbol)
+cuda_dl_in(l, c, l) :- cuda_dl_root(l, c), cuda_rdc_t(l).
+cuda_dl_in(l, c, x) :- cuda_dl_root(l, c), cuda_clo(l, c, x), cuda_static_rdc(x, c).
+.decl cuda_dl_cov(l:symbol, c:Cfg, x:symbol)
+cuda_dl_cov(l, c, x) :- cuda_clo(l, c, m), cuda_resolve_device_symbols(m), cuda_dl_in(m, c, x).
+.decl cuda_dl_use(l:symbol, c:Cfg, x:symbol)
+cuda_dl_use(l, c, x) :- cuda_dl_in(l, c, x), !cuda_dl_cov(l, c, x).
+cuda_arch_target(l, c) :- needed(l, c), cuda_dl_use(l, c, _).
+
+.decl cuda_dlink(l:symbol, c:Cfg, o:symbol)
+cuda_dlink(l, c, cat("out:obj/", n, "/", l, "/cuda_dlink.o")) :- needed(l, c), cuda_dl_use(l, c, _), cfg_name(c, n).
+native_object(l, c, o) :- cuda_dlink(l, c, o).
+// No target_action, and no way to have one without changing what feeds it: the
+// coverage negates over dependencies (eff_dep), which include the runtime edge
+// derived from the target's sources (cuda_runtime_of), whose conditional
+// selection reads needed through the C family's configuration checks; and
+// target_action feeds needed. The link's toolchain and ownership are the
+// target's linked object.
+action(o, "CUDA_DLINK") :- cuda_dlink(_, _, o).
+action_toolchain(o, "cuda", c) :- cuda_dlink(_, c, o).
+action_tc_tool(o, tc, "nvcc") :- cuda_dlink(l, c, o), tc_of(l, "cuda", c, tc).
+action_arg(o, 1, "-ccbin ", hp) :- cuda_dlink(_, c, o), cuda_host(c, tc), toolchain_tool(tc, "cxx", hp).
+action_arg(o, 2, "", "-dlink") :- cuda_dlink(_, _, o).
+action_arg(o, 3, "--generate-code=", g) :- cuda_dlink(l, c, o), cuda_arch_set(l, c, s), cuda_gencode(s, g).
+action_arg_set(o, 3) :- cuda_dlink(_, _, o).
+action_arg(o, 4, "-Xcompiler ", "-fPIC") :- cuda_dlink(l, c, o), cuda_pic_in(l, c).
+// The object files of l itself, then the archives of the static libraries.
+action_arg(o, 30, "", x) :- cuda_dlink(l, c, o), cuda_dl_use(l, c, l), rdc_object(l, c, x).
+action_in(o, x, "explicit") :- cuda_dlink(l, c, o), cuda_dl_use(l, c, l), rdc_object(l, c, x).
+action_arg(o, 31, "", a) :- cuda_dlink(l, c, o), cuda_dl_use(l, c, x), x != l, archive(x, c, a).
+action_in(o, a, "explicit") :- cuda_dlink(l, c, o), cuda_dl_use(l, c, x), x != l, archive(x, c, a).
+action_arg_set(o, 30) :- cuda_dlink(_, _, o).
+action_arg_set(o, 31) :- cuda_dlink(_, _, o).
+action_arg(o, 42, "-o ", o) :- cuda_dlink(_, _, o).
+
+// The device link must serve what its objects carry, and say what it drops.
+// An object serves a link's real code r when one of its codes does (sm_80
+// with compute_80 serves an sm_90 link, through the PTX; an sm_90-only
+// object serves no sm_80 link: nvlink then reports the symbols undefined).
+error_at("RDC object does not serve the device link's architecture",
+  cat(x, " is built for set ", sx, ", which has no code serving ", r, " of the device link of ", l, " (set ", sl, ")"), l, c) :-
+  cuda_dlink(l, c, _), cuda_dl_use(l, c, x), x != l, cuda_arch_set(x, c, sx), cuda_arch_set(l, c, sl), gpu_arch_set_code(sl, r),
+  gpu_code_parts(r, "sm", _, _), !gpu_set_serves(sx, r).
+// A device link keeps only the codes of its own set: PTX or SASS of an
+// object that the link's set lacks is silently gone from the executable.
+// That is an error unless the author states the loss (cuda_dlink_drops).
+error_at("device link drops architectures its objects carry",
+  cat("the device link of ", l, " (set ", sl, ") keeps no ", y, ", which ", x, " carries (set ", sx, "); state cuda_dlink_drops(", l, ", ", y, ") if the loss is intended"), l, c) :-
+  cuda_dlink(l, c, _), cuda_dl_use(l, c, x), x != l, cuda_arch_set(x, c, sx), cuda_arch_set(l, c, sl), gpu_arch_set_code(sx, y),
+  !gpu_arch_set_code(sl, y), !cuda_dlink_drops(l, y).
+error_at("device code reaches a link through an object library",
+  cat(t, " compiles RDC code and is an object library: its objects join each user's link without a device link"), t, c) :-
+  rdc_object(t, c, _), native_kind_in(t, c, "object_library").
+
+// ==== the runtime ====
+// A target with CUDA sources links the static runtime (nvcc's default, and
+// CMake's with nvcc); cuda_runtime(t, "shared" | "none") says otherwise, and a
+// C++-only target that calls the runtime API states its own (cuda_runtime
+// for it too). The edge is private: where t is a static library its users link
+// the runtime as well. Two kinds in one link are an error.
+.decl cuda_runtime(t:symbol, kind:symbol)
+.decl cuda_runtime_of(t:symbol, kind:symbol)
+cuda_runtime_of(t, k) :- cuda_runtime(t, k).
+cuda_runtime_of(t, "static") :- cuda_source(t, _), !cuda_runtime(t, _).
+error("cuda_runtime is static, shared or none", cat(t, ": ", k)) :- cuda_runtime(t, k), k != "static",
+  k != "shared", k != "none".
+dep(t, "cuda::cudart_static", "private") :- cuda_runtime_of(t, "static").
+dep(t, "cuda::cudart", "private") :- cuda_runtime_of(t, "shared").
+error_at("CUDA runtime mismatch in one link",
+  cat(t, " links both the static and the shared CUDA runtime (cuda::cudart_static and cuda::cudart)"), t, c) :-
+  link_closure(t, c, "cuda::cudart"), link_closure(t, c, "cuda::cudart_static").

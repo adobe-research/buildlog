@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# SPIRV-Headers from Homebrew (the spirv-headers keg, 1.4.357.0 =
+# vulkan-sdk-1.4.357.0, the commit SPIRV-Tools v2026.3's DEPS pins).
+package_prefix = [["/opt/homebrew/opt/spirv-headers"]]

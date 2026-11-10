@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Rejected: invalid probe declarations.
+name = "test-bad-probe"
+version = "0.1.0"
+rank = 5
+requires = { buildlog-cpp = ">=0.1" }
+layers = ["bad_probe.dl"]
+
+# The request relation belongs to buildlog-cpp, not to this package.
+[[probe]]
+kind = "stolen"
+request = "req_inventory"
+domain = "domain_stolen"
+result = "res_stolen"
+entry = "buildlog_testplugins.probes:runaway"
+
+# Domain and request disagree, and the result relation is derived by rules
+# instead of being a loader-generated input.
+[[probe]]
+kind = "derived_result"
+request = "req_derived"
+domain = "domain_derived"
+result = "res_derived"
+entry = "buildlog_testplugins.probes:runaway"

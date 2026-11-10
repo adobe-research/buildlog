@@ -1,0 +1,255 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// buildlog-python L4: Python interpreters and extension modules (the
+// nanobind case study, case-studies/nanobind/README.md).
+//
+// Roles.
+// - The user names the interpreters a build is for (python_interpreter, a
+//   user relation: which Python to build for is an invoker decision, like
+//   a toolchain pin) and puts each configuration on one of them with the
+//   setting python.interpreter (config_decl_setting).
+// - Everything about an interpreter is discovered: the python_interp probe
+//   runs it and reports its implementation, version, ABI, the extension
+//   suffixes its importer accepts and its header directory. Where a build
+//   requirement (python_requires, e.g. nanobind) lives is discovered too,
+//   by the python_package probe, in that interpreter's environment.
+// - The author states what the project is: its extension modules
+//   (python_extension), the pure-Python files of its package
+//   (python_package_file), its build requirements, and the stable-ABI
+//   policy (python_py_api, scikit-build-core's wheel.py-api).
+//
+// Consequences derived here, per configuration: the Python::Headers and
+// Python::Module interface targets (CMake's FindPython Python::Module,
+// split in two because nanobind states its own undefined-symbol policy),
+// whether the stable ABI applies (python.abi = abi3 | full, and the
+// Py_LIMITED_API value), each extension's file name, the importable
+// package tree under out:python/<cfg>/ (what goes on sys.path, and what a
+// wheel contains), and the wheel tag.
+
+// ---- the user's interpreters, and the configuration setting ----
+.decl python_interpreter(name:symbol, path:symbol)          // user
+error("python interpreter named twice", n) :- python_interpreter(n, a), python_interpreter(n, b), a < b.
+error("python interpreter name is reserved", n) :- python_interpreter(n, _), n = "none".
+// Absolute, or under the invoker's home directory (~/...).
+error("python interpreter path is not absolute", cat(n, ": ", p)) :- python_interpreter(n, p),
+  substr(p, 0, 1) != "/", substr(p, 0, 2) != "~/".
+
+// Position 3, after native.opt, native.sanitize and native.linkage. "none" (the default):
+// a configuration built for no interpreter. Build tools (exec
+// configurations) are not built for one.
+setting_key("python.interpreter", 3).
+setting_value("python.interpreter", "none").
+setting_value("python.interpreter", n) :- python_interpreter(n, _).
+setting_default("python.interpreter", "none").
+setting_exec_value("python.interpreter", "none").
+
+// A configuration the user declares for an interpreter builds the
+// project's extension modules (what a PEP 517 frontend or cibuildwheel
+// asks for when it picks an interpreter): no request_all needed.
+request(t, n) :- python_extension(t, _, _), config_decl_setting(n, "python.interpreter", i), i != "none".
+
+.decl python_cfg(c:Cfg, name:symbol, path:symbol)
+python_cfg(c, n, p) :- config_setting(c, "python.interpreter", n), python_interpreter(n, p).
+.decl python_wanted(path:symbol)
+python_wanted(p) :- python_cfg(c, _, p), needed(_, c).
+
+// ---- what an interpreter is (probe python_interp) ----
+.decl domain_python_interp(id:symbol, path:symbol)
+domain_python_interp(cat("python:", p), p) :- python_interpreter(_, p).
+.decl req_python_interp(id:symbol, path:symbol)
+req_python_interp(id, p) :- domain_python_interp(id, p), python_wanted(p).
+.decl res_python_interp(req:symbol, key:symbol, value:symbol)
+// python_info(c, key, value): c's interpreter, as the probe reported it.
+.decl python_info(c:Cfg, key:symbol, value:symbol)
+python_info(c, k, v) :- python_cfg(c, _, p), req_python_interp(id, p), res_python_interp(id, k, v).
+.decl python_found(c:Cfg)
+python_found(c) :- python_info(c, "found", "yes").
+error("python interpreter does not run", cat(n, ": ", p)) :- python_cfg(c, n, p), python_info(c, "found", "no").
+// The interpreter must run on, and load code for, the configuration's
+// platform: its machine is the platform's cpu.
+error("python interpreter is for another cpu", cat(n, ": ", m, " interpreter, ", x, " configuration ", cn)) :-
+  python_cfg(c, n, _), python_info(c, "machine", m), config_platform(c, p), platform_constraint(p, "cpu", x),
+  m != x, cfg_name(c, cn).
+
+// ---- build requirements, located in the interpreter's environment ----
+// python_requires(dist, module, specifier): the build needs distribution
+// dist (importable as module) satisfying the PEP 440 specifier, e.g.
+// pyproject.toml's build-system.requires "nanobind >=1.3.2". It is found
+// in each configuration's interpreter's environment, as a PEP 517 build
+// environment provides it.
+.decl python_requires(dist:symbol, module:symbol, spec:symbol)   // accepted
+.decl domain_python_package(id:symbol, path:symbol, dist:symbol, module:symbol, spec:symbol)
+domain_python_package(cat("python-package:", p, "|", d, "|", m, "|", s), p, d, m, s) :-
+  python_interpreter(_, p), python_requires(d, m, s).
+.decl req_python_package(id:symbol, path:symbol, dist:symbol, module:symbol, spec:symbol)
+// Asked of interpreters that run (one that does not is its own error).
+req_python_package(id, p, d, m, s) :- domain_python_package(id, p, d, m, s), python_wanted(p),
+  python_cfg(c, _, p), python_found(c).
+.decl res_python_package(req:symbol, key:symbol, value:symbol)
+// python_package_info(c, dist, key, value): version, dir, satisfies, found.
+.decl python_package_info(c:Cfg, dist:symbol, key:symbol, value:symbol)
+python_package_info(c, d, k, v) :- python_cfg(c, _, p), req_python_package(id, p, d, _, _),
+  res_python_package(id, k, v).
+.decl python_package_dir(c:Cfg, dist:symbol, dir:symbol)
+python_package_dir(c, d, x) :- python_package_info(c, d, "dir", x), python_package_info(c, d, "satisfies", "yes").
+error("python build requirement not found", cat(d, " for ", n, " (", p, ")")) :- python_cfg(c, n, p),
+  python_package_info(c, d, "found", "no").
+error("python build requirement not satisfied", cat(d, " ", v, " for ", n, " does not satisfy ", s)) :-
+  python_cfg(c, n, _), python_package_info(c, d, "satisfies", "no"), python_package_info(c, d, "version", v),
+  python_requires(d, _, s).
+
+// ---- the stable ABI ----
+// python_py_api(tag): the project's wheels target CPython's stable ABI of
+// tag (cp312 = 3.12) where the interpreter allows it: a CPython of that
+// version or newer, not free-threaded, whose importer accepts abi3 modules.
+// Elsewhere the full, version-specific ABI (scikit-build-core's
+// wheel.py-api; nanobind's STABLE_ABI, which does nothing below 3.12).
+// One project-wide fact decides both the compile define and the wheel
+// tag, so they cannot disagree (scikit-build-core discussion #1470).
+.decl python_py_api(tag:symbol)                              // accepted
+error("python_py_api stated twice", cat(a, " / ", b)) :- python_py_api(a), python_py_api(b), a < b.
+error("python_py_api is not cp3NN", t) :- python_py_api(t), !match("cp3[0-9]+", t).
+.decl python_py_api_minor(minor:number)
+python_py_api_minor(to_number(substr(t, 3, strlen(t) - 3))) :- python_py_api(t), match("cp3[0-9]+", t).
+// The probe reports the importer's abi3 suffix, or "none". Whether c
+// builds the full ABI is stated positively (python_full), not as "not
+// limited": the probe results depend on what is needed, and a negation
+// there would not stratify.
+.decl python_abi3_suffix(c:Cfg, suffix:symbol)
+python_abi3_suffix(c, s) :- python_info(c, "abi3_suffix", s), s != "none".
+.decl python_has_py_api()
+python_has_py_api() :- python_py_api(_).
+.decl python_hex_digit(i:number, d:symbol)
+python_hex_digit(i, substr("0123456789ABCDEF", i, 1)) :- i = range(0, 16).
+// python_limited_api(c, version, hex): Py_LIMITED_API for c.
+.decl python_limited_api(c:Cfg, version:symbol, hex:symbol)
+python_limited_api(c, cat("3.", to_string(m)), cat("0x03", h, l, "0000")) :- python_py_api_minor(m),
+  python_info(c, "implementation", "cpython"), python_info(c, "gil_disabled", "no"),
+  python_info(c, "version_minor", vm), to_number(vm) >= m, python_abi3_suffix(c, _),
+  python_hex_digit(m / 16, h), python_hex_digit(m % 16, l).
+.decl python_is_limited(c:Cfg)
+python_is_limited(c) :- python_limited_api(c, _, _).
+.decl python_full(c:Cfg)
+python_full(c) :- python_found(c), !python_has_py_api().
+python_full(c) :- python_info(c, "implementation", i), i != "cpython".
+python_full(c) :- python_info(c, "gil_disabled", "yes").
+python_full(c) :- python_info(c, "abi3_suffix", "none").
+python_full(c) :- python_info(c, "version_minor", vm), python_py_api_minor(m), to_number(vm) < m.
+attr_value("python.abi", "abi3"). attr_value("python.abi", "full").
+attr_discovered("python.abi").
+config_attr(c, "python.abi", "abi3") :- python_is_limited(c).
+config_attr(c, "python.abi", "full") :- python_full(c).
+
+// ---- Python::Headers and Python::Module ----
+// Python::Headers: the interpreter's header directory, and Py_LIMITED_API
+// where the stable ABI applies, for everything compiled against Python.
+// Python::Module: that, plus how an extension module leaves the Python
+// API undefined at link time: on macOS, -undefined dynamic_lookup (the
+// interpreter provides the symbols when it loads the module; CMake's
+// FindPython Python::Module). Never libpython: an extension linked to one
+// interpreter's library breaks under another, or a static one.
+target("Python::Headers"). target("Python::Module").
+// Python::Interpreter: the configuration's interpreter as a program, for
+// tests and generator actions that run Python (CMake's Python::Interpreter).
+target("Python::Interpreter").
+run_artifact("Python::Interpreter", c, p) :- python_cfg(c, _, p), python_found(c).
+dep("Python::Module", "Python::Headers", "interface").
+prop_in("Python::Headers", c, "cc.include_dir", d, "interface") :- python_info(c, "include_dir", d),
+  needed("Python::Headers", c).
+prop_in("Python::Headers", c, "cc.define", cat("Py_LIMITED_API=", h), "interface") :-
+  python_limited_api(c, _, h), needed("Python::Headers", c).
+prop_in("Python::Module", c, "native.link_option", "-Wl,-undefined,dynamic_lookup", "interface") :-
+  needed("Python::Module", c), config_platform(c, p), platform_constraint(p, "os", "macos").
+error_at("no Python interpreter for this configuration",
+  cat(cn, " (put it on one with config_decl_setting python.interpreter)"), "Python::Headers", c) :-
+  needed("Python::Headers", c), config_setting(c, "python.interpreter", "none"), cfg_name(c, cn).
+
+// ---- extension modules and the package tree ----
+// python_extension(t, dir, module): module library t is the extension
+// module `module` of the package directory `dir` (a path, e.g.
+// "nanobind_example"). Its file is <module><suffix>: the abi3 suffix
+// where the stable ABI applies, else the interpreter's EXT_SUFFIX.
+// python_package_file(src, dest): a source file of the package tree, at
+// dest under the tree's root. The tree is out:python/<cfg>/: what goes on
+// sys.path to import the package from the build, and a wheel's contents.
+.decl python_extension(t:symbol, dir:symbol, module:symbol)      // accepted
+.decl python_package_file(src:symbol, dest:symbol)               // accepted
+error("python extension is not a module library", t) :- python_extension(t, _, _), !native_kind(t, "module_library").
+.decl python_ext_suffix(c:Cfg, suffix:symbol)
+python_ext_suffix(c, s) :- python_is_limited(c), python_abi3_suffix(c, s).
+python_ext_suffix(c, s) :- python_full(c), python_info(c, "ext_suffix", s).
+.decl python_tree(c:Cfg, root:symbol)
+python_tree(c, cat("out:python/", n)) :- python_extension(t, _, _), needed(t, c), cfg_name(c, n).
+.decl python_tree_file(c:Cfg, rel:symbol, from:symbol)
+// The link writes the module's Python name (core's native_file_name), in
+// lib/<cfg>/; the tree holds a copy beside the package's sources.
+native_file_named(t) :- python_extension(t, _, _).
+native_file_name(t, c, cat(m, s)) :- python_extension(t, _, m), needed(t, c), python_ext_suffix(c, s).
+// Without an interpreter there is no suffix, and that error is the cause:
+// a placeholder name keeps core from reporting a missing one as well.
+native_file_name(t, c, cat(m, ".so")) :- python_extension(t, _, m), needed(t, c), python_info(c, "found", "no").
+python_tree_file(c, cat(d, "/", m, s), a) :- python_extension(t, d, m), d != "", needed(t, c), python_ext_suffix(c, s),
+  target_action(t, c, a), action(a, "LINK_MODULE").
+// An empty package directory is the tree's root: a top-level module.
+python_tree_file(c, cat(m, s), a) :- python_extension(t, "", m), needed(t, c), python_ext_suffix(c, s),
+  target_action(t, c, a), action(a, "LINK_MODULE").
+python_tree_file(c, dest, cat("src:", src)) :- python_tree(c, _), python_package_file(src, dest).
+error("two files at one place in the python package tree", cat(r, ": ", a, " / ", b)) :-
+  python_tree_file(c, r, a), python_tree_file(c, r, b), a < b.
+.decl python_staged(c:Cfg, rel:symbol, path:symbol)
+python_staged(c, r, cat(root, "/", r)) :- python_tree_file(c, r, _), python_tree(c, root).
+action(o, "PYTHON_STAGE"), action_builtin(o, "copy_if_different"), action_restat(o),
+action_arg(o, 1, "", f), action_arg(o, 2, "", o), action_in(o, f, "explicit") :-
+  python_staged(c, r, o), python_tree_file(c, r, f).
+default_output(o) :- python_staged(c, _, o), python_extension(t, _, _), request(t, n), decl_cfg(n, c).
+
+// The module is copied into the tree, deeper than lib/<cfg>/ where core's
+// build-tree rpath is relative to: it also gets the run path from where it
+// sits to the build's libraries (what CMake's absolute build rpath does).
+.decl python_dir_depth(d:symbol, k:number)
+python_dir_depth(d, k) :- python_extension(_, d, _),
+  k = count : { i = range(0, strlen(d)), substr(d, i, 1) = "/" }.
+.decl python_ups(n:number, s:symbol)
+python_ups(2, "../../"). python_ups(3, "../../../"). python_ups(4, "../../../../"). python_ups(5, "../../../../../").
+prop_in(t, c, "native.link_option", cat(pre, u, "lib/", n), "private") :- python_extension(t, d, _), needed(t, c),
+  python_dir_depth(d, k), ((d = "", j = 2) ; (d != "", j = k + 3)), python_ups(j, u),
+  tc_of(t, "native-link", c, tc), config_platform(c, p), rpath_origin_prefix(tc, p, pre), cfg_name(c, n).
+
+// ---- the wheel tag (PEP 425) ----
+// python: cp3NN (the stable ABI's version where it applies, else the
+// interpreter's); abi: abi3, or cp3NN with "t" for a free-threaded build;
+// platform: macOS's from the configuration's platform, i.e. the
+// deployment target buildlog compiles for (arm64-apple-macos13 is
+// macosx_13_0_arm64), not the host's version.
+.decl python_wheel_tag(c:Cfg, py:symbol, abi:symbol, plat:symbol)
+.decl python_wheel_abi(c:Cfg, py:symbol, abi:symbol)
+python_wheel_abi(c, t, "abi3") :- python_is_limited(c), python_py_api(t).
+python_wheel_abi(c, cat("cp3", m), cat("cp3", m, x)) :- python_full(c),
+  python_info(c, "implementation", "cpython"), python_info(c, "version_minor", m),
+  python_info(c, "gil_disabled", g), ((g = "yes", x = "t") ; (g = "no", x = "")).
+.decl python_macos_version(p:symbol, v:symbol)
+python_macos_version(p, substr(tr, i + 5, strlen(tr) - i - 5)) :- platform(p, tr),
+  platform_constraint(p, "os", "macos"), i = range(0, strlen(tr) - 4), substr(tr, i, 5) = "macos".
+.decl python_platform_tag(c:Cfg, tag:symbol)
+python_platform_tag(c, cat("macosx_", v, "_0_", cpu)) :- python_found(c), config_platform(c, p),
+  python_macos_version(p, v), !contains(".", v), platform_constraint(p, "cpu", cpu).
+// Linux: the plain platform tag (linux_aarch64). A manylinux or musllinux
+// tag is a packager's claim about the libraries the module needs (what
+// auditwheel checks), not a fact of the build.
+.decl python_linux_cpu(buildlog:symbol, linux:symbol)
+python_linux_cpu("arm64", "aarch64"). python_linux_cpu("x86_64", "x86_64").
+python_platform_tag(c, cat("linux_", lcpu)) :- python_found(c), config_platform(c, p),
+  platform_constraint(p, "os", "linux"), platform_constraint(p, "cpu", cpu), python_linux_cpu(cpu, lcpu).
+python_wheel_tag(c, py, abi, plat) :- python_wheel_abi(c, py, abi), python_platform_tag(c, plat).
+
+// ---- a wheel per declared configuration ----
+// What buildlog_python.wheel (the assembler; README, "Wheels") reads: the
+// tag, and the files of the package tree, by configuration name. The
+// metadata (.dist-info/METADATA) is the author's pyproject.toml [project]
+// table, which buildlog does not read.
+.decl python_wheel(decl:symbol, cfg:symbol, py:symbol, abi:symbol, plat:symbol)
+python_wheel(d, n, py, abi, plat) :- python_wheel_tag(c, py, abi, plat), decl_cfg(d, c), cfg_name(c, n),
+  python_extension(t, _, _), request(t, d).
+.decl python_wheel_file(decl:symbol, rel:symbol, path:symbol)
+python_wheel_file(d, r, o) :- python_wheel(d, _, _, _, _), decl_cfg(d, c), python_staged(c, r, o).

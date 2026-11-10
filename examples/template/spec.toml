@@ -1,0 +1,11 @@
+config_decl = [["debug", "arm64-macos"]]
+request_all = [["kernels-avx2"]]
+
+[target_template.kernels]
+param = ["isa"]
+kind = "module_library"
+sources = ["src/kernels.c", "src/arch/{isa}/impl.c"]
+
+[target.kernels-avx2]
+instance_of = "kernels"
+instance_param = [["isa", "avx2"]]

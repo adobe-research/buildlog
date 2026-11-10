@@ -1,0 +1,9 @@
+# Instantiates core's generic ordered join from spec facts, for tests.
+name = "join-demo"
+version = "0.1.0"
+rank = 1
+namespace = "joindemo"
+layers = ["join_demo.dl"]
+extends = ["join_item", "join_rank", "join_sep"]
+accepts = ["joindemo_item", "joindemo_rank", "joindemo_sep"]
+outputs = ["joindemo_text"]

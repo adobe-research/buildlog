@@ -1,0 +1,169 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L1: project options (the nlohmann/json case study). A project states an option and its default (CMake's
+// option(JSON_Diagnostics "..." OFF)); the user may state its value. Every
+// configuration then has the attribute option.<name> with that value, so
+// a condition tests it ($Eq(option.JSON_Diagnostics, on)) and a property
+// under that condition (prop_when) is an ordinary usage requirement: it
+// propagates to consumers in-tree and it is exported, the same fact both
+// ways (upstream nlohmann/json #3106).
+//
+// Build-wide, not per configuration: an option is one value for the whole
+// build, like a CMake cache variable. The alternative, options as
+// configuration settings (setting_key), would let one build hold several
+// values side by side and name them in configuration names; it is an open
+// question. Options are boolean (on | off), as
+// CMake's option() is; other domains are future work.
+//
+// Options are namespaced by project: the root project's option X is X, a
+// source project N's is N.X (and its conditions are N.c). Only the user
+// states a value for N.X; an author may not, even with [author_decides]
+// (facts.py).
+.decl option_decl(name:symbol, default:symbol)   // author: an option and its default
+.decl option_value(name:symbol, value:symbol)    // user: the option's value for this build
+
+.decl option_declared(name:symbol)
+option_declared(n) :- option_decl(n, _).
+.decl option_set(name:symbol)
+option_set(n) :- option_value(n, _).
+.decl option_eff(name:symbol, value:symbol)
+option_eff(n, v) :- option_value(n, v), option_declared(n).
+option_eff(n, d) :- option_decl(n, d), !option_set(n).
+
+// option_effective(n, v): the option's value for this build. It depends
+// only on the spec and the user's inputs, never on what is needed, so a
+// condition over options may decide what is built (request_when,
+// target_kind_when below).
+.decl option_effective(name:symbol, value:symbol)
+option_effective(n, v) :- option_eff(n, v).
+
+// ---- One declaration: [option.X] ----
+// option(n) with default (on | off; off if absent), help, and a type: an
+// option is boolean unless it lists its choices (choice = [...]) or says
+// type = "string". Only a boolean option is also a condition.
+.decl option(name:symbol)
+.decl option_default(name:symbol, value:symbol)
+.decl option_help(name:symbol, text:symbol)
+.decl option_type(name:symbol, type:symbol)          // bool | string | choice
+.decl option_choice(name:symbol, value:symbol)
+.decl option_requires(name:symbol, e:Cond)           // where the option is on (or set), e holds
+.decl option_conflicts(name:symbol, other:symbol)    // the two are not both on
+.decl option_has_default(name:symbol)
+option_has_default(n) :- option_default(n, _).
+option_decl(n, d) :- option_default(n, d).
+option_decl(n, "off") :- option(n), !option_has_default(n).
+.decl option_kind(name:symbol, type:symbol)
+.decl option_not_bool(name:symbol)
+option_not_bool(n) :- option_choice(n, _).
+option_not_bool(n) :- option_type(n, t), t != "bool".
+option_kind(n, "bool") :- option_declared(n), !option_not_bool(n).
+option_kind(n, "choice") :- option_declared(n), option_choice(n, _).
+option_kind(n, "string") :- option_type(n, "string"), !option_has_choice(n).
+.decl option_has_choice(name:symbol)
+option_has_choice(n) :- option_choice(n, _).
+error("unknown option type (bool | string | choice)", cat(n, ": ", t)) :-
+  option_type(n, t), t != "bool", t != "string", t != "choice".
+error("option setting for an undeclared option", n) :- option_help(n, _), !option_declared(n).
+error("option setting for an undeclared option", n) :- option_type(n, _), !option_declared(n).
+error("option setting for an undeclared option", n) :- option_choice(n, _), !option_declared(n).
+error("option setting for an undeclared option", n) :- option_requires(n, _), !option_declared(n).
+error("option setting for an undeclared option", n) :- option_conflicts(n, _), !option_declared(n).
+error("unknown option", cat(m, " (conflicts with ", n, ")")) :-
+  option_conflicts(n, m), !option_declared(m).
+error("option value is not one of its choices", cat(n, "=", v)) :-
+  option_eff(n, v), option_has_choice(n), !option_choice(n, v).
+
+.decl option_domain(value:symbol)
+option_domain("on"). option_domain("off").
+attr_value(cat("option.", n), v) :- option_kind(n, "bool"), option_domain(v).
+attr_value(cat("option.", n), v) :- option_choice(n, v).
+attr_value(cat("option.", n), v) :- option_kind(n, "string"), option_eff(n, v).
+config_attr(c, cat("option.", n), v) :- config(c), option_eff(n, v).
+// A boolean option is also the condition of its own name, holding where it
+// is on: `prop_when = [["cxx.rtti", "off", "private", "!ENABLE_RTTI"]]`
+// needs no condition row of its own.
+condition(n, EQ(cat("option.", n), "on")) :- option_kind(n, "bool").
+
+// ---- Options decide what is built ----
+// request_when(t, e): t is requested in every declared configuration where
+// e holds; target_kind_when(t, kind, e): t's native kind where e holds.
+// e may test only options (a bare name is a boolean option): it is
+// evaluated once for the build (opt_holds/opt_fails), not per
+// configuration, since what is requested cannot depend on what is needed.
+.decl request_when(t:symbol, e:Cond)
+.decl target_kind_when(t:symbol, kind:symbol, e:Cond)
+.decl static_cond(e:Cond)
+static_cond(e) :- request_when(_, e).
+static_cond(e) :- target_kind_when(_, _, e).
+static_cond(e) :- option_requires(_, e).
+static_cond(x) :- static_cond(NOT(x)).
+static_cond(x), static_cond(y) :- static_cond(AND(x, y)).
+static_cond(x), static_cond(y) :- static_cond(OR(x, y)).
+.decl opt_holds(e:Cond)
+.decl opt_fails(e:Cond)
+opt_holds(EQ(k, v)) :- static_cond(EQ(k, v)), option_eff(n, v), k = cat("option.", n).
+opt_fails(EQ(k, v)) :- static_cond(EQ(k, v)), option_eff(n, w), k = cat("option.", n), v != w.
+opt_holds(NAMED(n)) :- static_cond(NAMED(n)), option_kind(n, "bool"), option_eff(n, "on").
+opt_fails(NAMED(n)) :- static_cond(NAMED(n)), option_kind(n, "bool"), option_eff(n, "off").
+opt_holds(NOT(x)) :- static_cond(NOT(x)), opt_fails(x).
+opt_fails(NOT(x)) :- static_cond(NOT(x)), opt_holds(x).
+opt_holds(AND(x, y)) :- static_cond(AND(x, y)), opt_holds(x), opt_holds(y).
+opt_fails(AND(x, y)) :- static_cond(AND(x, y)), opt_fails(x).
+opt_fails(AND(x, y)) :- static_cond(AND(x, y)), opt_fails(y).
+opt_holds(OR(x, y)) :- static_cond(OR(x, y)), opt_holds(x).
+opt_holds(OR(x, y)) :- static_cond(OR(x, y)), opt_holds(y).
+opt_fails(OR(x, y)) :- static_cond(OR(x, y)), opt_fails(x), opt_fails(y).
+.decl option_attr(k:symbol)
+option_attr(cat("option.", n)) :- option_declared(n).
+.decl option_bool(n:symbol)
+option_bool(n) :- option_kind(n, "bool").
+error("a condition deciding what is built may test only options", k) :-
+  static_cond(EQ(k, _)), !option_attr(k).
+error("a condition deciding what is built may name only boolean options", n) :-
+  static_cond(NAMED(n)), !option_bool(n).
+error("a condition deciding what is built may test only options", cat("defined(", t, ")")) :-
+  static_cond(DEFINED(t)).
+error("a condition deciding what is built may test only options", cat(k, " >= ", v)) :-
+  static_cond(GE(k, v)).
+error("a condition deciding what is built may test only options", cat(k, " > ", v)) :-
+  static_cond(GT(k, v)).
+
+request_all(t) :- request_when(t, e), opt_holds(e).
+// A target some gate disables must not be requested otherwise: the user's
+// options conflict with what asks for it. Requests are decided from options
+// alone, so this adds no dependence on probes.
+.decl request_open(t:symbol)
+request_open(t) :- request_when(t, e), opt_holds(e).
+error("target is requested although its options disable it", t) :-
+  request_gated(t), !request_open(t), request_all(t).
+error("target is requested although its options disable it", t) :-
+  request_gated(t), !request_open(t), request(t, _).
+native_kind(t, k), target_kind_decided(t) :- target_kind_when(t, k, e), opt_holds(e).
+.decl target_kind_decided(t:symbol)
+
+error("option requirement not met", cat(n, " is on")) :-
+  option_requires(n, e), option_kind(n, "bool"), option_eff(n, "on"), opt_fails(e).
+error("option requirement not met", cat(n, "=", v)) :-
+  option_requires(n, e), !option_bool(n), option_eff(n, v), opt_fails(e).
+error("options conflict", cat(n, " and ", m, " are both on")) :-
+  option_conflicts(n, m), option_eff(n, "on"), option_eff(m, "on").
+
+// A source project's options are namespaced by the driver (facts.py,
+// namespace_source_project): its option X is <project>.X, and only the
+// user sets it. An unqualified name that some source project declares is
+// named in the error.
+.decl option_qualified_as(name:symbol, q:symbol)
+option_qualified_as(n, q) :- option_value(n, _), !option_declared(n), option_declared(q),
+  strlen(q) > strlen(n) + 1, substr(q, strlen(q) - strlen(n) - 1, strlen(n) + 1) = cat(".", n).
+.decl option_has_qualified(name:symbol)
+option_has_qualified(n) :- option_qualified_as(n, _).
+error("unknown option", n) :- option_value(n, _), !option_declared(n), !option_has_qualified(n).
+error("unknown option", cat(n, " (a source project's option: ", q, ")")) :- option_qualified_as(n, q).
+error("option declared with two defaults", cat(n, ": ", a, " and ", b)) :-
+  option_decl(n, a), option_decl(n, b), a < b.
+error("option given two values", cat(n, ": ", a, " and ", b)) :- option_value(n, a), option_value(n, b), a < b.
+error("option value is not on or off", cat(n, "=", v)) :-
+  option_decl(n, v), option_bool(n), !option_domain(v).
+error("option value is not on or off", cat(n, "=", v)) :-
+  option_value(n, v), option_bool(n), !option_domain(v).

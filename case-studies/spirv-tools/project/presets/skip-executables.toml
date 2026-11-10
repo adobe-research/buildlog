@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# -DSPIRV_SKIP_EXECUTABLES=ON: the libraries only (no tools, no tests).
+option_value = [["SPIRV_SKIP_EXECUTABLES", "on"]]

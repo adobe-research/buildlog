@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# -DSPIRV_SKIP_TESTS=ON: the libraries and tools, no tests (then googletest
+# is not needed).
+option_value = [["SPIRV_SKIP_TESTS", "on"]]

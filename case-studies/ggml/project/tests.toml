@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Programs that load and run the CPU backend. test-backend-ops is
+# tests/CMakeLists.txt's (the one test it keeps under GGML_BACKEND_DL);
+# simple-backend is examples/simple's, which upstream builds only without
+# GGML_BACKEND_DL, though it calls ggml_backend_load_all() and so runs either
+# way (the README's ledger). Under GGML_BACKEND_DL both print the module the
+# loader chose; rules.dl states which one this machine should get.
+request_all = [["test-backend-ops"], ["simple-backend"]]
+test = [["simple-backend", "simple-backend"], ["test-backend-ops-add", "test-backend-ops"]]
+test_arg = [["test-backend-ops-add", 0, "-o"], ["test-backend-ops-add", 1, "ADD"]]
+
+[target.test-backend-ops]
+kind = "executable"
+sources = "tests/test-backend-ops.cpp"
+deps = { private = ["ggml"] }
+private = { "cc.compile_flag" = "-UNDEBUG", "cxx.std" = "17" }
+
+[target.simple-backend]
+kind = "executable"
+sources = "examples/simple/simple-backend.cpp"
+deps = { private = ["ggml"] }
+# examples/CMakeLists.txt's warnings.
+private = { "cc.compile_flag" = [
+  "-Wpedantic",
+  "-Wunused-variable",
+  "-Wno-unused-function",
+  "-Wno-multichar",
+], "cxx.std" = "17" }

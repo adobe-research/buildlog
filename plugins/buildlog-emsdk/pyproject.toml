@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+[project]
+name = "buildlog-emsdk"
+version = "0.1.0"
+description = "Emscripten plugin for buildlog: discovery, toolchain, platform (provisional)"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = ["buildlog", "buildlog-cpp"]
+
+[project.entry-points."buildlog.plugins"]
+buildlog-emsdk = "buildlog_emsdk:manifest_dir"
+
+[build-system]
+requires = ["uv_build>=0.8.0,<0.9"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+buildlog = { workspace = true }
+buildlog-cpp = { workspace = true }

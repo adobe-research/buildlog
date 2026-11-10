@@ -1,0 +1,142 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Halide's build policy over LLVM (M3 phase 1): the Halide-specific part of
+# what FindHalide_LLVM.cmake does, as checks and a small rule over the
+# package-level facts the tier-2 LLVM, Clang and LLD packages state
+# (package_version, package_attr) and their LLVM:<component> targets
+# (llvm-install/). No discovery here. [M3 phase 2] halide_build_gen.dl: the sources Halide's host
+# tools generate (binary2cpp, build_halide_h), with no exec annotation.
+# [M3 phase 3] halide_build_runtime.dl: the runtime (clang -> llvm-as ->
+# binary2cpp), compiled into libHalide. [M3 phase 5] halide_build_gen.dl:
+# flatc's halide_ir.fbs.h. [M3 phase 4] halide_build_generator.dl: generator
+# libraries (add_halide_library) and runtimes (add_halide_runtime). [M3
+# phase 6] the rest of add_halide_library that test/ uses, and
+# add_halide_stub. halide_build_test.dl: add_halide_test over core's typed
+# tests (`buildlog test`).
+name = "halide-build"
+version = "0.1.0"
+rank = 4
+namespace = "halide_build"
+layers = [
+  "halide_build.dl",
+  "halide_build_gen.dl",
+  "halide_build_runtime.dl",
+  "halide_build_generator.dl",
+  "halide_build_install.dl",
+  "halide_build_test.dl"
+]
+requires = { buildlog-cpp = ">=0.1" }
+extends = [
+  "target",
+  "dep",
+  "prop",
+  "prop_when",
+  "prop_in",
+  "error",
+  "action",
+  "action_arg",
+  "action_in",
+  "action_run",
+  "action_stdin",
+  "action_stdout",
+  "action_cwd",
+  "action_restat",
+  "action_builtin",
+  "action_depfile",
+  "target_action",
+  "default_output",
+  "iface",
+  "cxx_generated_source",
+  "native_kind",
+  "linkage_require",
+  "native_object",
+  "action_out",
+  "error_at",
+  "join_item",
+  "join_rank",
+  "join_sep",
+  "action_run_list",
+  "action_run_item",
+  "test",
+  "test_label",
+  "test_serial",
+  "test_regex",
+  "test_env",
+  "test_config_env",
+  "import_same_package",
+  "imported",
+  "imported_kind",
+  "import_artifact",
+]
+open = [
+  "halide_build_test",
+  "halide_build_test_group",
+  "halide_build_test_exit_code_only",
+  "halide_build_test_plain",
+  "halide_build_test_environment",
+  "halide_build_test_pass",
+  "halide_build_library",
+  "halide_build_library_autoscheduler",
+  "halide_build_library_c_backend",
+  "halide_build_library_emit",
+  "halide_build_library_feature",
+  "halide_build_library_gradient",
+  "halide_build_library_param_set",
+  "halide_build_library_plugin",
+  "halide_build_library_target",
+  "halide_build_library_registration",
+  "halide_build_params",
+  "halide_build_stub",
+  "halide_build_launcher_words",
+  "halide_build_launcher",
+  "halide_build_launcher_in",
+  "halide_build_pyext",
+  "halide_build_pyext_library",
+  "halide_build_generator",
+  "halide_build_runtime_library",
+]
+exports = ["halide_build_runtime_defaults"]
+# The LLVM backends this Halide build enables (WITH_<TARGET>): a setting of
+# the build, validated against what the bound LLVM has built. The generated
+# sources (halide_build_gen.dl).
+accepts = [
+  "halide_build_llvm_backend",
+  "halide_build_embed",
+  "halide_build_mono_header",
+  "halide_build_header",
+  "halide_build_runtime",
+  "halide_build_runtime_include",
+  "halide_build_flatc",
+  "halide_build_install",
+  "halide_build_library",
+  "halide_build_runtime_library",
+  "halide_build_runtime_defaults",
+  "halide_build_library_target",
+  "halide_build_library_target_feature",
+  "halide_build_library_feature",
+  "halide_build_params",
+  "halide_build_library_param_set",
+  "halide_build_library_params",
+  "halide_build_runtime_params",
+  "halide_build_library_plugin",
+  "halide_build_library_autoscheduler",
+  "halide_build_library_gradient",
+  "halide_build_library_emit",
+  "halide_build_library_registration",
+  "halide_build_library_c_backend",
+  "halide_build_stub",
+  "halide_build_launcher_words",
+  "halide_build_launcher",
+  "halide_build_launcher_in",
+  "halide_build_pyext",
+  "halide_build_pyext_library",
+  "halide_build_generator",
+  "halide_build_test",
+  "halide_build_test_group",
+  "halide_build_test_exit_code_only",
+  "halide_build_test_plain",
+  "halide_build_test_environment",
+  "halide_build_test_pass",
+]
+outputs = ["halide_build_llvm_version_define"]

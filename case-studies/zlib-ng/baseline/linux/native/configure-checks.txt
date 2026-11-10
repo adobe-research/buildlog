@@ -1,0 +1,61 @@
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Arch detected: 'aarch64'
+-- Basearch of 'aarch64' has been detected as: 'arm'
+-- Performing Test FNO_LTO_AVAILABLE
+-- Performing Test FNO_LTO_AVAILABLE -> Success
+-- Looking for arm_acle.h
+-- Looking for arm_acle.h -> found
+-- Looking for sys/auxv.h
+-- Looking for sys/auxv.h -> found
+-- Looking for sys/sdt.h
+-- Looking for sys/sdt.h -> not found
+-- Looking for unistd.h
+-- Looking for unistd.h -> found
+-- Looking for linux/auxvec.h
+-- Looking for linux/auxvec.h -> found
+-- Looking for sys/types.h
+-- Looking for sys/types.h -> found
+-- Looking for stdint.h
+-- Looking for stdint.h -> found
+-- Looking for stddef.h
+-- Looking for stddef.h -> found
+-- Check size of off64_t
+-- Check size of off64_t - done
+-- Looking for fseeko
+-- Looking for fseeko -> found
+-- Looking for strerror
+-- Looking for strerror -> found
+-- Looking for __cpuid_count
+-- Looking for __cpuid_count -> not found
+-- Performing Test HAVE_CPUID_MS
+-- Performing Test HAVE_CPUID_MS -> Failed
+-- Performing Test HAVE_NO_INTERPOSITION
+-- Performing Test HAVE_NO_INTERPOSITION -> Success
+-- Performing Test HAVE_ATTRIBUTE_VISIBILITY_HIDDEN
+-- Performing Test HAVE_ATTRIBUTE_VISIBILITY_HIDDEN -> Success
+-- Performing Test HAVE_ATTRIBUTE_VISIBILITY_INTERNAL
+-- Performing Test HAVE_ATTRIBUTE_VISIBILITY_INTERNAL -> Success
+-- Performing Test HAVE_ATTRIBUTE_ALIGNED
+-- Performing Test HAVE_ATTRIBUTE_ALIGNED -> Success
+-- Performing Test HAVE_BUILTIN_ASSUME_ALIGNED
+-- Performing Test HAVE_BUILTIN_ASSUME_ALIGNED -> Success
+-- Performing Test HAVE_BUILTIN_CTZ
+-- Performing Test HAVE_BUILTIN_CTZ -> Success
+-- Performing Test HAVE_BUILTIN_CTZLL
+-- Performing Test HAVE_BUILTIN_CTZLL -> Success
+-- Performing Test HAVE_PTRDIFF_T
+-- Performing Test HAVE_PTRDIFF_T -> Success
+-- Performing Test ARM_AUXV_HAS_CRC32
+-- Performing Test ARM_AUXV_HAS_CRC32 -> Success
+-- Performing Test HAVE_MARCH_ARMV8_CRC
+-- Performing Test HAVE_MARCH_ARMV8_CRC -> Success
+-- Performing Test HAVE_ARMV8_INLINE_ASM
+-- Performing Test HAVE_ARMV8_INLINE_ASM -> Success
+-- Performing Test HAVE_ARMV8_INTRIN
+-- Performing Test HAVE_ARMV8_INTRIN -> Success
+-- Performing Test NEON_AVAILABLE
+-- Performing Test NEON_AVAILABLE -> Success
+-- Performing Test NEON_HAS_LD4
+-- Performing Test NEON_HAS_LD4 -> Success
+-- Architecture-specific source files: arch/arm/arm_features.c;arch/arm/crc32_armv8.c;arch/arm/adler32_neon.c;arch/arm/chunkset_neon.c;arch/arm/compare256_neon.c;arch/arm/slide_hash_neon.c

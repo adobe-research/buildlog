@@ -1,0 +1,99 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Halide's generated sources (M3 phase 2), as src/CMakeLists.txt makes them
+// with its host tools. Nothing here says where a tool runs: each action
+// names its tool by target reference (action_run), and core builds that
+// target for the exec configuration of the library's configuration.
+//
+// halide_build_embed(lib, tool, symbol, input, file): `tool symbol < input
+// > file`, compiled into lib (binary2cpp: the C and HTML templates, later
+// the runtime modules). input is under the source root; file lands in
+// out:gen/<config>/<lib>/.
+//
+// Like CMake, the embed runs in out:gen/<config>/<lib>/ (CMake's
+// CMAKE_CURRENT_BINARY_DIR).
+//
+// halide_build_mono_header(lib, tool, license, file) and
+// halide_build_header(lib, header, rank): `tool license headers... >
+// file.tmp` (build_halide_h), run in the headers' directory, then `buildlog
+// -E copy_if_different file.tmp file` with restat, so an unchanged header
+// doesn't rebuild its consumers (CMake's copy_if_different in the same
+// custom command). file lands in out:include/<config>/, which lib's
+// consumers get as an include dir; the headers are ranked (CMake's
+// HEADER_SET order). Building lib builds it (CMake's
+// add_dependencies(Halide HalideIncludes)).
+
+.decl halide_build_embed(lib:symbol, tool:symbol, sym:symbol, in:symbol, file:symbol)
+.decl halide_build_mono_header(lib:symbol, tool:symbol, license:symbol, file:symbol)
+.decl halide_build_header(lib:symbol, header:symbol, rank:number)
+
+// halide_build_embed_file(lib, c, dir, file, tool, symbol, input): one
+// embed in configuration c, run in dir (file's directory); input is rooted.
+// halide_build_runtime.dl adds the runtime's embeds.
+.decl halide_build_embed_file(lib:symbol, c:Cfg, dir:symbol, o:symbol, tool:symbol, sym:symbol, in:symbol)
+halide_build_embed_file(l, c, d, cat(d, "/", f), g, s, cat("src:", i)) :-
+  halide_build_embed(l, g, s, i, f), needed(l, c), cfg_name(c, n), d = cat("out:gen/", n, "/", l).
+action(o, "EMBED") :- halide_build_embed_file(_, _, _, o, _, _, _).
+target_action(l, c, o) :- halide_build_embed_file(l, c, _, o, _, _, _).
+action_run(o, 0, "", g, "run") :- halide_build_embed_file(_, _, _, o, g, _, _).
+action_arg(o, 1, "", s) :- halide_build_embed_file(_, _, _, o, _, s, _).
+action_stdin(o, i) :- halide_build_embed_file(_, _, _, o, _, _, i).
+action_stdout(o, o) :- halide_build_embed_file(_, _, _, o, _, _, _).
+action_cwd(o, d) :- halide_build_embed_file(_, _, d, o, _, _, _).
+cxx_generated_source(l, c, o) :- halide_build_embed_file(l, c, _, o, _, _, _).
+
+.decl halide_build_mono_out(lib:symbol, c:Cfg, dir:symbol, o:symbol, tmp:symbol)
+halide_build_mono_out(l, c, d, cat(d, "/", f), cat(d, "/", f, ".tmp")) :-
+  halide_build_mono_header(l, _, _, f), needed(l, c), cfg_name(c, n), d = cat("out:include/", n).
+action(t, "MONOHEADER") :- halide_build_mono_out(_, _, _, _, t).
+target_action(l, c, t) :- halide_build_mono_out(l, c, _, _, t).
+action_run(t, 0, "", g, "run") :- halide_build_mono_out(l, _, _, _, t), halide_build_mono_header(l, g, _, _).
+action_arg(t, 1, "", cat("src:", x)), action_in(t, cat("src:", x), "explicit") :-
+  halide_build_mono_out(l, _, _, _, t), halide_build_mono_header(l, _, x, _).
+action_arg(t, 100 + r, "", cat("src:", h)), action_in(t, cat("src:", h), "explicit") :-
+  halide_build_mono_out(l, _, _, _, t), halide_build_header(l, h, r).
+action_stdout(t, t) :- halide_build_mono_out(_, _, _, _, t).
+action_cwd(t, "src:src") :- halide_build_mono_out(_, _, _, _, t).
+action(o, "COPY") :- halide_build_mono_out(_, _, _, o, _).
+target_action(l, c, o) :- halide_build_mono_out(l, c, _, o, _).
+action_builtin(o, "copy_if_different") :- halide_build_mono_out(_, _, _, o, _).
+action_arg(o, 1, "", t), action_arg(o, 2, "", o), action_in(o, t, "explicit") :-
+  halide_build_mono_out(_, _, _, o, t).
+action_restat(o) :- halide_build_mono_out(_, _, _, o, _).
+default_output(o) :- halide_build_mono_out(_, _, _, o, _).
+iface(l, c, "cc.include_dir", d) :- halide_build_mono_out(l, c, d, _, _).
+iface(l, c, "cc.generated_header", o) :- halide_build_mono_out(l, c, _, o, _).
+
+// halide_build_flatc(lib, tool, schema, header) [M3 phase 5]: `tool --cpp
+// ... -o dir schema` (flatc, Halide's flags) writes header into
+// out:include/<config>/flatc/ (CMake's build/include/flatc), run in
+// out:gen/<config>/<lib> like CMake's custom command. The directory is a
+// *private* include dir of lib and the header a generated header of its
+// compiles, through an interface target lib depends on privately
+// (halide-build::<lib>.flatc); CMake's FILE_SET fb_headers and
+// add_dependencies(Halide generate_fb_header).
+.decl halide_build_flatc(lib:symbol, tool:symbol, schema:symbol, header:symbol)
+.decl halide_build_flatc_out(lib:symbol, c:Cfg, dir:symbol, o:symbol, cwd:symbol)
+halide_build_flatc_out(l, c, d, cat(d, "/", h), cat("out:gen/", n, "/", l)) :-
+  halide_build_flatc(l, _, _, h), needed(l, c), cfg_name(c, n), d = cat("out:include/", n, "/flatc").
+.decl halide_build_flatc_flag(rank:number, flag:symbol)
+halide_build_flatc_flag(1, "--cpp"). halide_build_flatc_flag(2, "--cpp-std"). halide_build_flatc_flag(3, "C++17").
+halide_build_flatc_flag(4, "--no-union-value-namespacing"). halide_build_flatc_flag(5, "--keep-prefix").
+halide_build_flatc_flag(6, "--filename-suffix"). halide_build_flatc_flag(7, ".fbs").
+action(o, "FLATC"), target_action(l, c, o), action_cwd(o, w) :- halide_build_flatc_out(l, c, _, o, w).
+action_run(o, 0, "", g, "run") :- halide_build_flatc_out(l, _, _, o, _), halide_build_flatc(l, g, _, _).
+action_arg(o, r, "", f) :- halide_build_flatc_out(_, _, _, o, _), halide_build_flatc_flag(r, f).
+action_arg(o, 8, "", "-o"), action_arg(o, 9, "", d), action_arg(o, 10, "", cat("src:", x)),
+action_in(o, cat("src:", x), "explicit") :- halide_build_flatc_out(l, _, d, o, _), halide_build_flatc(l, _, x, _).
+target(cat("halide-build::", l, ".flatc")), dep(l, cat("halide-build::", l, ".flatc"), "private") :-
+  halide_build_flatc(l, _, _, _).
+iface(cat("halide-build::", l, ".flatc"), c, "cc.include_dir", d),
+iface(cat("halide-build::", l, ".flatc"), c, "cc.generated_header", o) :- halide_build_flatc_out(l, c, d, o, _).
+
+error("Halide header rank out of range (0..9999)", cat(l, ": ", h)) :-
+  halide_build_header(l, h, r), (r < 0 ; r > 9999).
+error("Halide headers listed without a mono header", l) :-
+  halide_build_header(l, _, _), !halide_build_has_mono(l).
+.decl halide_build_has_mono(l:symbol)
+halide_build_has_mono(l) :- halide_build_mono_header(l, _, _, _).

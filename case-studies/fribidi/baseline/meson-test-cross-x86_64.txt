@@ -1,0 +1,9 @@
+fribidi:BidiCharacterTest SKIP   exit status 77
+fribidi:BidiTest          SKIP   exit status 77
+fribidi:CapRTL_explicit   OK
+fribidi:CapRTL_implicit   OK
+fribidi:CapRTL_isolate    OK
+fribidi:ISO8859-8_hebrew  OK
+fribidi:reorder-nsm       SKIP   exit status 77
+fribidi:UTF-8_persian     OK
+fribidi:UTF-8_reordernsm  OK

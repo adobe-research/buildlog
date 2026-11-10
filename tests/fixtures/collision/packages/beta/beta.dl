@@ -1,0 +1,9 @@
+// A toy generator: one action per beta_resource, emitting out:gen/beta/<name>.cc.
+// gen_item is a private helper; its name deliberately collides across packages.
+.decl beta_resource(name:symbol)
+.decl gen_item(name:symbol, out:symbol)
+gen_item(n, cat("out:gen/beta/", n, ".cc")) :- beta_resource(n).
+action(o, "BETA") :- gen_item(_, o).
+action_arg(o, 0, "", "beta-gen") :- gen_item(_, o).
+action_arg(o, 1, "--name=", n) :- gen_item(n, o).
+default_output(o) :- gen_item(_, o).

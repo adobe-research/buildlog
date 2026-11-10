@@ -1,0 +1,141 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# HelloWasm (apps/HelloWasm): one configure, one graph. Upstream is a CMake
+# super-build: ExternalProject builds generator/ for the host, configures app/
+# under Emscripten.cmake, and unrolls the build into four variants (SIMD and
+# threads, each on or off) because one CMake tree cannot build a target in
+# several configurations. Here the variants are configurations of the one
+# project: the host (the generator, `run` and its benchmarks) and four
+# wasm32-emscripten configurations. What differs between them is the
+# configuration's settings (buildlog-emsdk's emscripten.simd and
+# emscripten.threads); the Halide target features and the compile and link
+# flags follow from them.
+
+halide_build_install = [["${HALIDE_PREFIX}"]]
+halide_build_runtime_defaults = [["Halide::GenRT", "Halide::Runtime"]]
+package_want = [["libpng"], ["libjpeg"]]
+
+[defaults.config_decl]
+setting = { "native.opt" = "release" }
+
+[defaults.target]
+profile = "cxx17"
+
+[config_decl.host]
+p = "arm64-macos"
+
+[config_decl.wasm]
+p = "wasm32-emscripten"
+
+[config_decl.wasm-simd]
+p = "wasm32-emscripten"
+setting = { "emscripten.simd" = "simd128" }
+
+[config_decl.wasm-threads]
+p = "wasm32-emscripten"
+setting = { "emscripten.threads" = "threads" }
+
+[config_decl.wasm-simd-threads]
+p = "wasm32-emscripten"
+setting = { "emscripten.simd" = "simd128", "emscripten.threads" = "threads" }
+
+# CMAKE_CXX_STANDARD 17 for the whole project.
+[profile.cxx17]
+private = { "cxx.std" = "17" }
+
+# add_halide_library(reaction_diffusion_<f> FROM reaction_diffusion_generator).
+# Whether a pipeline is threaded is the app's own parameter: upstream passes
+# threads=true to the host (benchmark) libraries and the threaded wasm ones,
+# threads=false to the other wasm ones. The registrations are what `run`
+# (RunGenMain) links.
+[profile.pipeline]
+halide_build_library_params = { "emscripten.threads == threads | platform.os != emscripten" = [
+  "threads=true",
+], "emscripten.threads == off & platform.os == emscripten" = [
+  "threads=false",
+] }
+
+# add_halide_generator: an executable of Halide::Generator.
+[target.reaction_diffusion_generator]
+halide_build_generator = true
+sources = "generator/reaction_diffusion_generator.cpp"
+
+[target.reaction_diffusion_init]
+halide_build_library = { from = "reaction_diffusion_generator", registration = "run" }
+profile = "pipeline"
+
+[target.reaction_diffusion_update]
+halide_build_library = { from = "reaction_diffusion_generator", registration = "run" }
+profile = "pipeline"
+
+[target.reaction_diffusion_render]
+halide_build_library = { from = "reaction_diffusion_generator", registration = "run" }
+profile = "pipeline"
+
+# The benchmark runner (RunGenMain) links the host libraries with their
+# registrations.
+[target.run]
+kind = "executable"
+sources = "${HALIDE_PREFIX}/share/tools/RunGenMain.cpp"
+deps = { private = [
+  "Halide::ImageIO",
+  "reaction_diffusion_init",
+  "reaction_diffusion_update",
+  "reaction_diffusion_render",
+] }
+request = "host"
+
+# The browser app. Its compile and link flags for SDL2, optimization and
+# atomics come from the emsdk plugin; the memory size is the app's.
+[target.index]
+kind = "executable"
+sources = "app/core.cpp"
+deps = { private = [
+  "emscripten::sdl2",
+  "reaction_diffusion_init",
+  "reaction_diffusion_update",
+  "reaction_diffusion_render",
+] }
+private = { "native.link_option" = "-sTOTAL_MEMORY=512MB" }
+request = ["wasm", "wasm-simd", "wasm-threads", "wasm-simd-threads"]
+
+# ctest in generator/: the benchmarks of each function, on the host.
+
+[test.init_bench]
+program = "run"
+when = "platform.os != emscripten"
+arg = [
+  "--benchmarks=all",
+  "--benchmark_min_time=1",
+  "--name=reaction_diffusion_init",
+  "--output_extents=[1024,1024]",
+  "--parsable_output",
+]
+
+[test.update_bench]
+program = "run"
+when = "platform.os != emscripten"
+arg = [
+  "--benchmarks=all",
+  "--benchmark_min_time=1",
+  "--name=reaction_diffusion_update",
+  "--output_extents=[1024,1024]",
+  "frame=0",
+  "mouse_x=0",
+  "mouse_y=0",
+  "state=random:0:[1024,1024,3]",
+  "--parsable_output",
+]
+
+[test.render_bench]
+program = "run"
+when = "platform.os != emscripten"
+arg = [
+  "--benchmarks=all",
+  "--benchmark_min_time=1",
+  "--name=reaction_diffusion_render",
+  "--output_extents=[1024,1024]",
+  "state=random:0:[1024,1024,3]",
+  "--parsable_output",
+]

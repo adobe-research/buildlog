@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# GNU FriBidi 1.0.17, as its meson.build builds it on this Mac (the fribidi
+# case study; case-studies/fribidi/README.md). Configure with a user file:
+#   uv run --frozen buildlog configure --user case-studies/fribidi/project/presets/apple-clang-arm64.toml \
+#     -C BUILD case-studies/fribidi/project
+uses = ["buildlog-cpp"]
+source_root = "${FRIBIDI_SRC}"
+spec = ["spec.toml", "gen.toml", "configured.toml", "programs.toml", "rules.dl"]
+
+[vars]
+# The pinned checkout the Meson baseline builds (tag v1.0.17, b93119f5; see
+# baseline/run-meson.sh). BUILDLOG_FRIBIDI_SRC or -D FRIBIDI_SRC=... override it.
+FRIBIDI_SRC = "${REPO_ROOT}/case-studies/fribidi/upstream"

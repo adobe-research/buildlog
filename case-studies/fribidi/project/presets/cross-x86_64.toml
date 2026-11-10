@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# User decisions for a cross build on this Mac: the arm64 preset's toolchains,
+# the same Apple clang targeting x86_64-macos, and a release configuration for
+# that platform. The gen.tab programs follow their use: they are built for the
+# exec platform (arm64-macos) whichever configuration's library runs them.
+toolchain_pin = [
+  ["c", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["c", "arm64-macos", "x86_64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "x86_64-macos", "apple-clang"],
+]
+config_decl = [["x86_64-release", "x86_64-macos"]]
+config_decl_setting = [["x86_64-release", "native.opt", "release"]]

@@ -1,0 +1,6 @@
+# L0 integrity fixture: argv without a program, and an undeclared multi-token position
+name = "l0-argv"
+version = "0.1.0"
+rank = 1
+layers = ["l0.dl"]
+extends = ["action", "action_arg", "action_seq"]

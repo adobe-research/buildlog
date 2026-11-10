@@ -1,0 +1,38 @@
+===== files
+bin/fribidi
+bin/fribidi-benchmark
+bin/fribidi-bidi-types
+bin/fribidi-caprtl2utf8
+gen.tab/gen-arabic-shaping-tab
+gen.tab/gen-bidi-type-tab
+gen.tab/gen-brackets-tab
+gen.tab/gen-brackets-type-tab
+gen.tab/gen-joining-type-tab
+gen.tab/gen-mirroring-tab
+gen.tab/gen-unicode-version
+lib/libfribidi.so
+lib/libfribidi.so.0
+lib/libfribidi.so.0.4.0
+test/test-reorder-nsm
+test/unicode-conformance/BidiCharacterTest
+test/unicode-conformance/BidiTest
+===== links
+lib/libfribidi.so -> libfribidi.so.0
+lib/libfribidi.so.0 -> libfribidi.so.0.4.0
+===== readelf -d lib/libfribidi.so.0
+(NEEDED) Shared library: [libc.so.6]
+(NEEDED) Shared library: [ld-linux-aarch64.so.1]
+(SONAME) Library soname: [libfribidi.so.0]
+===== readelf -d bin/fribidi
+(NEEDED) Shared library: [libfribidi.so.0]
+(NEEDED) Shared library: [libc.so.6]
+(NEEDED) Shared library: [ld-linux-aarch64.so.1]
+(RUNPATH) Library runpath: [$ORIGIN/../lib]
+===== readelf -d test/unicode-conformance/BidiTest
+(NEEDED) Shared library: [libfribidi.so.0]
+(NEEDED) Shared library: [libc.so.6]
+(NEEDED) Shared library: [ld-linux-aarch64.so.1]
+(RUNPATH) Library runpath: [$ORIGIN/../../lib]
+===== readelf -d gen.tab/gen-bidi-type-tab
+(NEEDED) Shared library: [libc.so.6]
+(NEEDED) Shared library: [ld-linux-aarch64.so.1]

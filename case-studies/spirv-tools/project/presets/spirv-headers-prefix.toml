@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Where SPIRV-Headers is installed: a prefix given on the command line,
+# -D SPIRV_HEADERS_PREFIX=/abs/prefix (its share/cmake/SPIRV-Headers/ holds
+# the CMake export the cmake provider imports).
+package_prefix = [["${SPIRV_HEADERS_PREFIX}"]]

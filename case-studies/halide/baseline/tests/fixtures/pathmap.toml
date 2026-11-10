@@ -1,0 +1,12 @@
+# Example path map for compare.py: B uses a flat obj/ layout.
+[[map]]
+side = "b"
+from = '^\$BUILD/obj/src/(\w+)\.o$'
+to = '$BUILD/src/CMakeFiles/Halide.dir/\1.cpp.o'
+
+[modes]
+custom = "set"
+
+[ignore]
+tokens = ["-fcolor-diagnostics"]
+flags = ["-MT"]

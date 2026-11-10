@@ -1,0 +1,11 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Qt's FindWrapOpenGL target: the OpenGL framework on macOS, libGL elsewhere
+// (CMake's FindOpenGL resolves it to libGL.so on Linux, found by path).
+imported("WrapOpenGL::WrapOpenGL").
+imported_kind("WrapOpenGL::WrapOpenGL", "interface").
+condition("wrapopengl-macos", $Eq("platform.os", "macos")).
+condition("wrapopengl-linux", $Eq("platform.os", "linux")).
+prop_when("WrapOpenGL::WrapOpenGL", "native.link_flag", "-framework OpenGL", "interface", "wrapopengl-macos").
+prop_when("WrapOpenGL::WrapOpenGL", "native.link_flag", "-lGL", "interface", "wrapopengl-linux").

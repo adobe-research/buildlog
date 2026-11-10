@@ -1,0 +1,7 @@
+# Rejected (W5): request, a decision relation, reads a probe result.
+name = "request-reads-result"
+version = "0.1.0"
+rank = 5
+requires = { buildlog-cpp = ">=0.1" }
+layers = ["request_reads_result.dl"]
+extends = ["request"]

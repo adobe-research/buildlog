@@ -1,0 +1,3 @@
+.decl req_sneaky(id:symbol)
+.decl domain_sneaky(id:symbol)
+.decl res_sneaky(req:symbol, ok:symbol)

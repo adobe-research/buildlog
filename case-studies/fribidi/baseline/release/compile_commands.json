@@ -1,0 +1,254 @@
+[
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-unicode-version.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-unicode-version.p/gen-unicode-version.c.o -MF gen.tab/gen-unicode-version.p/gen-unicode-version.c.o.d -o gen.tab/gen-unicode-version.p/gen-unicode-version.c.o -c $SRC/gen.tab/gen-unicode-version.c",
+    "file": "$SRC/gen.tab/gen-unicode-version.c",
+    "output": "gen.tab/gen-unicode-version.p/gen-unicode-version.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-bidi-type-tab.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-bidi-type-tab.p/gen-bidi-type-tab.c.o -MF gen.tab/gen-bidi-type-tab.p/gen-bidi-type-tab.c.o.d -o gen.tab/gen-bidi-type-tab.p/gen-bidi-type-tab.c.o -c $SRC/gen.tab/gen-bidi-type-tab.c",
+    "file": "$SRC/gen.tab/gen-bidi-type-tab.c",
+    "output": "gen.tab/gen-bidi-type-tab.p/gen-bidi-type-tab.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-bidi-type-tab.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-bidi-type-tab.p/packtab.c.o -MF gen.tab/gen-bidi-type-tab.p/packtab.c.o.d -o gen.tab/gen-bidi-type-tab.p/packtab.c.o -c $SRC/gen.tab/packtab.c",
+    "file": "$SRC/gen.tab/packtab.c",
+    "output": "gen.tab/gen-bidi-type-tab.p/packtab.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-joining-type-tab.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-joining-type-tab.p/gen-joining-type-tab.c.o -MF gen.tab/gen-joining-type-tab.p/gen-joining-type-tab.c.o.d -o gen.tab/gen-joining-type-tab.p/gen-joining-type-tab.c.o -c $SRC/gen.tab/gen-joining-type-tab.c",
+    "file": "$SRC/gen.tab/gen-joining-type-tab.c",
+    "output": "gen.tab/gen-joining-type-tab.p/gen-joining-type-tab.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-joining-type-tab.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-joining-type-tab.p/packtab.c.o -MF gen.tab/gen-joining-type-tab.p/packtab.c.o.d -o gen.tab/gen-joining-type-tab.p/packtab.c.o -c $SRC/gen.tab/packtab.c",
+    "file": "$SRC/gen.tab/packtab.c",
+    "output": "gen.tab/gen-joining-type-tab.p/packtab.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-arabic-shaping-tab.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-arabic-shaping-tab.p/gen-arabic-shaping-tab.c.o -MF gen.tab/gen-arabic-shaping-tab.p/gen-arabic-shaping-tab.c.o.d -o gen.tab/gen-arabic-shaping-tab.p/gen-arabic-shaping-tab.c.o -c $SRC/gen.tab/gen-arabic-shaping-tab.c",
+    "file": "$SRC/gen.tab/gen-arabic-shaping-tab.c",
+    "output": "gen.tab/gen-arabic-shaping-tab.p/gen-arabic-shaping-tab.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-arabic-shaping-tab.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-arabic-shaping-tab.p/packtab.c.o -MF gen.tab/gen-arabic-shaping-tab.p/packtab.c.o.d -o gen.tab/gen-arabic-shaping-tab.p/packtab.c.o -c $SRC/gen.tab/packtab.c",
+    "file": "$SRC/gen.tab/packtab.c",
+    "output": "gen.tab/gen-arabic-shaping-tab.p/packtab.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-mirroring-tab.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-mirroring-tab.p/gen-mirroring-tab.c.o -MF gen.tab/gen-mirroring-tab.p/gen-mirroring-tab.c.o.d -o gen.tab/gen-mirroring-tab.p/gen-mirroring-tab.c.o -c $SRC/gen.tab/gen-mirroring-tab.c",
+    "file": "$SRC/gen.tab/gen-mirroring-tab.c",
+    "output": "gen.tab/gen-mirroring-tab.p/gen-mirroring-tab.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-mirroring-tab.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-mirroring-tab.p/packtab.c.o -MF gen.tab/gen-mirroring-tab.p/packtab.c.o.d -o gen.tab/gen-mirroring-tab.p/packtab.c.o -c $SRC/gen.tab/packtab.c",
+    "file": "$SRC/gen.tab/packtab.c",
+    "output": "gen.tab/gen-mirroring-tab.p/packtab.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-brackets-tab.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-brackets-tab.p/gen-brackets-tab.c.o -MF gen.tab/gen-brackets-tab.p/gen-brackets-tab.c.o.d -o gen.tab/gen-brackets-tab.p/gen-brackets-tab.c.o -c $SRC/gen.tab/gen-brackets-tab.c",
+    "file": "$SRC/gen.tab/gen-brackets-tab.c",
+    "output": "gen.tab/gen-brackets-tab.p/gen-brackets-tab.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-brackets-tab.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-brackets-tab.p/packtab.c.o -MF gen.tab/gen-brackets-tab.p/packtab.c.o.d -o gen.tab/gen-brackets-tab.p/packtab.c.o -c $SRC/gen.tab/packtab.c",
+    "file": "$SRC/gen.tab/packtab.c",
+    "output": "gen.tab/gen-brackets-tab.p/packtab.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-brackets-type-tab.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-brackets-type-tab.p/gen-brackets-type-tab.c.o -MF gen.tab/gen-brackets-type-tab.p/gen-brackets-type-tab.c.o.d -o gen.tab/gen-brackets-type-tab.p/gen-brackets-type-tab.c.o -c $SRC/gen.tab/gen-brackets-type-tab.c",
+    "file": "$SRC/gen.tab/gen-brackets-type-tab.c",
+    "output": "gen.tab/gen-brackets-type-tab.p/gen-brackets-type-tab.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Igen.tab/gen-brackets-type-tab.p -Igen.tab -I$SRC/gen.tab -I. -I$SRC -Ilib -I$SRC/lib -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -UHAVE_CONFIG_H -DHAVE_STRINGIZE -DDONT_HAVE_FRIBIDI_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DHAVE_STRINGS_H -DSTDC_HEADERS=1 -MD -MQ gen.tab/gen-brackets-type-tab.p/packtab.c.o -MF gen.tab/gen-brackets-type-tab.p/packtab.c.o.d -o gen.tab/gen-brackets-type-tab.p/packtab.c.o -c $SRC/gen.tab/packtab.c",
+    "file": "$SRC/gen.tab/packtab.c",
+    "output": "gen.tab/gen-brackets-type-tab.p/packtab.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi.c.o -MF lib/libfribidi.0.dylib.p/fribidi.c.o.d -o lib/libfribidi.0.dylib.p/fribidi.c.o -c $SRC/lib/fribidi.c",
+    "file": "$SRC/lib/fribidi.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-arabic.c.o -MF lib/libfribidi.0.dylib.p/fribidi-arabic.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-arabic.c.o -c $SRC/lib/fribidi-arabic.c",
+    "file": "$SRC/lib/fribidi-arabic.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-arabic.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-bidi.c.o -MF lib/libfribidi.0.dylib.p/fribidi-bidi.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-bidi.c.o -c $SRC/lib/fribidi-bidi.c",
+    "file": "$SRC/lib/fribidi-bidi.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-bidi.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-bidi-types.c.o -MF lib/libfribidi.0.dylib.p/fribidi-bidi-types.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-bidi-types.c.o -c $SRC/lib/fribidi-bidi-types.c",
+    "file": "$SRC/lib/fribidi-bidi-types.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-bidi-types.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-char-sets.c.o -MF lib/libfribidi.0.dylib.p/fribidi-char-sets.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-char-sets.c.o -c $SRC/lib/fribidi-char-sets.c",
+    "file": "$SRC/lib/fribidi-char-sets.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-char-sets.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-char-sets-cap-rtl.c.o -MF lib/libfribidi.0.dylib.p/fribidi-char-sets-cap-rtl.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-char-sets-cap-rtl.c.o -c $SRC/lib/fribidi-char-sets-cap-rtl.c",
+    "file": "$SRC/lib/fribidi-char-sets-cap-rtl.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-char-sets-cap-rtl.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-char-sets-cp1255.c.o -MF lib/libfribidi.0.dylib.p/fribidi-char-sets-cp1255.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-char-sets-cp1255.c.o -c $SRC/lib/fribidi-char-sets-cp1255.c",
+    "file": "$SRC/lib/fribidi-char-sets-cp1255.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-char-sets-cp1255.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-char-sets-cp1256.c.o -MF lib/libfribidi.0.dylib.p/fribidi-char-sets-cp1256.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-char-sets-cp1256.c.o -c $SRC/lib/fribidi-char-sets-cp1256.c",
+    "file": "$SRC/lib/fribidi-char-sets-cp1256.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-char-sets-cp1256.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-char-sets-iso8859-6.c.o -MF lib/libfribidi.0.dylib.p/fribidi-char-sets-iso8859-6.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-char-sets-iso8859-6.c.o -c $SRC/lib/fribidi-char-sets-iso8859-6.c",
+    "file": "$SRC/lib/fribidi-char-sets-iso8859-6.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-char-sets-iso8859-6.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-char-sets-iso8859-8.c.o -MF lib/libfribidi.0.dylib.p/fribidi-char-sets-iso8859-8.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-char-sets-iso8859-8.c.o -c $SRC/lib/fribidi-char-sets-iso8859-8.c",
+    "file": "$SRC/lib/fribidi-char-sets-iso8859-8.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-char-sets-iso8859-8.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-char-sets-utf8.c.o -MF lib/libfribidi.0.dylib.p/fribidi-char-sets-utf8.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-char-sets-utf8.c.o -c $SRC/lib/fribidi-char-sets-utf8.c",
+    "file": "$SRC/lib/fribidi-char-sets-utf8.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-char-sets-utf8.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-deprecated.c.o -MF lib/libfribidi.0.dylib.p/fribidi-deprecated.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-deprecated.c.o -c $SRC/lib/fribidi-deprecated.c",
+    "file": "$SRC/lib/fribidi-deprecated.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-deprecated.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-joining.c.o -MF lib/libfribidi.0.dylib.p/fribidi-joining.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-joining.c.o -c $SRC/lib/fribidi-joining.c",
+    "file": "$SRC/lib/fribidi-joining.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-joining.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-joining-types.c.o -MF lib/libfribidi.0.dylib.p/fribidi-joining-types.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-joining-types.c.o -c $SRC/lib/fribidi-joining-types.c",
+    "file": "$SRC/lib/fribidi-joining-types.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-joining-types.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-mirroring.c.o -MF lib/libfribidi.0.dylib.p/fribidi-mirroring.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-mirroring.c.o -c $SRC/lib/fribidi-mirroring.c",
+    "file": "$SRC/lib/fribidi-mirroring.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-mirroring.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-brackets.c.o -MF lib/libfribidi.0.dylib.p/fribidi-brackets.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-brackets.c.o -c $SRC/lib/fribidi-brackets.c",
+    "file": "$SRC/lib/fribidi-brackets.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-brackets.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-run.c.o -MF lib/libfribidi.0.dylib.p/fribidi-run.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-run.c.o -c $SRC/lib/fribidi-run.c",
+    "file": "$SRC/lib/fribidi-run.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-run.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ilib/libfribidi.0.dylib.p -Ilib -I$SRC/lib -I. -I$SRC -Igen.tab -I$SRC/gen.tab -fvisibility=hidden -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ lib/libfribidi.0.dylib.p/fribidi-shape.c.o -MF lib/libfribidi.0.dylib.p/fribidi-shape.c.o.d -o lib/libfribidi.0.dylib.p/fribidi-shape.c.o -c $SRC/lib/fribidi-shape.c",
+    "file": "$SRC/lib/fribidi-shape.c",
+    "output": "lib/libfribidi.0.dylib.p/fribidi-shape.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ibin/fribidi.p -Ibin -I$SRC/bin -I. -I$SRC -Ilib -I$SRC/lib -Igen.tab -I$SRC/gen.tab -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ bin/fribidi.p/fribidi-main.c.o -MF bin/fribidi.p/fribidi-main.c.o.d -o bin/fribidi.p/fribidi-main.c.o -c $SRC/bin/fribidi-main.c",
+    "file": "$SRC/bin/fribidi-main.c",
+    "output": "bin/fribidi.p/fribidi-main.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ibin/fribidi.p -Ibin -I$SRC/bin -I. -I$SRC -Ilib -I$SRC/lib -Igen.tab -I$SRC/gen.tab -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ bin/fribidi.p/getopt.c.o -MF bin/fribidi.p/getopt.c.o.d -o bin/fribidi.p/getopt.c.o -c $SRC/bin/getopt.c",
+    "file": "$SRC/bin/getopt.c",
+    "output": "bin/fribidi.p/getopt.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ibin/fribidi.p -Ibin -I$SRC/bin -I. -I$SRC -Ilib -I$SRC/lib -Igen.tab -I$SRC/gen.tab -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ bin/fribidi.p/getopt1.c.o -MF bin/fribidi.p/getopt1.c.o.d -o bin/fribidi.p/getopt1.c.o -c $SRC/bin/getopt1.c",
+    "file": "$SRC/bin/getopt1.c",
+    "output": "bin/fribidi.p/getopt1.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ibin/fribidi-benchmark.p -Ibin -I$SRC/bin -I. -I$SRC -Ilib -I$SRC/lib -Igen.tab -I$SRC/gen.tab -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ bin/fribidi-benchmark.p/fribidi-benchmark.c.o -MF bin/fribidi-benchmark.p/fribidi-benchmark.c.o.d -o bin/fribidi-benchmark.p/fribidi-benchmark.c.o -c $SRC/bin/fribidi-benchmark.c",
+    "file": "$SRC/bin/fribidi-benchmark.c",
+    "output": "bin/fribidi-benchmark.p/fribidi-benchmark.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ibin/fribidi-benchmark.p -Ibin -I$SRC/bin -I. -I$SRC -Ilib -I$SRC/lib -Igen.tab -I$SRC/gen.tab -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ bin/fribidi-benchmark.p/getopt.c.o -MF bin/fribidi-benchmark.p/getopt.c.o.d -o bin/fribidi-benchmark.p/getopt.c.o -c $SRC/bin/getopt.c",
+    "file": "$SRC/bin/getopt.c",
+    "output": "bin/fribidi-benchmark.p/getopt.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ibin/fribidi-benchmark.p -Ibin -I$SRC/bin -I. -I$SRC -Ilib -I$SRC/lib -Igen.tab -I$SRC/gen.tab -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ bin/fribidi-benchmark.p/getopt1.c.o -MF bin/fribidi-benchmark.p/getopt1.c.o.d -o bin/fribidi-benchmark.p/getopt1.c.o -c $SRC/bin/getopt1.c",
+    "file": "$SRC/bin/getopt1.c",
+    "output": "bin/fribidi-benchmark.p/getopt1.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ibin/fribidi-bidi-types.p -Ibin -I$SRC/bin -I. -I$SRC -Ilib -I$SRC/lib -Igen.tab -I$SRC/gen.tab -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ bin/fribidi-bidi-types.p/fribidi-bidi-types.c.o -MF bin/fribidi-bidi-types.p/fribidi-bidi-types.c.o.d -o bin/fribidi-bidi-types.p/fribidi-bidi-types.c.o -c $SRC/bin/fribidi-bidi-types.c",
+    "file": "$SRC/bin/fribidi-bidi-types.c",
+    "output": "bin/fribidi-bidi-types.p/fribidi-bidi-types.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Ibin/fribidi-caprtl2utf8.p -Ibin -I$SRC/bin -I. -I$SRC -Ilib -I$SRC/lib -Igen.tab -I$SRC/gen.tab -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ bin/fribidi-caprtl2utf8.p/fribidi-caprtl2utf8.c.o -MF bin/fribidi-caprtl2utf8.p/fribidi-caprtl2utf8.c.o.d -o bin/fribidi-caprtl2utf8.p/fribidi-caprtl2utf8.c.o -c $SRC/bin/fribidi-caprtl2utf8.c",
+    "file": "$SRC/bin/fribidi-caprtl2utf8.c",
+    "output": "bin/fribidi-caprtl2utf8.p/fribidi-caprtl2utf8.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Itest/test-reorder-nsm.p -Itest -I$SRC/test -I. -I$SRC -Ilib -I$SRC/lib -Igen.tab -I$SRC/gen.tab -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -MD -MQ test/test-reorder-nsm.p/test-reorder-nsm.c.o -MF test/test-reorder-nsm.p/test-reorder-nsm.c.o.d -o test/test-reorder-nsm.p/test-reorder-nsm.c.o -c $SRC/test/test-reorder-nsm.c",
+    "file": "$SRC/test/test-reorder-nsm.c",
+    "output": "test/test-reorder-nsm.p/test-reorder-nsm.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Itest/unicode-conformance/BidiTest.p -Itest/unicode-conformance -I$SRC/test/unicode-conformance -I. -I$SRC -Ilib -I$SRC/lib -Igen.tab -I$SRC/gen.tab -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ test/unicode-conformance/BidiTest.p/BidiTest.c.o -MF test/unicode-conformance/BidiTest.p/BidiTest.c.o.d -o test/unicode-conformance/BidiTest.p/BidiTest.c.o -c $SRC/test/unicode-conformance/BidiTest.c",
+    "file": "$SRC/test/unicode-conformance/BidiTest.c",
+    "output": "test/unicode-conformance/BidiTest.p/BidiTest.c.o"
+  },
+  {
+    "directory": "$BUILD",
+    "command": "/opt/homebrew/bin/ccache cc -Itest/unicode-conformance/BidiCharacterTest.p -Itest/unicode-conformance -I$SRC/test/unicode-conformance -I. -I$SRC -Ilib -I$SRC/lib -Igen.tab -I$SRC/gen.tab -fdiagnostics-color=always -Wall -Winvalid-pch -O3 -DHAVE_CONFIG_H -MD -MQ test/unicode-conformance/BidiCharacterTest.p/BidiCharacterTest.c.o -MF test/unicode-conformance/BidiCharacterTest.p/BidiCharacterTest.c.o.d -o test/unicode-conformance/BidiCharacterTest.p/BidiCharacterTest.c.o -c $SRC/test/unicode-conformance/BidiCharacterTest.c",
+    "file": "$SRC/test/unicode-conformance/BidiCharacterTest.c",
+    "output": "test/unicode-conformance/BidiCharacterTest.p/BidiCharacterTest.c.o"
+  }
+]

@@ -1,0 +1,101 @@
+===== bin/
+libggml-cpu-armv8.0_1.so
+libggml-cpu-armv8.2_1.so
+libggml-cpu-armv8.2_2.so
+libggml-cpu-armv8.2_3.so
+libggml-cpu-armv8.6_1.so
+libggml-cpu-armv8.6_2.so
+libggml-cpu-armv9.2_1.so
+libggml-cpu-armv9.2_2.so
+test-backend-ops
+===== src/*.so*
+libggml-base.so
+libggml-base.so.0
+libggml-base.so.0.25.3
+libggml.so
+libggml.so.0
+libggml.so.0.25.3
+===== libggml-base.so -> libggml-base.so.0
+===== libggml-base.so.0 -> libggml-base.so.0.25.3
+===== libggml-base.so.0.25.3
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libm.so.6]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(SONAME) Library soname: [libggml-base.so.0]
+===== libggml.so -> libggml.so.0
+===== libggml.so.0 -> libggml.so.0.25.3
+===== libggml.so.0.25.3
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libggml-base.so.0]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libm.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(SONAME) Library soname: [libggml.so.0]
+(RUNPATH) Library runpath: [$BUILD/src:]
+===== libggml-cpu-armv8.0_1.so
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libggml-base.so.0]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libm.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(RUNPATH) Library runpath: [$BUILD/src:]
+===== libggml-cpu-armv8.2_1.so
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libggml-base.so.0]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libm.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(RUNPATH) Library runpath: [$BUILD/src:]
+===== libggml-cpu-armv8.2_2.so
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libggml-base.so.0]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libm.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(RUNPATH) Library runpath: [$BUILD/src:]
+===== libggml-cpu-armv8.2_3.so
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libggml-base.so.0]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libm.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(RUNPATH) Library runpath: [$BUILD/src:]
+===== libggml-cpu-armv8.6_1.so
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libggml-base.so.0]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libm.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(RUNPATH) Library runpath: [$BUILD/src:]
+===== libggml-cpu-armv8.6_2.so
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libggml-base.so.0]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libm.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(RUNPATH) Library runpath: [$BUILD/src:]
+===== libggml-cpu-armv9.2_1.so
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libggml-base.so.0]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libm.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(RUNPATH) Library runpath: [$BUILD/src:]
+===== libggml-cpu-armv9.2_2.so
+ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
+(NEEDED) Shared library: [libggml-base.so.0]
+(NEEDED) Shared library: [libstdc++.so.6]
+(NEEDED) Shared library: [libm.so.6]
+(NEEDED) Shared library: [libgcc_s.so.1]
+(NEEDED) Shared library: [libc.so.6]
+(RUNPATH) Library runpath: [$BUILD/src:]

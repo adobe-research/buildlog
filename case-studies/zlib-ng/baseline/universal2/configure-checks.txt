@@ -1,0 +1,80 @@
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Arch detected: 'arm64'
+-- Basearch of 'arm64' has been detected as: 'arm'
+-- Performing Test FNO_LTO_AVAILABLE
+-- Performing Test FNO_LTO_AVAILABLE -> Success
+-- Looking for features.h
+-- Looking for features.h -> not found
+-- Performing Test HAVE_W_ERROR_UNGUARDED_AVAILABILITY
+-- Performing Test HAVE_W_ERROR_UNGUARDED_AVAILABILITY -> Success
+-- Performing Test HAVE_W_ERROR_UNGUARDED_AVAILABILITY_NEW
+-- Performing Test HAVE_W_ERROR_UNGUARDED_AVAILABILITY_NEW -> Success
+-- Performing Test HAVE_W_ERROR_UNUSED_COMMAND_LINE_ARGUMENT
+-- Performing Test HAVE_W_ERROR_UNUSED_COMMAND_LINE_ARGUMENT -> Success
+-- Looking for arm_acle.h
+-- Looking for arm_acle.h -> not found
+-- Looking for sys/auxv.h
+-- Looking for sys/auxv.h -> not found
+-- Looking for sys/sdt.h
+-- Looking for sys/sdt.h -> found
+-- Looking for unistd.h
+-- Looking for unistd.h -> found
+-- Looking for linux/auxvec.h
+-- Looking for linux/auxvec.h -> not found
+-- Looking for sys/types.h
+-- Looking for sys/types.h -> found
+-- Looking for stdint.h
+-- Looking for stdint.h -> found
+-- Looking for stddef.h
+-- Looking for stddef.h -> found
+-- Check size of off64_t
+-- Check size of off64_t - failed
+-- Check size of _off64_t
+-- Check size of _off64_t - failed
+-- Check size of __off64_t
+-- Check size of __off64_t - failed
+-- Looking for fseeko
+-- Looking for fseeko -> found
+-- Looking for strerror
+-- Looking for strerror -> found
+-- Looking for __cpuid_count
+-- Looking for __cpuid_count -> not found
+-- Performing Test HAVE_CPUID_MS
+-- Performing Test HAVE_CPUID_MS -> Failed
+-- Performing Test HAVE_NO_INTERPOSITION
+-- Performing Test HAVE_NO_INTERPOSITION -> Failed
+-- Performing Test HAVE_ATTRIBUTE_VISIBILITY_HIDDEN
+-- Performing Test HAVE_ATTRIBUTE_VISIBILITY_HIDDEN -> Success
+-- Performing Test HAVE_ATTRIBUTE_VISIBILITY_INTERNAL
+-- Performing Test HAVE_ATTRIBUTE_VISIBILITY_INTERNAL -> Success
+-- Performing Test HAVE_ATTRIBUTE_ALIGNED
+-- Performing Test HAVE_ATTRIBUTE_ALIGNED -> Success
+-- Performing Test HAVE_BUILTIN_ASSUME_ALIGNED
+-- Performing Test HAVE_BUILTIN_ASSUME_ALIGNED -> Success
+-- Performing Test HAVE_BUILTIN_CTZ
+-- Performing Test HAVE_BUILTIN_CTZ -> Success
+-- Performing Test HAVE_BUILTIN_CTZLL
+-- Performing Test HAVE_BUILTIN_CTZLL -> Success
+-- Performing Test HAVE_PTRDIFF_T
+-- Performing Test HAVE_PTRDIFF_T -> Success
+-- Performing Test HAVE_MARCH_ARMV8_CRC
+-- Performing Test HAVE_MARCH_ARMV8_CRC -> Failed
+-- Performing Test HAVE_MARCH_ARMV8_CRC_SIMD
+-- Performing Test HAVE_MARCH_ARMV8_CRC_SIMD -> Failed
+-- Performing Test HAVE_WA_MARCH_ARMV8_CRC
+-- Performing Test HAVE_WA_MARCH_ARMV8_CRC -> Success
+-- Performing Test HAVE_ARMV8_INLINE_ASM
+-- Performing Test HAVE_ARMV8_INLINE_ASM -> Failed
+-- Performing Test HAVE_ARMV8_INTRIN
+-- Performing Test HAVE_ARMV8_INTRIN -> Failed
+-- Performing Test NEON_AVAILABLE
+-- Performing Test NEON_AVAILABLE -> Failed
+-- Performing Test HAVE_MARCH_ARMV6
+-- Performing Test HAVE_MARCH_ARMV6 -> Failed
+-- Performing Test HAVE_WA_MARCH_ARMV6
+-- Performing Test HAVE_WA_MARCH_ARMV6 -> Success
+-- Performing Test HAVE_ARMV6_INLINE_ASM
+-- Performing Test HAVE_ARMV6_INLINE_ASM -> Failed
+-- Performing Test HAVE_ARMV6_INTRIN
+-- Performing Test HAVE_ARMV6_INTRIN -> Failed
+-- Architecture-specific source files: arch/arm/arm_features.c

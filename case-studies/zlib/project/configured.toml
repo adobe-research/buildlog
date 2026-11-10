@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The files CMakeLists.txt configures (configure_file): zconf.h, which the
+# library and its users include, and zlib.pc. Both are core configured
+# files. zconf.h belongs to the library: one per configuration, its
+# variables and its directory the library's own properties. zlib.pc belongs
+# to the target that generates it.
+request_all = ["zlib_pc"]
+
+# CMakeLists.txt assembles zconf.h's template (zconf.h.cmakein) from the
+# source zconf.h: its first 245 bytes (lines 1-10), three #cmakedefine
+# lines, then the file from byte 244 on, so byte 244 (line 10's newline)
+# appears twice: the blank piece 4.
+[target.zlib]
+configure_file = "zconf.h"
+cc_configured_header = "zconf.h"
+cc_check_configure = ["HAVE_STDARG_H", "HAVE_UNISTD_H"]
+configure_file_lines = { "zconf.h" = [[0, "zconf.h", 1, 10], [5, "zconf.h", 11, 0]] }
+configure_file_text = { "zconf.h" = [
+  [1, "#cmakedefine Z_PREFIX 1"],
+  [2, "#cmakedefine HAVE_STDARG_H 1"],
+  [3, "#cmakedefine HAVE_UNISTD_H 1"],
+  [4, ""],
+] }
+
+# configure_file(zlib.pc.cmakein zlib.pc @ONLY). The installation
+# directories are GNUInstallDirs' defaults under INSTALL_PREFIX (a [vars]
+# entry the invoker overrides with -D, CMake's CMAKE_INSTALL_PREFIX).
+[target.zlib_pc]
+configure_file = "zlib.pc"
+configure_file_at_only = "zlib.pc"
+configure_file_lines = { "zlib.pc" = [[0, "zlib.pc.cmakein", 1, 0]] }
+private = { "configure.define" = [
+  "CMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}",
+  "CMAKE_INSTALL_LIBDIR=lib",
+  "CMAKE_INSTALL_INCLUDEDIR=include",
+] }

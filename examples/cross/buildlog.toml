@@ -1,0 +1,4 @@
+# Packages this project uses: the C-family plugin and the project-local
+# blurgen rule package (packages/blurgen).
+uses = ["buildlog-cpp", "blurgen"]
+spec = ["pkg.toml", "spec.toml"]

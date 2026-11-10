@@ -1,0 +1,81 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The libraries and tools (source/CMakeLists.txt, source/opt/CMakeLists.txt,
+# tools/CMakeLists.txt). Every one uses profile.spvtools (spec.toml: the
+# default compile options) and compiles against the generated tables
+# (gen_user). Library sources are sources.toml's template.
+
+request_all = ["SPIRV-Tools", "SPIRV-Tools-opt"]
+
+[defaults.target]
+profile = "spvtools"
+gen_user = "spirv-tools-tables"
+
+# SPIRV_SOURCES, built twice (spirv_tools_default_target_options): upstream's
+# SPIRV-Tools-static and SPIRV-Tools-shared are one library built static and
+# shared. include/ public, SPIRV-Headers' include dir private. "The static
+# target does not have the '-static' suffix"; the shared one is
+# SPIRV-Tools-shared, with hidden visibility (CXX_VISIBILITY_PRESET hidden)
+# and the export macros.
+[target.SPIRV-Tools]
+kind = "library"
+default_linkage = "both"
+linkage_output_name = [["shared", "SPIRV-Tools-shared"]]
+public = { "cc.include_dir" = "src:include" }
+deps = { private = ["SPIRV-Headers::SPIRV-Headers"] }
+linkage_prop = [
+  ["shared", "cc.define", "SPIRV_TOOLS_IMPLEMENTATION", "private"],
+  ["shared", "cxx.compile_flag", "-fvisibility=hidden", "private"],
+  ["shared", "cc.define", "SPIRV_TOOLS_SHAREDLIB", "public"],
+]
+
+# SPIRV_TOOLS_LIBRARY_TYPE is STATIC (SPIRV_TOOLS_BUILD_STATIC=ON); it links
+# the full-visibility library (SPIRV-Tools static: a static library follows
+# its own linkage), and SPIRV-Headers' dir is public in the build interface.
+[target.SPIRV-Tools-opt]
+kind = "library"
+linkage = { require = "static", why = "SPIRV_TOOLS_BUILD_STATIC makes SPIRV_TOOLS_LIBRARY_TYPE STATIC, and the optimizer uses SPIRV-Tools' internal (hidden in the shared build) symbols" }
+public = { "cc.include_dir" = "src:include" }
+deps = { public = ["SPIRV-Tools", "SPIRV-Headers::SPIRV-Headers"] }
+
+# add_spvtools_tool: ${COMMON_TOOLS_SRCS} (tools/util/flags.cpp) and the
+# listed sources, linked against ${SPIRV_TOOLS_FULL_VISIBILITY}
+# (SPIRV-Tools static). spirv-as also has SPIRV-Headers' include dir.
+[target.spirv-as]
+kind = "executable"
+sources = ["tools/as/as.cpp", "tools/io.cpp", "tools/util/flags.cpp"]
+deps = { private = ["SPIRV-Tools", "SPIRV-Headers::SPIRV-Headers"] }
+dep_linkage = [["SPIRV-Tools", "static", "upstream: SPIRV_TOOLS_FULL_VISIBILITY, the static one"]]
+request_when = "!SPIRV_SKIP_EXECUTABLES"
+
+[target.spirv-dis]
+kind = "executable"
+sources = ["tools/util/flags.cpp", "tools/dis/dis.cpp", "tools/io.cpp"]
+deps = { private = ["SPIRV-Tools"] }
+dep_linkage = [["SPIRV-Tools", "static", "upstream: SPIRV_TOOLS_FULL_VISIBILITY, the static one"]]
+request_when = "!SPIRV_SKIP_EXECUTABLES"
+
+[target.spirv-val]
+kind = "executable"
+sources = [
+  "tools/util/flags.cpp",
+  "tools/val/val.cpp",
+  "tools/util/cli_consumer.cpp",
+  "tools/io.cpp",
+]
+deps = { private = ["SPIRV-Tools"] }
+dep_linkage = [["SPIRV-Tools", "static", "upstream: SPIRV_TOOLS_FULL_VISIBILITY, the static one"]]
+request_when = "!SPIRV_SKIP_EXECUTABLES"
+
+[target.spirv-opt]
+kind = "executable"
+sources = [
+  "tools/util/flags.cpp",
+  "tools/opt/opt.cpp",
+  "tools/util/cli_consumer.cpp",
+  "tools/io.cpp",
+]
+deps = { private = ["SPIRV-Tools-opt", "SPIRV-Tools"] }
+dep_linkage = [["SPIRV-Tools", "static", "upstream: SPIRV_TOOLS_FULL_VISIBILITY, the static one"]]
+request_when = "!SPIRV_SKIP_EXECUTABLES"

@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# nanobind's build logic as a pure rule package: a port of
+# nanobind-config.cmake (nanobind 3.1.x, linked mode, NB_STATIC) for
+# clang on macOS. nanobind ships its C++ sources inside its Python
+# distribution; where that is, per configuration, is buildlog-python's
+# python_package probe result (python_requires "nanobind"). nanobind would
+# ship this package itself, as it ships nanobind-config.cmake.
+name = "nanobind"
+version = "3.1.0"
+rank = 5
+namespace = "nanobind"
+layers = ["L5_nanobind.dl"]
+facts = ["spec.toml"]
+requires = { buildlog-cpp = ">=0.1", buildlog-python = ">=0.1" }
+extends = [
+  "target",
+  "native_kind",
+  "native_output_name",
+  "dep",
+  "prop",
+  "prop_in",
+  "cxx_generated_source",
+  "action",
+  "action_arg",
+  "action_in",
+  "action_builtin",
+  "action_restat",
+  "error",
+  "error_at",
+]
+accepts = ["nanobind_module", "nanobind_module_option"]

@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+name = "LLVM"
+version = "22.1.8"
+rank = 3
+namespace = "llvm"
+layers = ["LLVM.dl"]
+facts = ["facts.toml"]
+requires = { buildlog-cpp = ">=0.1" }
+extends = [
+  "package_version",
+  "package_want",
+  "package_attr",
+  "import_linkage_dep",
+  "imported",
+  "imported_kind",
+  "prop",
+]
+accepts = [
+  "llvm_version",
+  "llvm_define",
+  "llvm_include_dir",
+  "llvm_enable_rtti",
+  "llvm_enable_eh",
+  "llvm_target",
+  "llvm_define_on",
+  "llvm_include_dir_on",
+  "llvm_target_on",
+]

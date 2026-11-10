@@ -1,0 +1,95 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# buildlog-cuda: NVIDIA CUDA as a plugin on buildlog-cpp (provisional: nvcc
+# on Linux, compile and link; the first CUDA study is stdgpu). Discovery of
+# one toolkit (CUDAToolkit_ROOT, CUDA_PATH, nvcc on PATH, /usr/local/cuda),
+# nvcc as the CUDA toolchain, its host compiler (the configuration's C++
+# toolchain, or a user's pin) checked against the toolkit by running it,
+# named GPU architecture sets as a setting, RDC objects and the device link
+# derived over them, and the runtime and math libraries as imported packages.
+name = "buildlog-cuda"
+version = "0.1.0"
+rank = 3
+layers = ["layers/L2_cuda.dl", "layers/L4_cuda.dl"]
+requires = { buildlog = ">=0.1", buildlog-cpp = ">=0.1" }
+extends = [
+  "source_claimed",
+  "path_want",
+  "cc_include_before",
+  "cc_implicit_include_for",
+  "toolchain_tool",
+  "toolchain_runs_on",
+  "toolchain_can_target",
+  "tc_required",
+  "setting_key",
+  "setting_value",
+  "setting_default",
+  "setting_exec_value",
+  "setting_name_elide",
+  "set_key",
+  "imported",
+  "imported_kind",
+  "artifact_covers",
+  "import_artifact",
+  "prop",
+  "dep",
+  "native_object",
+  "target_action",
+  "action",
+  "action_arg",
+  "action_arg_set",
+  "action_in",
+  "action_seq",
+  "action_seq_spelled",
+  "action_seq_before",
+  "action_depfile",
+  "action_tc_tool",
+  "action_toolchain",
+  "error",
+  "error_at",
+]
+
+accepts = [
+  # sources a project states beside the ones its suffixes claim
+  "cuda_source",
+  # named architecture sets: a set's codes (sm_80 is SASS, compute_80 PTX)
+  "gpu_arch_set_code",
+  # target properties
+  "cuda_rdc",
+  "cuda_runtime",
+  "cuda_arch_of",
+  # a static library resolves the device symbols of the code it holds
+  "cuda_resolve_device_symbols",
+  # the device link of a target is stated to drop a code its objects carry
+  "cuda_dlink_drops",
+]
+
+user = [
+  # the host compiler nvcc uses, where it is not the C++ toolchain
+  "cuda_host_pin",
+]
+
+structural = ["gpu_code_parts", "cuda_lib_name"]
+
+[[probe]]
+kind = "cuda_toolkit"
+request = "req_cuda_toolkit"
+domain = "domain_cuda_toolkit"
+result = [
+  "res_cuda_toolkit_status",
+  "res_cuda_toolkit",
+  "res_cuda_toolkit_code",
+  "res_cuda_toolkit_tool",
+  "res_cuda_toolkit_lib",
+]
+entry = "buildlog_cuda.cuda:toolkit"
+fingerprint = "buildlog_cuda.cuda:toolkit_fingerprint"
+
+[[probe]]
+kind = "cuda_host_check"
+request = "req_cuda_host_check"
+domain = "domain_cuda_host_check"
+result = "res_cuda_host_check"
+entry = "buildlog_cuda.cuda:host_check"
+fingerprint = "buildlog_cuda.cuda:host_check_fingerprint"

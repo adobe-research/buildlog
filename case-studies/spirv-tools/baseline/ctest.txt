@@ -1,0 +1,25 @@
+ 1/24 Test  #2: spirv-tools-test_spirv_unit_tests ................   Passed
+ 2/24 Test  #3: spirv-tools-test_c_interface .....................   Passed
+ 3/24 Test  #1: spirv-tools-copyrights ...........................   Passed
+ 4/24 Test  #5: spirv-tools-test_cpp_interface ...................   Passed
+ 5/24 Test  #6: spirv-tools-test_lcs .............................   Passed
+ 6/24 Test  #4: spirv-tools-test_c_interface_shared ..............   Passed
+ 7/24 Test  #7: spirv-tools-test_diff ............................   Passed
+ 8/24 Test  #8: spirv-tools-test_link ............................   Passed
+ 9/24 Test  #9: spirv-tools-test_lint ............................   Passed
+10/24 Test #11: spirv-tools-test_dominator_analysis ..............   Passed
+11/24 Test #14: spirv-tools_expect_unittests .....................   Passed
+12/24 Test #15: spirv-tools_spirv_test_framework_unittests .......   Passed
+13/24 Test #12: spirv-tools-test_opt_loops .......................   Passed
+14/24 Test #13: spirv-tools-test_reduce ..........................   Passed
+15/24 Test #16: spirv-tools-test_spirv_unit_test_tools_util ......   Passed
+16/24 Test #18: spirv-tools-test_spirv_unit_test_tools_objdump ...   Passed
+17/24 Test #19: spirv-tools-test_utils ...........................   Passed
+18/24 Test #17: spirv_opt_cli_tools_tests ........................   Passed
+19/24 Test #10: spirv-tools-test_opt .............................   Passed
+20/24 Test #22: spirv-tools-test_val_limits ......................   Passed
+21/24 Test #20: spirv-tools-test_val_abcde .......................   Passed
+22/24 Test #24: spirv-tools-test_val_rstuvw ......................   Passed
+23/24 Test #21: spirv-tools-test_val_capability ..................   Passed
+24/24 Test #23: spirv-tools-test_val_fghijklmnop .................   Passed
+100% tests passed out of 24

@@ -1,0 +1,45 @@
+exec_config(‹x86_64-macos.debug.none›, ‹arm64-macos.release.none›)  [buildlog:L1_targets.dl:133]
+  #n1 config(‹x86_64-macos.debug.none›)  [buildlog:L1_targets.dl:89]
+    decl_cfg("cross", ‹x86_64-macos.debug.none›)  [buildlog:L1_targets.dl:84]
+      #n3 config_decl("cross", "x86_64-macos")  ← case-studies/bazel-flatc/project/spec.toml:7 (package project)
+      decl_suffix("cross", 0, [["native.opt", "debug"], [["native.sanitize", "none"], nil]])  [buildlog:L1_targets.dl:82]
+        decl_suffix("cross", 1, [["native.sanitize", "none"], nil])  [buildlog:L1_targets.dl:82]
+          decl_suffix("cross", 2, nil)  [buildlog:L1_targets.dl:81]
+            ↑ config_decl("cross", "x86_64-macos")  (#n3)
+            nkeys(2)  ← aggregate src/buildlog/layers/core/L1_targets.dl:47
+          setting_key("native.sanitize", 1)  ← src/buildlog/layers/core/L3_native.dl:45
+          decl_value("cross", "native.sanitize", "none")  [buildlog:L1_targets.dl:70]
+            ↑ config_decl("cross", "x86_64-macos")  (#n3)
+            setting_default("native.sanitize", "none")  ← src/buildlog/layers/core/L3_native.dl:47
+            !decl_has("cross", "native.sanitize")
+          2 > 0
+          1 = 1
+        setting_key("native.opt", 0)  ← src/buildlog/layers/core/L3_native.dl:41
+        decl_value("cross", "native.opt", "debug")  [buildlog:L1_targets.dl:69]
+          config_decl_setting("cross", "native.opt", "debug")  ← case-studies/bazel-flatc/project/spec.toml:11 (package project)
+          #n17 setting_value("native.opt", "debug")  ← src/buildlog/layers/core/L3_native.dl:42
+        1 > 0
+        0 = 0
+    platform("x86_64-macos", "x86_64-apple-macos13")  [buildlog-cpp:layers/L2_toolchains.dl:24]
+      res_platform("inventory:default", "x86_64-macos", "x86_64-apple-macos13")  ← probe inventory request "inventory:default"
+      #n22 req_inventory("inventory:default")  [asked: probe inventory request; --demand explains why]
+  host_platform("arm64-macos")  [buildlog-cpp:layers/L2_toolchains.dl:23]
+    res_host_platform("inventory:default", "arm64-macos")  ← probe inventory request "inventory:default"
+    ↑ req_inventory("inventory:default")  (#n22)
+  exec_settings([["native.opt", "debug"], [["native.sanitize", "none"], nil]], [["native.opt", "release"], [["native.sanitize", "none"], nil]])  [buildlog:L1_targets.dl:131]
+    ↑ config(‹x86_64-macos.debug.none›)  (#n1)  (via settings_suffix)
+    exec_settings([["native.sanitize", "none"], nil], [["native.sanitize", "none"], nil])  [buildlog:L1_targets.dl:131]
+      ↑ config(‹x86_64-macos.debug.none›)  (#n1)  (via settings_suffix ← settings_suffix)
+      exec_settings(nil, nil)  ← src/buildlog/layers/core/L1_targets.dl:130
+      exec_value("native.sanitize", "none", "none")  [buildlog:L1_targets.dl:126]
+        setting_exec_value("native.sanitize", "none")  ← src/buildlog/layers/core/L3_native.dl:48
+        !exec_overridden("native.sanitize")
+        setting_value("native.sanitize", "none")  ← src/buildlog/layers/core/L3_native.dl:46
+    exec_value("native.opt", "debug", "release")  [buildlog:L1_targets.dl:126]
+      setting_exec_value("native.opt", "release")  ← src/buildlog/layers/core/L3_native.dl:44
+      !exec_overridden("native.opt")
+      ↑ setting_value("native.opt", "debug")  (#n17)
+
+legend:
+  ‹arm64-macos.release.none› = ["arm64-macos", [["native.opt", "release"], [["native.sanitize", "none"], nil]]]
+  ‹x86_64-macos.debug.none› = ["x86_64-macos", [["native.opt", "debug"], [["native.sanitize", "none"], nil]]]

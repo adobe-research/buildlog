@@ -1,0 +1,31 @@
+{
+  "libhalide": {
+    "cold_passes": 1,
+    "cold_rounds": 4,
+    "composed_clauses": 3258,
+    "edit_rounds": 1,
+    "pruned_clauses": 2262,
+    "warm_rounds": 1
+  },
+  "trivial": {
+    "cold_passes": 1,
+    "cold_rounds": 4,
+    "composed_clauses": 2426,
+    "edit_rounds": 1,
+    "pruned_clauses": 981,
+    "warm_rounds": 1
+  },
+  "trivial_seconds": {
+    "cold": 4.0,
+    "edit": 1.0,
+    "warm": 1.0
+  },
+  "zlib": {
+    "cold_passes": 1,
+    "cold_rounds": 4,
+    "composed_clauses": 2428,
+    "edit_rounds": 1,
+    "pruned_clauses": 1364,
+    "warm_rounds": 1
+  }
+}

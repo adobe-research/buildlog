@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# User decisions for this Mac: Apple's clang (the /usr/bin/cc CMake picks)
+# compiles and links everything, natively and for the x86_64 target (the
+# x86_64 configuration and universal2's x86_64 slice).
+toolchain_pin = [
+  ["c", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["c", "arm64-macos", "x86_64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "x86_64-macos", "apple-clang"],
+]

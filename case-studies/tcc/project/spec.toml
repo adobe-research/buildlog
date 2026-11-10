@@ -1,0 +1,97 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The bootstrap. Each stage is a target that compiles tcc.c (tinycc's
+# ONE_SOURCE build, as its Makefile does with ONE_SOURCE=yes) and a
+# libtcc1.a runtime that the same stage's compiler builds; tcc's package
+# (packages/tcc) makes a (compiler, runtime) pair a toolchain. A target
+# chooses the toolchain that builds it with `toolchain`; a target that
+# names none is built by the user's (here apple-clang, the preset).
+
+# toolchain id, compiler target, runtime target, tccdir (-B), version
+tcc_toolchain = [
+  ["tcc-stage1", "tcc_stage1", "libtcc1_stage1", "src:upstream", "0.9.28rc"],
+  ["tcc-stage2", "tcc_stage2", "libtcc1_stage2", "src:upstream", "0.9.28rc"],
+]
+# The last stage is only compared, never used as a toolchain.
+tcc_compiler = ["tcc_stage3"]
+# The fixpoint test's arguments: the two compilers' files.
+test_arg_ref = [
+  ["bootstrap_fixpoint", 0, "tcc_stage2"],
+  ["bootstrap_fixpoint", 1, "tcc_stage3"],
+]
+
+[target_template.tcc]
+kind = "executable"
+sources = ["upstream/tcc.c"]
+# The defines tinycc's Makefile passes for a native compiler: one source, no
+# libtcc1 named implicitly (the toolchain's runtime is linked as a
+# dependency instead), and no installed tccdir (each use passes -B).
+private = { "cc.include_dir" = "src:project/config", "cc.define" = [
+  "ONE_SOURCE=1",
+  "TCC_LIBTCC1=\"\"",
+  "CONFIG_TCCDIR=\"/nonexistent\"",
+], "native.link_option" = ["-lm", "-ldl", "-lpthread"] }
+
+# lib/Makefile's OBJ-arm64-osx, without the extras that are not in the
+# archive (runmain, bt-*, bcheck) and tcov.
+[target_template.libtcc1]
+kind = "library"
+linkage = { require = "static", why = "libtcc1.a is the compiler's static support archive" }
+sources = [
+  "upstream/lib/lib-arm64.c",
+  "upstream/lib/stdatomic.c",
+  "upstream/lib/builtin.c",
+  "upstream/lib/atomic.S",
+  "upstream/lib/alloca.S",
+  "upstream/lib/alloca-bt.S",
+]
+
+[target.tcc_stage1]
+instance_of = "tcc"
+native_output_name = "stage1/tcc"
+
+[target.libtcc1_stage1]
+instance_of = "libtcc1"
+toolchain = "tcc-stage1"
+
+[target.tcc_stage2]
+instance_of = "tcc"
+native_output_name = "stage2/tcc"
+toolchain = "tcc-stage1"
+
+[target.libtcc1_stage2]
+instance_of = "libtcc1"
+toolchain = "tcc-stage2"
+
+[target.tcc_stage3]
+instance_of = "tcc"
+native_output_name = "stage3/tcc"
+toolchain = "tcc-stage2"
+
+# The bootstrap's fixpoint: the compiler stage 2 builds is the compiler stage
+# 1 built, byte for byte (tinycc's `make test3`, as cmp).
+[target.same_file]
+kind = "executable"
+sources = ["project/demo/same_file.c"]
+toolchain = "tcc-stage2"
+
+# An ordinary library and program, built by the built compiler as by any.
+[target.greet]
+kind = "library"
+sources = ["project/demo/greet.c"]
+public = { "cc.include_dir" = "src:project/demo" }
+toolchain = "tcc-stage2"
+
+[target.hello]
+kind = "executable"
+sources = ["project/demo/hello.c"]
+deps = { private = ["greet"] }
+toolchain = "tcc-stage2"
+
+[test.bootstrap_fixpoint]
+program = "same_file"
+
+[test.hello]
+program = "hello"
+test_regex = [["pass", "^hello from tcc, 6 \\* 7 = 42$"]]

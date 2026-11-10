@@ -1,0 +1,13 @@
+action("out:a.o", "CC").
+action_in("out:a.o", "src:a.c", "explicit").
+action_arg("out:a.o", 0, "", "/usr/bin/cc").
+action_arg("out:a.o", 1, "", "-O2").
+action_arg("out:a.o", 1, "", "-g").
+action_arg_set("out:a.o", 1).
+action_arg("out:a.o", 7, "-o ", "out:a.o").
+action("out:app", "LINK").
+action_in("out:app", "out:a.o", "explicit").
+action_in("out:app", "/usr/lib/libSystem.tbd", "implicit").
+action_arg("out:app", 0, "", "/usr/bin/cc").
+action_arg("out:app", 3, "-o ", "out:app").
+default_output("out:app").

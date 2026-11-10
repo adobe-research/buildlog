@@ -1,0 +1,27 @@
+build exit status: 137
+===== file flatc
+$BUILD/flatc: Mach-O 64-bit executable arm64
+===== vtool -show-build flatc
+ platform IOS
+    minos 15.0
+===== failures
+   1 /bin/sh: line 1: 26535 Killed: 9               $BUILD/flatc --cpp --gen-compare --gen-mutable --gen-object-api --reflect-names --filename-suffix _generated -o tests $SRC/tests/alignment_test.fbs
+   1 /bin/sh: line 1: 26537 Killed: 9               $BUILD/flatc --cpp --gen-compare --gen-mutable --gen-object-api --reflect-names --filename-suffix .fbs -o tests $SRC/tests/default_vectors_strings_test.fbs
+   1 /bin/sh: line 1: 26539 Killed: 9               $BUILD/flatc --cpp --gen-compare --gen-mutable --gen-object-api --reflect-names --scoped-enums --filename-suffix _generated -o tests $SRC/tests/arrays_test.fbs
+   1 /bin/sh: line 1: 26541 Killed: 9               $BUILD/flatc --cpp --gen-compare --gen-mutable --gen-object-api --reflect-names --filename-suffix _generated -o tests $SRC/tests/native_inline_table_test.fbs
+   1 /bin/sh: line 1: 26544 Killed: 9               $BUILD/flatc --cpp --gen-compare --gen-mutable --gen-object-api --reflect-names --filename-suffix _generated -o tests $SRC/tests/native_type_test.fbs
+   1 /bin/sh: line 1: 26546 Killed: 9               $BUILD/flatc --cpp --gen-compare --gen-mutable --gen-object-api --reflect-names --filename-suffix _generated -o tests/key_field $SRC/tests/key_field/key_field_sample.fbs
+   1 /bin/sh: line 1: 26548 Killed: 9               $BUILD/flatc --cpp --gen-compare --gen-mutable --gen-object-api --reflect-names --bfbs-gen-embed --filename-suffix _generated -o tests/64bit $SRC/tests/64bit/test_64bit.fbs
+   1 /bin/sh: line 1: 26550 Killed: 9               $BUILD/flatc --cpp --gen-compare --gen-mutable --gen-object-api --reflect-names --filename-suffix _generated -o tests/64bit/evolution $SRC/tests/64bit/evolution/v1.fbs
+   1 /bin/sh: line 1: 26552 Killed: 9               $BUILD/flatc --cpp --gen-compare --gen-mutable --gen-object-api --reflect-names --filename-suffix _generated -o tests/64bit/evolution $SRC/tests/64bit/evolution/v2.fbs
+   1 /bin/sh: line 1: 26555 Killed: 9               $BUILD/flatc --cpp --gen-compare --gen-mutable --gen-object-api --reflect-names --scoped-enums --filename-suffix _generated -o tests $SRC/tests/union_underlying_type_test.fbs
+   1 FAILED: [code=137] tests/64bit/evolution/v1_generated.h $BUILD/tests/64bit/evolution/v1_generated.h 
+   1 FAILED: [code=137] tests/64bit/evolution/v2_generated.h $BUILD/tests/64bit/evolution/v2_generated.h 
+   1 FAILED: [code=137] tests/64bit/test_64bit_generated.h $BUILD/tests/64bit/test_64bit_generated.h 
+   1 FAILED: [code=137] tests/alignment_test_generated.h $BUILD/tests/alignment_test_generated.h 
+   1 FAILED: [code=137] tests/arrays_test_generated.h $BUILD/tests/arrays_test_generated.h 
+   1 FAILED: [code=137] tests/default_vectors_strings_test.fbs.h $BUILD/tests/default_vectors_strings_test.fbs.h 
+   1 FAILED: [code=137] tests/key_field/key_field_sample_generated.h $BUILD/tests/key_field/key_field_sample_generated.h 
+   1 FAILED: [code=137] tests/native_inline_table_test_generated.h $BUILD/tests/native_inline_table_test_generated.h 
+   1 FAILED: [code=137] tests/native_type_test_generated.h $BUILD/tests/native_type_test_generated.h 
+   1 FAILED: [code=137] tests/union_underlying_type_test_generated.h $BUILD/tests/union_underlying_type_test_generated.h 

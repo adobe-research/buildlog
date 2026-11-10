@@ -1,0 +1,11 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Deliberately bad plugin layer: it constructs a fresh request
+// from its previous result but declares only the seed in its finite domain.
+.decl req_runaway(id:symbol, n:symbol)
+.decl domain_runaway(id:symbol, n:symbol)
+.decl res_runaway(req:symbol, next:symbol)
+req_runaway("runaway:0", "0") :- config_decl(_, _).
+domain_runaway("runaway:0", "0") :- config_decl(_, _).
+req_runaway(cat("runaway:", n), n) :- res_runaway(r, n), req_runaway(r, _).

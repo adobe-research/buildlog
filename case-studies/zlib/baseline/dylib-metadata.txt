@@ -1,0 +1,20 @@
+===== links
+libz.1.dylib -> libz.1.3.2.dylib
+libz.dylib -> libz.1.dylib
+===== otool -L libz.1.3.2.dylib
+	@rpath/libz.1.dylib (compatibility version 1.0.0, current version 1.3.2)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== LC_ID_DYLIB
+         name @rpath/libz.1.dylib (offset 24)
+      current version 1.3.2
+compatibility version 1.0.0
+===== otool -L test/zlib_example
+	@rpath/libz.1.dylib (compatibility version 1.0.0, current version 1.3.2)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== otool -L test/minigzip
+	@rpath/libz.1.dylib (compatibility version 1.0.0, current version 1.3.2)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== otool -L test/zlib_static_example
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+===== otool -L test/static_minigzip
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)

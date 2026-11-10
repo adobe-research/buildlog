@@ -1,0 +1,12 @@
+{
+ "configs": {
+  "wasm32-emscripten.release.none": "",
+  "wasm32-emscripten.release.none.simd128": "_simd",
+  "wasm32-emscripten.release.none.threads": "_threads",
+  "wasm32-emscripten.release.none.simd128.threads": "_simd_threads"
+ },
+ "rename": [
+  ["index", "index{v}"],
+  ["reaction_diffusion_(init|update|render)(\\.runtime)?", "index{v}_\\1\\2"]
+ ]
+}

@@ -1,0 +1,80 @@
+{
+ "configurations": [
+  {
+   "directories": [
+    {
+     "build": ".",
+     "source": "."
+    },
+    {
+     "build": "src",
+     "source": "src"
+    },
+    {
+     "build": "src/runtime",
+     "source": "src/runtime"
+    },
+    {
+     "build": "tools",
+     "source": "tools"
+    },
+    {
+     "build": "python_bindings",
+     "source": "python_bindings"
+    }
+   ],
+   "name": "Release",
+   "projects": [
+    {
+     "name": "Halide"
+    }
+   ],
+   "targets": [
+    {
+     "directoryIndex": 3,
+     "id": "binary2cpp::@3",
+     "jsonFile": "target-binary2cpp-Release.json",
+     "name": "binary2cpp",
+     "projectIndex": 0
+    },
+    {
+     "directoryIndex": 2,
+     "id": "Halide_initmod::@2",
+     "jsonFile": "target-Halide_initmod-Release.json",
+     "name": "Halide_initmod",
+     "projectIndex": 0
+    },
+    {
+     "directoryIndex": 1,
+     "id": "Halide::@1",
+     "jsonFile": "target-Halide-Release.json",
+     "name": "Halide",
+     "projectIndex": 0
+    },
+    {
+     "directoryIndex": 4,
+     "id": "Halide_py_thing::@4",
+     "jsonFile": "target-Halide_py_thing-Release.json",
+     "name": "Halide_py_thing",
+     "projectIndex": 0
+    },
+    {
+     "directoryIndex": 0,
+     "id": "edit_cache::@0",
+     "jsonFile": "target-edit_cache-Release.json",
+     "name": "edit_cache",
+     "projectIndex": 0
+    }
+   ]
+  }
+ ],
+ "kind": "codemodel",
+ "paths": {
+  "build": "/work/build",
+  "source": "/work/src"
+ },
+ "version": {
+  "major": 2,
+  "minor": 11
+ }
+}

@@ -1,0 +1,1 @@
+library_linkage = [["codec", "static"]]

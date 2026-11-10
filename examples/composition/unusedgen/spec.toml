@@ -1,0 +1,10 @@
+config_decl = [["release", "${EXAMPLE_PLATFORM}"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = [["rt"]]
+export_package = ["unusedgen"]
+export_version = [["unusedgen", "1.0.0"]]
+export_component = [["unusedgen", "rt", "rt"]]
+export_rules = [["unusedgen", "src:packages/unusedgen"]]
+
+[target.rt]
+interface = { "cc.define" = "UNUSEDGEN=1" }

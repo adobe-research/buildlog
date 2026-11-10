@@ -1,0 +1,6 @@
+# Rejected: `needed` is a core relation but not in core's open registry.
+name = "closed-extends"
+version = "0.1.0"
+rank = 5
+layers = ["closed_extends.dl"]
+extends = ["target", "needed"]

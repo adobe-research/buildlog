@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# TOML formatting standard: tombi, 100 columns. Line counts are measured
+# after formatting. Trailing commas are not used to force short arrays open.
+[files]
+exclude = ["**/buildlog.lock", "uv.lock", "**/build/**", "**/upstream/**", ".venv/**"]
+
+[format.rules]
+line-width = 100

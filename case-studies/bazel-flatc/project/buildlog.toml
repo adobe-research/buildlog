@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The Bazel baseline slice of flatbuffers (v25.12.19): flatc, run during the
+# build, and one generated C++ library (samples/monster.fbs) with a consumer
+# (samples/sample_binary.cpp); case-studies/bazel-flatc/README.md. Configure
+# with a user file:
+#   uv run --frozen buildlog configure --user case-studies/bazel-flatc/project/presets/apple-clang.toml \
+#     -C BUILD case-studies/bazel-flatc/project
+uses = ["buildlog-cpp"]
+source_root = "${FLATBUFFERS_SRC}"
+spec = ["spec.toml", "rules.dl"]
+
+[vars]
+# The pinned checkout the Bazel baseline builds (tag v25.12.19, 7e163021;
+# see baseline/run-bazel.sh).
+FLATBUFFERS_SRC = "${REPO_ROOT}/case-studies/bazel-flatc/upstream"

@@ -1,0 +1,6 @@
+===== x86_64
+_arm_check_features
+_cpu_check_features
+===== arm64
+_arm_check_features
+_cpu_check_features

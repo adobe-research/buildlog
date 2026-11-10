@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Opt-in Python bindings: the default configuration builds for this
+# interpreter (a venv with pybind11, numpy and imageio), so the pybind11
+# modules and the Python tests are part of it. Use with homebrew-arm64.toml:
+#   --user presets/homebrew-arm64.toml --user presets/python.toml
+python_interpreter = [["py310", "${HALIDE_PYVENV}/bin/python"]]
+config_decl_setting = [["release", "python.interpreter", "py310"]]
+# Native generators share Halide with the Python-enabled products.
+exec_setting = [["python.interpreter", "inherit"]]

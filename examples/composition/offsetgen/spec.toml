@@ -1,0 +1,12 @@
+config_decl = [["release", "${EXAMPLE_PLATFORM}"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = [["rt"]]
+export_package = ["offsetgen"]
+export_version = [["offsetgen", "1.0.0"]]
+export_component = [["offsetgen", "rt", "rt"]]
+export_rules = [["offsetgen", "src:packages/offsetgen"]]
+
+[target.rt]
+prop = [["cc.include_dir", "src:include", "interface"]]
+install_map = [["src:include", "includedir", ""]]
+install_file = ["src:include/offsetgen/rt.h"]

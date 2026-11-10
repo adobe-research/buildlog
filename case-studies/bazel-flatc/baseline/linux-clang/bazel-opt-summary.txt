@@ -1,0 +1,29 @@
+configurations:
+  exec                     aarch64-opt-exec-ST-d57f47055a04  (platformName aarch64)
+  target                   aarch64-opt  (platformName aarch64)
+in-scope actions (role, kind: count):
+  exec                     archive  24
+  exec                     compile  82
+  exec                     link     13
+  target                   archive  6
+  target                   compile  14
+  target                   custom   1
+  target                   link     4
+excluded:
+    34  bazel: C++ module map (written when the compiler is clang)
+     4  bazel: build info
+     2  bazel: file write
+   254  bazel: header symlink (_virtual_includes)
+     2  bazel: middleman
+     2  bazel: repo mapping manifest
+     2  bazel: runfiles manifest
+     2  bazel: runfiles tree
+    15  bazel: shared-library symlink (_solib)
+     2  bazel: strip (the .stripped output, built only on request)
+sources compiled in more than one configuration: 6
+  $SRC/src/code_generators.cpp  (exec, target)
+  $SRC/src/idl_gen_fbs.cpp  (exec, target)
+  $SRC/src/idl_gen_text.cpp  (exec, target)
+  $SRC/src/idl_parser.cpp  (exec, target)
+  $SRC/src/reflection.cpp  (exec, target)
+  $SRC/src/util.cpp  (exec, target)

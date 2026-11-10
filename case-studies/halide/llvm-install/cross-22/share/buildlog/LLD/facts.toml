@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+lld_version = [["22", "1", "8"]]
+lld_include_dir_on = [
+  ["arm64-macos", "/opt/homebrew/opt/lld@22/include"],
+  ["arm64-linux", "${SYSROOT}/usr/lib/llvm-22/include"],
+]

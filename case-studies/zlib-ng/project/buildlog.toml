@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# zlib-ng 2.3.3, as its CMakeLists.txt builds it on this Mac in its default
+# mode (native zlib-ng API, ZLIB_COMPAT=OFF), for arm64, for x86_64 (cross)
+# and as universal2 (the zlib-ng case study; case-studies/zlib-ng/README.md).
+# Configure with the preset user file:
+#   uv run --frozen buildlog configure --user case-studies/zlib-ng/project/presets/apple-clang.toml \
+#     -C BUILD case-studies/zlib-ng/project                 # every configuration
+#   ... --config release | x86_64 | universal2              # or some of them
+#   ninja -C BUILD/souffle
+uses = ["buildlog-cpp"]
+source_root = "${ZLIBNG_SRC}"
+spec = [
+  "spec.toml",
+  "checks.toml",
+  "isa.toml",
+  "configured.toml",
+  "tests.toml",
+  "rules.dl",
+  "isa.dl",
+]
+
+[vars]
+# The pinned checkout the CMake baseline builds (tag 2.3.3, 12731092; see
+# baseline/run-cmake.sh).
+ZLIBNG_SRC = "${REPO_ROOT}/case-studies/zlib-ng/upstream"
+# The installation prefix zlib-ng.pc names (CMake's CMAKE_INSTALL_PREFIX
+# and its default); an invoker's decision, overridden with -D INSTALL_PREFIX=...
+INSTALL_PREFIX = "/usr/local"
+# zlib-ng.pc's directories are pkg-config variables (${exec_prefix}/lib).
+# A spec value has no escape for "${", so these two name themselves: the
+# substitution leaves them as written (README ledger).
+exec_prefix = "${exec_prefix}"
+prefix = "${prefix}"

@@ -1,0 +1,710 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L3: install and export (the nlohmann/json case study). Language- and format-neutral.
+//
+// Principle: imported = built. A built target's usage requirements are
+// facts derived in-tree; an installed package states the same facts about
+// the installed files, and a consumer that imports the package derives the
+// same usage facts as one that builds the target in-tree, modulo where the
+// files are. So the export is not a separate description the author
+// maintains: it is the component targets' own exported properties
+// (eff_prop with an exported visibility), in the configuration being
+// installed, with every path mapped from the build's location to the
+// install's.
+//
+// Roles.
+// - The author states what is installable and the package's interface:
+//   install_map (a directory of the build and the layout directory it goes
+//   to), install_file (the files), export_package/_version/_compat/
+//   _description, and export_component (which targets the package offers,
+//   keyed by name: a library that is later offered in several linkage
+//   flavours is still one component).
+// - The user or packager states where: install_prefix, required and with
+//   no default (installing without one fails with a clear message), and
+//   install_dir, a layout override (lib64 for libdir, another place for the
+//   pkg-config files). Layout paths are relative to the prefix, so every
+//   exported file can be relocatable (paths relative to the package root).
+// - A platform/format plugin states the conventions: the default layout
+//   (install_dir_default, GNUInstallDirs' names and values), per-package
+//   defaults (install_pkg_dir_default: metadata of an architecture-
+//   independent package under datadir, the nlohmann/json #1697 lesson),
+//   which files each export format writes (export_format_file) and how a
+//   format spells each property key (export_spelling, export_value_spelling,
+//   export_unspelled, export_path_key, export_internal_key).
+//
+// Install is part of the graph: one action, out:install (the Ninja target
+// `install`), copies every installed file to <DESTDIR><prefix>/<dir>/...;
+// it never exists, so it always runs. The export files are ordinary actions
+// under out:export/<config>/<package>/, written by the `export_package`
+// builtin from typed argv (one token per exported fact, so `why --flag`
+// explains each).
+
+// ---- author facts ----
+.decl install_map(t:symbol, from:symbol, dir:symbol, sub:symbol)
+// t's files and exported paths under the rooted directory `from` (src:...,
+// out:...) install under layout directory `dir` (e.g. includedir), in
+// subdirectory `sub` ("" for none).
+.decl install_file(t:symbol, file:symbol)                   // a rooted file of t to install
+// CMake's install(TARGETS t DESTINATION dir) for a target that is not an
+// exported component: its built artifact, whatever its configuration, goes
+// under layout directory `dir` (libdir for a library, bindir for a program
+// or a module that is loaded beside it). A library installs its versioned file
+// and its links, a static library its archive. See "installing built targets".
+.decl install_target(t:symbol, dir:symbol)
+// t's configured file (configure_file) installs under layout directory `dir`,
+// in each configuration; the file's generated directory is mapped there, so
+// an exported include directory that is the configured file's finds it.
+.decl install_configured(t:symbol, file:symbol, dir:symbol)
+.decl install_file_when(t:symbol, file:symbol, cond:symbol) // ... where cond holds
+.decl export_package(pkg:symbol)
+.decl export_version(pkg:symbol, version:symbol)
+.decl export_compat(pkg:symbol, policy:symbol)              // same_major | same_minor | exact | any_newer
+.decl export_description(pkg:symbol, text:symbol)
+.decl export_component(pkg:symbol, comp:symbol, t:symbol)
+.decl export_component_linkage(pkg:symbol, comp:symbol, linkage:symbol)   // the component is t's l instance
+.decl export_format_omit(pkg:symbol, fmt:symbol, reason:symbol)   // the interface is not encodable in fmt
+// A requirement on an imported package, by the reference a component's dep
+// writes (route-neutral: `zlib`, `pkgx:b`): the package name to require it
+// by, and the minimum version to require. Both default (below).
+.decl export_requires_name(pkg:symbol, ref:symbol, name:symbol)
+.decl export_requires_version(pkg:symbol, ref:symbol, version:symbol)
+
+// ---- user facts ----
+.decl install_prefix(prefix:symbol)                         // absolute; no default
+.decl install_dir(dir:symbol, rel:symbol)                   // layout override, relative to the prefix
+.decl export_format_skip(pkg:symbol, fmt:symbol)            // do not write or install fmt
+
+// ---- conventions (open: a platform/format plugin states them) ----
+.decl install_dir_default(dir:symbol, rel:symbol)
+.decl install_pkg_dir_default(pkg:symbol, dir:symbol, rel:symbol)
+.decl export_format_file(pkg:symbol, fmt:symbol, dir:symbol, rel:symbol)
+.decl export_format_components(fmt:symbol)                  // fmt states components' properties
+.decl export_format_of(file_fmt:symbol, fmt:symbol)         // a file format's format name (default: itself)
+.decl export_spelling(fmt:symbol, key:symbol, field:symbol)
+.decl export_value_spelling(fmt:symbol, key:symbol, value:symbol, spelled:symbol)
+.decl export_unspelled(fmt:symbol, key:symbol, reason:symbol)
+.decl export_path_key(key:symbol)                           // the key's values are paths
+.decl export_internal_key(key:symbol)                       // build-internal: never exported
+
+// ---- layout ----
+.decl install_dir_user(dir:symbol)
+install_dir_user(d) :- install_dir(d, _).
+.decl install_layout_dir(dir:symbol, rel:symbol)            // exported
+install_layout_dir(d, r) :- install_dir(d, r).
+install_layout_dir(d, r) :- install_dir_default(d, r), !install_dir_user(d).
+.decl pkg_dir_default(pkg:symbol, dir:symbol)
+pkg_dir_default(p, d) :- install_pkg_dir_default(p, d, _).
+.decl pkg_layout_dir(pkg:symbol, dir:symbol, rel:symbol)
+pkg_layout_dir(p, d, r) :- export_package(p), install_layout_dir(d, r), !pkg_dir_default(p, d).
+pkg_layout_dir(p, d, r) :- install_pkg_dir_default(p, d, r), !install_dir_user(d).
+pkg_layout_dir(p, d, r) :- export_package(p), pkg_dir_default(p, d), install_dir(d, r).
+
+error("install directory has two defaults; state install_dir", cat(d, ": ", a, " and ", b)) :-
+  install_dir_default(d, a), install_dir_default(d, b), a < b, !install_dir_user(d).
+
+.decl has_install_prefix()
+has_install_prefix() :- install_prefix(_).
+error("install prefix given twice", cat(a, " and ", b)) :- install_prefix(a), install_prefix(b), a < b.
+error("install prefix is not an absolute path", p) :- install_prefix(p), substr(p, 0, 1) != "/".
+error("install prefix ends in a slash", p) :- install_prefix(p), match(".+/", p).
+error("install directory is not relative to the prefix", cat(d, " = ", r)) :- install_dir(d, r),
+  (r = "" ; substr(r, 0, 1) = "/" ; match("(.*/)?\\.\\.(/.*)?", r) ; match(".*/", r)).
+error("install directory given twice", cat(d, ": ", a, " and ", b)) :- install_dir(d, a), install_dir(d, b), a < b.
+
+// ---- package names (format-neutral) ----
+// A package's components have the names a downstream writes whichever route
+// binds the package: P:comp for component comp and P for the package (its
+// default components, all of them, as buildlog's CPS export states). An
+// import states them from the format (CPS ids are these names; buildlog-
+// cpp's CMake provider maps P::comp and P::P to them), and a project states
+// them for its own targets with package_component. export_component implies
+// it, and a source project's export_component is kept as package_component
+// (its install and export are dropped). So the downstream spec is the same
+// for every route, and the user's preset alone chooses it.
+.decl package_component(pkg:symbol, comp:symbol, t:symbol)
+package_component(p, m, t) :- export_component(p, m, t).
+alias(cat(p, ":", m), t) :- package_component(p, m, t).
+source_alias(cat(p, ":", m), t) :- package_component(p, m, t).
+.decl package_named(pkg:symbol)
+package_named(p) :- package_component(p, _, _).
+target(cat(p, ":*")) :- package_named(p).
+source_target(cat(p, ":*")) :- package_named(p).
+dep(cat(p, ":*"), t, "public") :- package_component(p, _, t).
+alias(p, cat(p, ":*")) :- package_named(p), !target(p).
+source_alias(p, cat(p, ":*")) :- package_named(p), !source_target(p).
+
+// ---- which package a target is installed with ----
+.decl target_pkg(t:symbol, pkg:symbol)
+target_pkg(t, p) :- export_component(p, _, t).
+target_pkg(i, p) :- export_component(p, _, t), linkage_twin(i, t).
+.decl in_pkg(t:symbol)
+in_pkg(t) :- target_pkg(t, _).
+error("target is a component of two packages", cat(t, ": ", a, " and ", b)) :-
+  target_pkg(t, a), target_pkg(t, b), a < b.
+error("component of an undeclared package", cat(p, ":", m)) :- export_component(p, m, _), !export_package(p).
+error("component is not a target", cat(p, ":", m, " = ", t)) :- export_component(p, m, t), !target(t).
+error("component name used twice", cat(p, ":", m)) :- export_component(p, m, a), export_component(p, m, b), a < b.
+error("exported package has no components", p) :- export_package(p), !target_pkg(_, p).
+error("package version given twice", p) :- export_version(p, a), export_version(p, b), a < b.
+error("package compatibility given twice", p) :- export_compat(p, a), export_compat(p, b), a < b.
+error("unknown compatibility policy", cat(p, ": ", x)) :- export_compat(p, x),
+  x != "same_major", x != "same_minor", x != "exact", x != "any_newer".
+error("compatibility policy without a version", p) :- export_compat(p, _), !export_version(p, _).
+
+// ---- compatibility: derived from the libraries' ABI ----
+// A package's compatibility claim defaults to the strictest ABI claim of
+// its library components (native_abi_compat, from native_version); a stated
+// export_compat looser than that is an error unless buildlog.toml says
+// [author_decides] export_compat = "reason" (an upstream-faithful port: zlib's
+// CMake says AnyNewerVersion of a library whose soname changes with the
+// major). A shared library exported with no version claims nothing, so the
+// package defaults to exact, with a warning. `why` shows which applied.
+.decl compat_rank(policy:symbol, r:number)
+compat_rank("exact", 0). compat_rank("same_minor", 1). compat_rank("same_major", 2). compat_rank("any_newer", 3).
+.decl export_abi_claim(pkg:symbol, policy:symbol, t:symbol)
+export_abi_claim(p, x, t) :- export_component(p, _, t), native_abi_compat(t, x).
+export_abi_claim(p, "exact", t) :- export_native(p, _, t, _, "dylib", _, _), !has_native_version(t).
+.decl export_compat_derived(pkg:symbol, policy:symbol)        // exported
+export_compat_derived(p, x) :- export_abi_claim(p, x, _), compat_rank(x, r),
+  r = min q : { export_abi_claim(p, y, _), compat_rank(y, q) }.
+.decl export_compat_stated(pkg:symbol)
+export_compat_stated(p) :- export_compat(p, _).
+.decl export_compat_in(pkg:symbol, policy:symbol)             // exported: what the export files state
+export_compat_in(p, x) :- export_compat(p, x).
+export_compat_in(p, x) :- export_compat_derived(p, x), !export_compat_stated(p), export_version(p, _).
+.decl export_compat_decided(reason:symbol)
+export_compat_decided(why) :- author_decision("export_compat", "*", why).
+.decl export_compat_anyone_decided()
+export_compat_anyone_decided() :- export_compat_decided(_).
+error("stated compatibility is looser than the library's ABI",
+  cat(p, ": ", x, " but ", t, "'s soversion claims ", y, " (state export_compat = ", y,
+      ", or add [author_decides] export_compat = \"reason\" to buildlog.toml)")) :-
+  export_compat(p, x), export_abi_claim(p, y, t), compat_rank(x, a), compat_rank(y, b), a > b,
+  !export_compat_anyone_decided().
+// The author's reason for a looser claim (for `why`).
+.decl export_compat_looser(pkg:symbol, stated:symbol, abi:symbol, t:symbol, reason:symbol)   // exported
+export_compat_looser(p, x, y, t, why) :- export_compat(p, x), export_abi_claim(p, y, t), compat_rank(x, a),
+  compat_rank(y, b), a > b, export_compat_decided(why).
+warning("exported shared library has no version; the package claims exact compatibility",
+  cat(p, ": ", t, " (native_version states its version and soversion)")) :-
+  export_native(p, _, t, _, "dylib", _, _), !has_native_version(t), !export_compat_stated(p).
+warning("a 0.y soversion cannot express breaks between minors",
+  cat(p, ": ", t, " ", v, " with soversion 0: the package claims same_minor, the loader accepts any 0.y")) :-
+  export_component(p, _, t), native_version(t, v, "0"), version_major(v, "0"), version_dot(v, _).
+
+.decl target_dir(t:symbol, dir:symbol, rel:symbol)
+target_dir(t, d, r) :- install_map(t, _, d, _), target_pkg(t, p), pkg_layout_dir(p, d, r).
+target_dir(t, d, r) :- install_map(t, _, d, _), !in_pkg(t), install_layout_dir(d, r).
+.decl has_target_dir(t:symbol, dir:symbol)
+has_target_dir(t, d) :- target_dir(t, d, _).
+error("install directory has no layout", cat(t, ": ", d)) :- install_map(t, _, d, _), !has_target_dir(t, d).
+error("install map source is not a rooted directory", cat(t, ": ", f)) :- install_map(t, f, _, _),
+  substr(f, 0, 4) != "src:", substr(f, 0, 4) != "out:".
+error("install map source ends in a slash", cat(t, ": ", f)) :- install_map(t, f, _, _), match(".+[^:]/", f).
+error("install map subdirectory is not relative", cat(t, ": ", s)) :- install_map(t, _, _, s),
+  (substr(s, 0, 1) = "/" ; match("(.*/)?\\.\\.(/.*)?", s) ; match(".*/", s)).
+error("install map of one directory to two places", cat(t, ": ", f)) :-
+  install_map(t, f, d1, s1), install_map(t, f, d2, s2), (d1 < d2 ; d1 = d2, s1 < s2).
+
+// ---- mapping a rooted path of t to its place under the prefix ----
+// The longest install_map directory containing the path decides.
+.decl map_query(t:symbol, v:symbol)
+.decl map_root(t:symbol, from:symbol, pre:symbol)
+map_root(t, f, f) :- install_map(t, f, _, _), match(".*:", f).
+map_root(t, f, cat(f, "/")) :- install_map(t, f, _, _), !match(".*:", f).
+.decl map_hit(t:symbol, v:symbol, from:symbol, rest:symbol)
+map_hit(t, v, f, "") :- map_query(t, v), install_map(t, f, _, _), v = f.
+map_hit(t, v, f, substr(v, strlen(pre), strlen(v) - strlen(pre))) :- map_query(t, v), map_root(t, f, pre),
+  strlen(v) > strlen(pre), substr(v, 0, strlen(pre)) = pre.
+.decl map_best(t:symbol, v:symbol, from:symbol, rest:symbol)
+map_best(t, v, f, rest) :- map_hit(t, v, f, rest), n = max strlen(g) : { map_hit(t, v, g, _) }, strlen(f) = n.
+.decl map_dir(t:symbol, from:symbol, dest:symbol)
+map_dir(t, f, r) :- install_map(t, f, d, ""), target_dir(t, d, r).
+map_dir(t, f, cat(r, "/", s)) :- install_map(t, f, d, s), s != "", target_dir(t, d, r).
+.decl mapped(t:symbol, v:symbol, rel:symbol)                // v installs at <prefix>/rel
+mapped(t, v, r) :- map_best(t, v, f, ""), map_dir(t, f, r).
+mapped(t, v, cat(r, "/", rest)) :- map_best(t, v, f, rest), rest != "", map_dir(t, f, r).
+.decl is_mapped(t:symbol, v:symbol)
+is_mapped(t, v) :- mapped(t, v, _).
+
+// ---- installed files ----
+.decl install_item(t:symbol, c:Cfg, file:symbol)
+install_item(t, c, f) :- install_file(t, f), needed(t, c).
+install_item(t, c, f) :- install_file_when(t, f, n), needed(t, c), cond_holds(c, n).
+map_query(t, f) :- install_item(t, _, f).
+error("installed file is not rooted", cat(t, ": ", f)) :- install_item(t, _, f),
+  substr(f, 0, 4) != "src:", substr(f, 0, 4) != "out:".
+error("installed file is under no install_map of its target", cat(t, ": ", f)) :-
+  install_item(t, _, f), !is_mapped(t, f).
+error("unknown condition", n) :- install_file_when(_, _, n), !known_cond(n).
+
+.decl installed(c:Cfg, src:symbol, rel:symbol)              // src installs at <prefix>/rel in c
+installed(c, f, r) :- install_item(t, c, f), mapped(t, f, r).
+
+// ---- the export: a package's facts in a configuration ----
+// A package is exported from every configuration its components are
+// built in; each configuration writes its own export files, and those of
+// two configurations go to one destination (see "multi-configuration
+// installs" below).
+.decl export_config(pkg:symbol, c:Cfg)
+// export_inst(p, m, i, c): component m is build instance i in c. A
+// component of a library that c builds both ways says which linkage it is
+// (export_component_linkage); one with a linkage is exported only from the
+// configurations that build that linkage.
+.decl export_inst(pkg:symbol, comp:symbol, i:symbol, c:Cfg)
+.decl has_component_linkage(pkg:symbol, comp:symbol)
+has_component_linkage(p, m) :- export_component_linkage(p, m, _).
+export_inst(p, m, t, c) :- export_component(p, m, t), !has_component_linkage(p, m), needed(t, c), !library_both(t, c).
+export_inst(p, m, i, c) :- export_component(p, m, t), export_component_linkage(p, m, l), needed(t, c),
+  inst_linkage(t, c, l), !library_both(t, c), i = t.
+export_inst(p, m, i, c) :- export_component(p, m, t), export_component_linkage(p, m, l), library_both(t, c),
+  inst_of(t, c, l, i), needed(i, c).
+export_config(p, c) :- export_inst(p, _, _, c).
+error_at("exported component is not built in a configuration its package is exported from",
+  cat(p, ":", m), t, c) :- export_config(p, c), export_component(p, m, t), !needed(t, c).
+error_at("component of a library built both ways needs a linkage",
+  cat(p, ":", m, " is ", t, ", which ", n, " builds static and shared; say which: export_component_linkage = [[\"",
+      p, "\", \"", m, "\", \"static\" or \"shared\"]]"), t, c) :-
+  export_component(p, m, t), !has_component_linkage(p, m), needed(t, c), library_both(t, c), cfg_name(c, n).
+error("unknown linkage", cat(p, ":", m, ": ", l, " (static or shared)")) :- export_component_linkage(p, m, l),
+  !linkage_value(l).
+error("component linkage of an undeclared component", cat(p, ":", m)) :- export_component_linkage(p, m, _),
+  !export_component(p, m, _).
+error("component linkage of a target whose kind is not library", cat(p, ":", m, " = ", t)) :-
+  export_component_linkage(p, m, _), export_component(p, m, t), !native_kind(t, "library").
+// In the build, P:comp of a linkage component links that linkage.
+pin_on(x, cat(p, ":", m), l) :- dep_ref(x, cat(p, ":", m)), export_component_linkage(p, m, l).
+
+.decl export_arch_dependent(pkg:symbol)                      // exported: some component has a native artifact
+export_arch_dependent(p) :- export_component(p, _, t), native_kind(t, _).
+
+// The own exported properties of each component: what the in-tree target
+// gives its consumers itself (iface less what its dependencies pass on,
+// which the export states as requirements instead).
+.decl export_prop(pkg:symbol, comp:symbol, c:Cfg, key:symbol, value:symbol)   // exported
+export_prop(p, m, c, k, v) :- export_inst(p, m, t, c), eff_prop(t, c, k, v, vis),
+  exported(vis), !export_internal_key(k).
+.decl export_rooted(pkg:symbol, comp:symbol, c:Cfg, key:symbol, value:symbol)
+export_rooted(p, m, c, k, v) :- export_prop(p, m, c, k, v), export_path_key(k),
+  (substr(v, 0, 4) = "src:" ; substr(v, 0, 4) = "out:").
+map_query(t, v) :- export_rooted(p, m, _, _, v), export_component(p, m, t).
+error("exported path has no install location", cat(p, ":", m, " ", k, " = ", v)) :-
+  export_rooted(p, m, _, k, v), export_component(p, m, t), !is_mapped(t, v).
+
+// export_fact(p, m, c, kind, key, value): what the package states;
+// kind "path" (relative to the package's prefix), "abspath" (an absolute
+// path outside the package: not relocatable) or "value".
+.decl export_fact(pkg:symbol, comp:symbol, c:Cfg, kind:symbol, key:symbol, value:symbol)
+export_fact(p, m, c, "path", k, r) :- export_rooted(p, m, c, k, v), export_component(p, m, t), mapped(t, v, r).
+export_fact(p, m, c, "abspath", k, v) :- export_prop(p, m, c, k, v), export_path_key(k), substr(v, 0, 1) = "/".
+export_fact(p, m, c, "value", k, v) :- export_prop(p, m, c, k, v), !export_path_key(k).
+error("exported path is neither rooted nor absolute", cat(p, ":", m, " ", k, " = ", v)) :-
+  export_prop(p, m, _, k, v), export_path_key(k), substr(v, 0, 1) != "/", substr(v, 0, 4) != "src:",
+  substr(v, 0, 4) != "out:".
+
+// Requirements: a component's exported edges. One to another component of
+// the package is a requirement by component name; one to any other built
+// target is an error (it must be exported too), and one to an imported
+// target is a requirement on another package (below). Private edges are
+// not exported (a static library's link-only requirements are future work,
+// with linkage as a parameter).
+.decl export_requires(pkg:symbol, comp:symbol, c:Cfg, req:symbol)
+export_requires(p, m, c, n) :- export_inst(p, m, t, c), eff_dep(t, c, d, vis),
+  exported(vis), export_inst(p, n, d, c).
+error_at("exported component depends on a target outside its package", cat(p, ":", m, " -> ", d), t, c) :-
+  export_inst(p, m, t, c), eff_dep(t, c, d, vis), exported(vis), target(d),
+  !target_pkg(d, p), !imported(d).
+
+// Requirements on imported packages. The package is named by the import's origin: the
+// discovered package's own name and component (package_of), unless the
+// author states a name (export_requires_name). The version is the author's
+// stated minimum (export_requires_version) if there is one, otherwise the
+// version found at build time, as a minimum (>= found). A minimum is the
+// one constraint CPS, pkg-config and find_dependency all state.
+// export_requires_version_from records which supplied it (why-able).
+.decl export_import_ref(pkg:symbol, comp:symbol, c:Cfg, ref:symbol, d:symbol, plat:symbol)
+export_import_ref(p, m, c, r, d, x) :- export_inst(p, m, t, c), eff_ref(t, c, r, vis),
+  exported(vis), dep_resolves(t, r, d), imported(d), config_platform(c, x).
+.decl export_requires_named(pkg:symbol, ref:symbol)
+export_requires_named(p, r) :- export_requires_name(p, r, _).
+.decl export_requires_stated(pkg:symbol, ref:symbol)
+export_requires_stated(p, r) :- export_requires_version(p, r, _).
+.decl export_requires_import(pkg:symbol, comp:symbol, c:Cfg, ref:symbol, req_pkg:symbol, req_comp:symbol)
+export_requires_import(p, m, c, r, n, k) :- export_import_ref(p, m, c, r, d, x), export_requires_name(p, r, n),
+  package_of(d, x, _, k).
+export_requires_import(p, m, c, r, n, "") :- export_import_ref(p, m, c, r, d, x), export_requires_name(p, r, n),
+  !package_of(d, x, _, _).
+export_requires_import(p, m, c, r, n, k) :- export_import_ref(p, m, c, r, d, x), !export_requires_named(p, r),
+  package_of(d, x, n, k).
+// export_requires_package(p, m, c, pkg, comp): component m of p requires
+// component comp of package pkg ("" for the package as a whole).
+.decl export_requires_package(pkg:symbol, comp:symbol, c:Cfg, req_pkg:symbol, req_comp:symbol)   // exported
+export_requires_package(p, m, c, n, k) :- export_requires_import(p, m, c, _, n, k).
+.decl export_requires_version_from(pkg:symbol, c:Cfg, req_pkg:symbol, version:symbol, source:symbol)   // exported
+export_requires_version_from(p, c, n, v, "author") :- export_requires_import(p, _, c, r, n, _),
+  export_requires_version(p, r, v).
+export_requires_version_from(p, c, n, cat(a, ".", b, ".", z), "found") :- export_requires_import(p, _, c, r, n, _),
+  !export_requires_stated(p, r), export_import_ref(p, _, c, r, d, x), package_version(d, x, a, b, z).
+.decl export_requires_versioned(pkg:symbol, c:Cfg, req_pkg:symbol)
+export_requires_versioned(p, c, n) :- export_requires_version_from(p, c, n, _, _).
+error_at("exported requirement on an imported target without a package name",
+  cat(p, ":", m, " -> ", d, " (its provider states no package; state export_requires_name for ", r, ")"), t, c) :-
+  export_import_ref(p, m, c, r, d, x), export_component(p, m, t), !export_requires_named(p, r),
+  !package_of(d, x, _, _).
+error("exported requirement has two versions", cat(p, " requires ", n, ": ", v1, " (", s1, ") and ", v2, " (", s2, ")")) :-
+  export_requires_version_from(p, _, n, v1, s1), export_requires_version_from(p, _, n, v2, s2), v1 < v2.
+warning("exported requirement has no version",
+  cat(p, " requires ", n, " (the import states none; export_requires_version states a minimum)")) :-
+  export_requires_package(p, _, c, n, _), !export_requires_versioned(p, c, n).
+error("export_requires_name or export_requires_version of an undeclared package", p) :-
+  export_requires_name(p, _, _), !export_package(p).
+error("export_requires_name or export_requires_version of an undeclared package", p) :-
+  export_requires_version(p, _, _), !export_package(p).
+// ---- native components ----
+// A library component installs and exports its artifact in the
+// configuration's linkage (native_kind_in): the linked file and, for a
+// shared library, its links (the install name, which the loader finds, and
+// lib<o><suffix>, which -l<o> finds), installed as links, under the layout
+// directory a plugin names for the artifact's type (native_artifact_dir).
+// The export states the component's type (CPS: archive | dylib), its
+// location and, for a shared library, its install name. Other kinds, and a
+// static library's link-only (private) requirements, are not exported yet.
+.decl native_artifact_dir(type:symbol, dir:symbol)            // open: e.g. buildlog-cpp's libdir
+.decl export_native(pkg:symbol, comp:symbol, t:symbol, c:Cfg, type:symbol, file:symbol, name:symbol)   // exported
+// native_primary(t, c, type, file, name): t's linked file in c, and native_link
+// (t, c, link, name) a shared library's links to it (shared_link), by the
+// names they install under. A component's artifact (below) and an
+// install_target's are the same files.
+.decl native_primary(t:symbol, c:Cfg, type:symbol, file:symbol, name:symbol)
+.decl native_link(t:symbol, c:Cfg, link:symbol, name:symbol)
+native_primary(t, c, "archive", a, cat("lib", o, ".a")) :- archive(t, c, a), native_name_in(t, c, o).
+native_primary(t, c, "dylib", a, f) :- shared_library(t, c, a), shared_file(t, c, f, _).
+native_link(t, c, l, substr(l, k, strlen(l) - k)) :- shared_link(t, c, l, _), cfg_name(c, n),
+  k = strlen(cat("out:lib/", n, "/")).
+export_native(p, m, t, c, y, a, x) :- export_inst(p, m, t, c), native_primary(t, c, y, a, x).
+.decl native_install(t:symbol, c:Cfg, type:symbol, src:symbol, name:symbol)
+native_install(t, c, y, a, x) :- export_native(_, _, t, c, y, a, x).
+native_install(t, c, "dylib", l, x) :- export_native(_, _, t, c, "dylib", _, _), native_link(t, c, l, x).
+.decl native_install_rel(t:symbol, c:Cfg, src:symbol, rel:symbol)
+native_install_rel(t, c, s, cat(r, "/", x)) :- native_install(t, c, y, s, x), native_artifact_dir(y, d),
+  target_pkg(t, p), pkg_layout_dir(p, d, r).
+installed(c, s, r) :- native_install_rel(_, c, s, r).
+.decl has_native_artifact_dir(type:symbol)
+has_native_artifact_dir(y) :- native_artifact_dir(y, _).
+error_at("exported native artifact has no install directory", cat(p, ":", m, " (", y, ")"), t, c) :-
+  export_native(p, m, t, c, y, _, _), !has_native_artifact_dir(y).
+error_at("exported component with a native artifact (not supported yet)", cat(p, ":", m, " (", k, ")"), t, c) :-
+  export_inst(p, m, t, c), native_kind_in(t, c, k), k != "static_library",
+  k != "shared_library".
+error_at("exported static library has link-only requirements (not supported yet)",
+  cat(p, ":", m, " -> ", d), t, c) :-
+  export_native(p, m, t, c, "archive", _, _), eff_dep(t, c, d, "private"), !native_kind(d, "object_library"),
+  (native_kind(d, _) ; imported(d)).
+
+// ---- installing built targets (install_target, install_configured) ----
+// CMake's install(TARGETS ...) for a target that is not an exported
+// component, and install(FILES <a configured file>): the author states the
+// intent and the layout directory; the files come from the target and the
+// configuration, the same files a component installs (native_primary,
+// native_link). Every active configuration installs its own, as install_file
+// does; CMake installs the one configuration it configured. Two built files
+// meeting at one destination (a library built in two configurations) is an
+// error of the install action, at configure time, whichever configurations
+// they come from: install one (--config). Content that is not known until the
+// build (a configured file in two configurations) is checked by the install
+// action's hashes, as for every other file.
+// built_file(t, c, src, name): the files of t in c an install copies, by name.
+.decl built_file(t:symbol, c:Cfg, src:symbol, name:symbol)
+built_file(t, c, a, x) :- needed(t, c), native_primary(t, c, _, a, x).
+built_file(t, c, l, x) :- needed(t, c), native_link(t, c, l, x).
+built_file(t, c, p, f) :- module_library(t, c, p), module_file(t, c, f).
+built_file(t, c, p, substr(p, k, strlen(p) - k)) :- executable(t, c, p), cfg_name(c, n), k = strlen(cat("out:bin/", n, "/")).
+.decl install_artifact(t:symbol, c:Cfg, src:symbol, name:symbol)   // t's built file in c and its installed name
+install_artifact(t, c, a, x) :- install_target(t, _), built_file(t, c, a, x).
+.decl install_artifact_rel(t:symbol, c:Cfg, src:symbol, rel:symbol)
+install_artifact_rel(t, c, s, cat(r, "/", x)) :- install_artifact(t, c, s, x), install_target(t, d),
+  install_layout_dir(d, r).
+installed(c, s, r) :- install_artifact_rel(_, c, s, r).
+error("install_target of a target that does not exist", t) :- install_target(t, _), !target(t).
+error("install directory has no layout", cat(t, ": ", d)) :- install_target(t, d), !install_layout_dir(d, _).
+error("install_target of an exported component (its package installs it)", t) :- install_target(t, _), in_pkg(t).
+error_at("install_target of a target that builds no installable file", t, t, c) :- install_target(t, _),
+  needed(t, c), !install_artifact(t, c, _, _).
+action_error("out:install", "two built files install to one destination",
+  cat(r, ": ", n1, " and ", n2, "; install one configuration (--config)")) :-
+  install_artifact_rel(_, c1, s1, r), install_artifact_rel(_, c2, s2, r), s1 < s2, has_install_prefix(),
+  cfg_name(c1, n1), cfg_name(c2, n2).
+
+// ---- run-time modules (L1's runtime_dep) ----
+// Installing a loader installs the modules it cannot work without: every
+// required module it reaches (runtime_required, through required edges
+// only), placed as its runtime_dep says. An optional module (runtime_dep_
+// optional) is installed only if the author lists it with install_target,
+// which the rule above already does; its own required modules follow it
+// then (it is a loader too).
+//   beside_loader: in the loader's install directory;
+//   beside_executables: in the install directory of each installed
+//   executable that is or links the loader (runtime_required_by). A loader
+//   no installed executable loads is the only place left: its directory.
+// A module that would land in two directories is an error: it is one file,
+// and a loader that finds it in only one of them is broken in the other.
+.decl install_dir_of(t:symbol, c:Cfg, dir:symbol)   // where t's own files install in c (a layout directory's path)
+install_dir_of(t, c, r) :- install_target(t, d), install_layout_dir(d, r), install_artifact(t, c, _, _).
+install_dir_of(t, c, r) :- native_install(t, c, y, _, _), native_artifact_dir(y, d), target_pkg(t, p), pkg_layout_dir(p, d, r).
+.decl module_beside_executable(t:symbol, c:Cfg, m:symbol)   // an installed executable is or links t, which places m beside executables
+module_beside_executable(t, c, m) :- runtime_required(t, c, m, "beside_executables"), install_dir_of(x, c, _),
+  executable(x, c, _), (x = t ; link_closure(x, c, t)).
+.decl module_dir(m:symbol, c:Cfg, dir:symbol)
+module_dir(m, c, r) :- runtime_required(t, c, m, "beside_loader"), install_dir_of(t, c, r).
+module_dir(m, c, r) :- executable(x, c, _), install_dir_of(x, c, r), runtime_required_by(x, c, m).
+module_dir(m, c, r) :- runtime_required(t, c, m, "beside_executables"), install_dir_of(t, c, r), !module_beside_executable(t, c, m).
+.decl module_install_rel(m:symbol, c:Cfg, src:symbol, rel:symbol)
+module_install_rel(m, c, s, cat(r, "/", x)) :- module_dir(m, c, r), built_file(m, c, s, x).
+installed(c, s, r) :- module_install_rel(_, c, s, r).
+error_at("required run-time module installs to two directories",
+  cat(m, " in ", n, ": ", r1, " and ", r2, " (a module is one file; make it optional and install it where wanted, or install its loader and executables together)"), m, c) :-
+  module_dir(m, c, r1), module_dir(m, c, r2), r1 < r2, cfg_name(c, n).
+
+// ---- run-time modules in an export ----
+// What a loader's package says about the modules it dlopens, in the buildlog
+// format (CMake, CPS and pkg-config have no way to state it: see
+// export_runtime_lossy). A required module of an exported component, or of
+// an exported module, is a `module` component of the package at the place
+// it installs, and the loader requires it (export_runtime_edge), so a
+// consumer that links the loader gets it placed as a built loader would
+// (L3_native, runtime_link). An optional module that is installed
+// (install_target) is exported as available, requiring nothing of users.
+.decl export_module(pkg:symbol, c:Cfg, m:symbol)
+export_module(p, c, m) :- export_inst(p, _, t, c), eff_runtime_edge(t, c, m, _, "required").
+export_module(p, c, m) :- export_inst(p, _, t, c), eff_runtime_edge(t, c, m, _, "optional"), install_artifact(m, c, _, _).
+export_module(p, c, m) :- export_module(p, c, t), eff_runtime_edge(t, c, m, _, "required").
+export_module(p, c, m) :- export_module(p, c, t), eff_runtime_edge(t, c, m, _, "optional"), install_artifact(m, c, _, _).
+.decl has_module_dir(m:symbol, c:Cfg)
+has_module_dir(m, c) :- module_dir(m, c, _).
+.decl export_module_at(pkg:symbol, c:Cfg, m:symbol, rel:symbol)   // exported
+export_module_at(p, c, m, r) :- export_module(p, c, m), module_library(m, c, s), module_install_rel(m, c, s, r).
+export_module_at(p, c, m, r) :- export_module(p, c, m), module_library(m, c, s), install_artifact_rel(m, c, s, r),
+  !has_module_dir(m, c).
+.decl export_runtime_edge(pkg:symbol, c:Cfg, a:symbol, m:symbol, place:symbol)   // exported: a (a component or module) requires m
+export_runtime_edge(p, c, a, m, pl) :- export_inst(p, a, t, c), eff_runtime_edge(t, c, m, pl, "required").
+export_runtime_edge(p, c, a, m, pl) :- export_module(p, c, a), eff_runtime_edge(a, c, m, pl, "required").
+error_at("exported run-time module is not a module library (not supported yet)", cat(p, ": ", m), m, c) :-
+  export_module(p, c, m), !module_library(m, c, _).
+error("exported run-time module is not a component name", cat(p, ": ", m, " (it contains a colon)")) :-
+  export_module(p, _, m), contains(":", m).
+error("exported run-time module has the name of a component", cat(p, ": ", m)) :- export_module(p, _, m),
+  export_component(p, m, _).
+// The other formats drop the requirement; so that is said, as for shipped
+// rules: export_format_omit or export_format_skip drops the format and the warning.
+.decl export_runtime_lossy(pkg:symbol, fmt:symbol, a:symbol, m:symbol)   // exported
+export_runtime_lossy(p, g, a, m) :- export_runtime_edge(p, _, a, m, _), export_format_active(p, f),
+  export_format_in(f, g), g != "buildlog".
+warning("export format cannot state a required run-time module",
+  cat(p, ":", a, " needs ", m, " at run time, which ", g, " cannot state (only the buildlog format does); export_format_omit or export_format_skip drops the format")) :-
+  export_runtime_lossy(p, g, a, m).
+
+install_item(t, c, p) :- install_configured(t, f, _), configured_file(t, c, f, p), needed(t, c).
+install_map(t, substr(p, 0, strlen(p) - strlen(f) - 1), d, "") :- install_configured(t, f, d),
+  configured_file(t, _, f, p).
+error("install_configured of a file that is not configured", cat(t, ": ", f)) :- install_configured(t, f, _),
+  !configure_file(t, f).
+
+// ---- which formats a package is exported in ----
+// Every format a format plugin offers (export_format_file), unless the
+// author omits it (export_format_omit: the package's interface is not
+// encodable there, with the reason) or the user or packager skips it
+// (export_format_skip). A format name covers its files (buildlog-cpp's
+// "cmake" is the config, version and targets files: export_format_of).
+// A format that cannot state some usage requirement of the package is
+// lossy: export_lossy says which (why-able), and configure warns, so that
+// keeping or dropping the format is an informed choice. pkg-config, for
+// example, has no field for cxx.std.
+.decl export_format_named(file_fmt:symbol)
+export_format_named(f) :- export_format_of(f, _).
+.decl export_format_in(file_fmt:symbol, fmt:symbol)
+export_format_in(f, g) :- export_format_of(f, g).
+export_format_in(f, f) :- export_format_file(_, f, _, _), !export_format_named(f).
+.decl export_format_known(fmt:symbol)
+export_format_known(g) :- export_format_in(_, g).
+.decl export_format_off(pkg:symbol, fmt:symbol)
+export_format_off(p, g) :- export_format_omit(p, g, _).
+export_format_off(p, g) :- export_format_skip(p, g).
+.decl export_format_active(pkg:symbol, file_fmt:symbol)
+export_format_active(p, f) :- export_format_file(p, f, _, _), export_format_in(f, g), !export_format_off(p, g).
+error("unknown export format", cat(p, ": ", g)) :- export_format_off(p, g), !export_format_known(g).
+error("export format of an undeclared package", cat(p, ": ", g)) :- export_format_off(p, g), !export_package(p).
+.decl export_lossy(pkg:symbol, fmt:symbol, comp:symbol, key:symbol, reason:symbol)   // exported
+export_lossy(p, g, m, k, why) :- export_fact(p, m, _, _, k, _), export_format_active(p, f),
+  export_format_in(f, g), export_unspelled(f, k, why).
+warning("export format cannot state a usage requirement",
+  cat(p, ":", m, " ", k, " in ", g, " (", why, "); export_format_omit or export_format_skip drops the format")) :-
+  export_lossy(p, g, m, k, why).
+
+// A package that ships rules (export_rules, below) ships them only in the
+// buildlog format; every other active format drops them. That is a loss too:
+// export_rules_lossy says which format drops which package's rules.
+.decl export_rules_lossy(pkg:symbol, fmt:symbol, dir:symbol)   // exported
+export_rules_lossy(p, g, d) :- export_rules(p, d), export_format_active(p, f), export_format_in(f, g), g != "buildlog".
+warning("export format cannot carry shipped rules",
+  cat(p, ": the rules of ", d, " are not in ", g, " (only the buildlog format ships them); export_format_omit or export_format_skip drops the format")) :-
+  export_rules_lossy(p, g, d).
+
+// ---- export files ----
+.decl export_file(pkg:symbol, c:Cfg, fmt:symbol, out:symbol, rel:symbol)
+export_file(p, c, f, cat("out:export/", n, "/", p, "/", d, "/", name), cat(r, "/", name)) :-
+  export_format_file(p, f, d, name), export_format_active(p, f), export_config(p, c), cfg_name(c, n),
+  pkg_layout_dir(p, d, r).
+.decl has_pkg_dir(pkg:symbol, dir:symbol)
+has_pkg_dir(p, d) :- pkg_layout_dir(p, d, _).
+error("install directory has no layout", cat(p, ": ", d)) :- export_format_file(p, _, d, _), !has_pkg_dir(p, d).
+installed(c, o, r) :- export_file(p, c, f, o, r), !export_file_dup(p, f, c).
+// The export files are the package's build products (a header-only package has
+// no others), so plain `ninja` writes them; installing stays the `install` target.
+default_output(o) :- export_file(_, _, _, o, _).
+
+.decl has_value_spelling(fmt:symbol, key:symbol)
+has_value_spelling(f, k) :- export_value_spelling(f, k, _, _).
+.decl export_spelled(pkg:symbol, comp:symbol, c:Cfg, fmt:symbol, kind:symbol, field:symbol, value:symbol)
+export_spelled(p, m, c, f, "value", x, s) :- export_fact(p, m, c, "value", k, v), export_format_components(f),
+  export_spelling(f, k, x), export_value_spelling(f, k, v, s).
+export_spelled(p, m, c, f, "value", x, v) :- export_fact(p, m, c, "value", k, v), export_format_components(f),
+  export_spelling(f, k, x), !has_value_spelling(f, k).
+export_spelled(p, m, c, f, kind, x, v) :- export_fact(p, m, c, kind, k, v), kind != "value",
+  export_format_components(f), export_spelling(f, k, x).
+.decl has_spelling(fmt:symbol, key:symbol)
+has_spelling(f, k) :- export_spelling(f, k, _).
+has_spelling(f, k) :- export_unspelled(f, k, _).
+// A key is spelled or unspelled in a format, never both: the two tables would
+// derive a spelling and a loss for the same exported fact.
+error("export key both spelled and unspelled", cat(f, ": ", k)) :- export_spelling(f, k, _), export_unspelled(f, k, _).
+error("export key both value-spelled and unspelled", cat(f, ": ", k)) :- export_value_spelling(f, k, _, _), export_unspelled(f, k, _).
+error("exported property has no spelling in an export format", cat(p, ":", m, " ", k, " in ", f)) :-
+  export_fact(p, m, _, _, k, _), export_format_active(p, f), export_format_components(f), !has_spelling(f, k).
+error("exported value has no spelling in an export format", cat(p, ":", m, " ", k, "=", v, " in ", f)) :-
+  export_fact(p, m, _, "value", k, v), export_format_active(p, f), has_value_spelling(f, k),
+  !export_value_spelling(f, k, v, _).
+
+// One writer action per (package, configuration, format).
+action(o, "EXPORT"), action_builtin(o, "export_package"), action_restat(o),
+action_arg(o, 1, "--format ", f), action_arg(o, 2, "-o ", o), action_arg(o, 3, "--package ", p),
+action_arg(o, 4, "--install-path ", r) :- export_file(p, _, f, o, r).
+action_arg(o, 5, "--version ", v) :- export_file(p, _, _, o, _), export_version(p, v).
+action_arg(o, 6, "--compat ", x) :- export_file(p, _, _, o, _), export_compat_in(p, x).
+action_arg(o, 7, "--description ", x) :- export_file(p, _, _, o, _), export_description(p, x).
+action_arg(o, 8, "", "--arch-independent") :- export_file(p, _, _, o, _), !export_arch_dependent(p).
+action_arg(o, 20, "--component=interface:", m) :- export_file(p, _, _, o, _), export_component(p, m, t),
+  !native_kind(t, _).
+action_arg(o, 20, cat("--component=", y, ":"), m) :- export_file(p, c, _, o, _), export_native(p, m, _, c, y, _, _).
+action_arg(o, 25, "--location=", cat(m, "=", r)) :- export_file(p, c, _, o, _), export_native(p, m, t, c, _, a, _),
+  native_install_rel(t, c, a, r).
+action_arg(o, 26, "--soname=", cat(m, "=", d, s)) :- export_file(p, c, _, o, _),
+  export_native(p, m, t, c, "dylib", _, _), shared_file(t, c, _, s), shared_spell(t, c, "install_name_dir", d).
+action_arg(o, 27, "--link-name=", cat(m, "=", n)) :- export_file(p, c, _, o, _), export_native(p, m, t, c, _, _, _),
+  native_name_in(t, c, n).
+action_arg(o, 21, "--requires=", cat(m, ":", n)) :- export_file(p, c, f, o, _), export_format_components(f),
+  export_requires(p, m, c, n).
+action_arg(o, 22, cat("--", kind, "=", m, ":", x, "="), v) :- export_file(p, c, f, o, _),
+  export_spelled(p, m, c, f, kind, x, v).
+action_arg(o, 23, "--depends=", cat(m, ":", n, ":", k)) :- export_file(p, c, _, o, _),
+  export_requires_package(p, m, c, n, k).
+action_arg(o, 24, "--depends-version=", cat(n, "=", v)) :- export_file(p, c, _, o, _),
+  export_requires_version_from(p, c, n, v, _).
+action_arg_set(o, 20), action_arg_set(o, 21), action_arg_set(o, 22) :- export_file(_, _, _, o, _).
+action_arg_set(o, 23), action_arg_set(o, 24) :- export_file(_, _, _, o, _).
+action_arg_set(o, 25), action_arg_set(o, 26), action_arg_set(o, 27) :- export_file(_, _, _, o, _).
+// Run-time modules: only the buildlog format's facts file states them.
+action_arg(o, 20, "--component=module:", m) :- export_file(p, c, "buildlog-facts", o, _), export_module(p, c, m).
+action_arg(o, 25, "--location=", cat(m, "=", r)) :- export_file(p, c, "buildlog-facts", o, _), export_module_at(p, c, m, r).
+action_arg(o, 28, "--runtime-dep=", cat(a, ":", m, ":", pl)) :- export_file(p, c, "buildlog-facts", o, _),
+  export_runtime_edge(p, c, a, m, pl).
+action_arg_set(o, 28) :- export_file(_, _, _, o, _).
+target_action(t, c, o) :- export_file(p, c, _, o, _), export_inst(p, _, t, c).
+
+// ---- the buildlog format: the package as Datalog (dl_package.py) ----
+// The package is installed as a rule package, <prefix>/share/buildlog/<pkg>/:
+// manifest.toml, <pkg>.facts.dl (the export_* facts above, in buildlog's own
+// property keys: identity spelling, so nothing is unspelled) and the layers of
+// the project's own rule package, if it declares one. export_rules(pkg, dir)
+// names that package (a directory of the source, with a manifest.toml named
+// like pkg); the spec loader lists its files (export_rules_file, derived: not
+// stated) and the install
+// ships them unchanged beside the generated manifest, which adds the facts
+// file to the package's own `facts`.
+.decl export_rules(pkg:symbol, dir:symbol)
+.decl export_rules_file(pkg:symbol, rel:symbol, src:symbol)   // derived from export_rules
+export_format_file(p, "buildlog-facts", "buildlogdir", cat(p, "/", p, ".facts.dl")) :- export_package(p).
+export_format_file(p, "buildlog-manifest", "buildlogdir", cat(p, "/manifest.toml")) :- export_package(p).
+export_format_of("buildlog-facts", "buildlog"). export_format_of("buildlog-manifest", "buildlog").
+export_format_components("buildlog-facts").
+export_spelling("buildlog-facts", k, k) :- export_fact(_, _, _, _, k, _).
+install_pkg_dir_default(p, "buildlogdir", cat(r, "/buildlog")) :- export_package(p), install_layout_dir("datadir", r).
+installed(c, s, cat(r, "/", p, "/", f)) :- export_rules_file(p, f, s), f != "manifest.toml",
+  export_format_active(p, "buildlog-manifest"), export_config(p, c), pkg_layout_dir(p, "buildlogdir", r).
+action_arg(o, 10, "--rules-manifest ", m), action_in(o, m, "explicit") :- export_file(p, _, "buildlog-manifest", o, _),
+  export_rules_file(p, "manifest.toml", m).
+error("export_rules of an undeclared package", p) :- export_rules(p, _), !export_package(p).
+
+// ---- multi-configuration installs ----
+// Several configurations may install into one prefix as long as nothing is
+// clobbered: one destination may receive identical content from several
+// configurations, never two different contents. Where the content is known statically,
+// the check is here, at configure time:
+// - one source file (src:...) installed by several configurations is one
+//   install_pair: it is copied once;
+// - one package's export files for one format in two configurations are
+//   written by one builtin from typed argv whose only per-configuration
+//   parts are the requirements (ranks 21, 23, 24), the spelled facts (rank
+//   22) and a native component's type and location (ranks 20, 25)
+//   (the output path is not in the content), so they are identical exactly
+//   when those agree. Identical ones install once (the configuration with
+//   the smallest name); different ones are an error of the install action,
+//   naming a fact that differs (the rest of the graph still builds).
+// Everything else that meets at one destination (two build outputs, e.g.
+// one program built in two configurations, or two source files) is checked
+// when installing: the `install` builtin hashes every source of a
+// destination and fails, before copying anything, unless they agree.
+.decl export_cfg_pair(pkg:symbol, fmt:symbol, c1:Cfg, c2:Cfg)
+export_cfg_pair(p, f, c1, c2) :- export_file(p, c1, f, _, _), export_file(p, c2, f, _, _), c1 != c2.
+.decl export_cfg_witness(pkg:symbol, fmt:symbol, c1:Cfg, c2:Cfg, what:symbol)   // in c1, not in c2
+export_cfg_witness(p, f, c1, c2, cat(m, " ", x, " ", v)) :- export_cfg_pair(p, f, c1, c2),
+  export_spelled(p, m, c1, f, _, x, v), !export_spelled(p, m, c2, f, _, x, v).
+export_cfg_witness(p, f, c1, c2, cat(m, " requires ", n)) :- export_cfg_pair(p, f, c1, c2),
+  export_format_components(f), export_requires(p, m, c1, n), !export_requires(p, m, c2, n).
+export_cfg_witness(p, f, c1, c2, cat(m, " requires ", n, ":", k)) :- export_cfg_pair(p, f, c1, c2),
+  export_requires_package(p, m, c1, n, k), !export_requires_package(p, m, c2, n, k).
+export_cfg_witness(p, f, c1, c2, cat("requires ", n, " >= ", v)) :- export_cfg_pair(p, f, c1, c2),
+  export_requires_version_from(p, c1, n, v, _), !export_requires_version_from(p, c2, n, v, _).
+export_cfg_witness(p, f, c1, c2, cat(m, " is ", y, " ", r)) :- export_cfg_pair(p, f, c1, c2),
+  export_native(p, m, t, c1, y, a, _), native_install_rel(t, c1, a, r), !export_native_at(p, m, c2, y, r).
+export_cfg_witness(p, "buildlog-facts", c1, c2, cat(m, " is the module ", r)) :- export_cfg_pair(p, "buildlog-facts", c1, c2),
+  export_module_at(p, c1, m, r), !export_module_at(p, c2, m, r).
+export_cfg_witness(p, "buildlog-facts", c1, c2, cat(a, " loads ", m, " ", pl)) :- export_cfg_pair(p, "buildlog-facts", c1, c2),
+  export_runtime_edge(p, c1, a, m, pl), !export_runtime_edge(p, c2, a, m, pl).
+.decl export_native_at(pkg:symbol, comp:symbol, c:Cfg, type:symbol, rel:symbol)
+export_native_at(p, m, c, y, r) :- export_native(p, m, t, c, y, a, _), native_install_rel(t, c, a, r).
+.decl export_cfg_differs(pkg:symbol, fmt:symbol, c1:Cfg, c2:Cfg)
+export_cfg_differs(p, f, c1, c2), export_cfg_differs(p, f, c2, c1) :- export_cfg_witness(p, f, c1, c2, _).
+.decl export_file_dup(pkg:symbol, fmt:symbol, c:Cfg)     // an identical file of an earlier configuration installs
+export_file_dup(p, f, c) :- export_cfg_pair(p, f, c, c2), !export_cfg_differs(p, f, c, c2),
+  cfg_name(c, n), cfg_name(c2, n2), n2 < n.
+action_error("out:install", "two configurations export different files to one destination",
+  cat(r, ": ", n1, " has ", w, ", ", n2, " does not")) :- export_cfg_witness(p, f, c1, c2, w),
+  export_file(p, c1, f, _, r), cfg_name(c1, n1), cfg_name(c2, n2), has_install_prefix().
+
+// ---- the install action ----
+.decl install_pair(src:symbol, rel:symbol)
+install_pair(s, r) :- installed(_, s, r).
+// Where each file goes (for `why`): the user's prefix and the layout.
+.decl install_path(src:symbol, rel:symbol, dest:symbol)
+install_path(s, r, cat(p, "/", r)) :- install_pair(s, r), install_prefix(p), p != "/".
+install_path(s, r, cat("/", r)) :- install_pair(s, r), install_prefix("/").
+.decl install_rank(src:symbol, rel:symbol, i:number)
+install_rank(s, r, a + b) :- install_pair(s, r), a = count : { install_pair(_, r2), r2 < r },
+  b = count : { install_pair(s2, r), s2 < s }.
+action("out:install", "INSTALL"), action_builtin("out:install", "install") :- install_pair(_, _).
+action_arg("out:install", 1, "--prefix ", p) :- install_pair(_, _), install_prefix(p).
+action_arg("out:install", 1, "", "--no-prefix") :- install_pair(_, _), !has_install_prefix().
+action_arg("out:install", 10 + 2 * i, "--file ", s), action_in("out:install", s, "explicit") :- install_rank(s, _, i).
+action_arg("out:install", 11 + 2 * i, "", d) :- install_rank(s, r, i), install_path(s, r, d).
+action_arg("out:install", 11 + 2 * i, "", r) :- install_rank(_, r, i), !has_install_prefix().

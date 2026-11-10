@@ -1,0 +1,133 @@
+# CMAKE generated file: DO NOT EDIT!
+# Miniature Halide-shaped build for the normalizer tests.
+
+ninja_required_version = 1.8
+
+include CMakeFiles/rules.ninja
+
+cmake_ninja_workdir = /work/build/
+
+#############################################
+# Utility command for edit_cache
+
+build CMakeFiles/edit_cache.util: CUSTOM_COMMAND
+  COMMAND = cd /work/build && /work/cmake/bin/ccmake -S/work/src -B/work/build
+  DESC = Running CMake cache editor...
+  pool = console
+  restat = 1
+
+build edit_cache: phony CMakeFiles/edit_cache.util
+
+# =============================================================================
+# Object build statements for EXECUTABLE target binary2cpp
+
+
+#############################################
+# Order-only phony target for binary2cpp
+
+build cmake_object_order_depends_target_binary2cpp: phony || .
+
+build tools/CMakeFiles/binary2cpp.dir/binary2cpp.cpp.o: CXX_COMPILER__binary2cpp_unscanned_Release /work/src/tools/binary2cpp.cpp || cmake_object_order_depends_target_binary2cpp
+  DEFINES = -DNDEBUG_X
+  DEP_FILE = tools/CMakeFiles/binary2cpp.dir/binary2cpp.cpp.o.d
+  FLAGS = -O3 -DNDEBUG -std=c++17 -arch arm64
+  OBJECT_DIR = tools/CMakeFiles/binary2cpp.dir
+  OBJECT_FILE_DIR = tools/CMakeFiles/binary2cpp.dir
+
+# =============================================================================
+# Link build statements for EXECUTABLE target binary2cpp
+
+
+#############################################
+# Link the executable tools/binary2cpp
+
+build tools/binary2cpp: CXX_EXECUTABLE_LINKER__binary2cpp_Release tools/CMakeFiles/binary2cpp.dir/binary2cpp.cpp.o
+  FLAGS = -O3 -DNDEBUG -arch arm64
+  LINK_FLAGS = -Wl,-search_paths_first
+  OBJECT_DIR = tools/CMakeFiles/binary2cpp.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = tools/binary2cpp
+
+#############################################
+# Custom command for src/runtime/_initmod_posix.cpp
+
+build src/runtime/_initmod_posix.cpp: CUSTOM_COMMAND /work/src/src/runtime/posix.bc tools/binary2cpp || tools/binary2cpp
+  COMMAND = cd /work/build/src/runtime && /work/build/tools/binary2cpp halide_internal_initmod_posix < /work/src/src/runtime/posix.bc > _initmod_posix.cpp
+  DESC = Generating _initmod_posix.cpp
+  restat = 1
+
+# =============================================================================
+# Object build statements for OBJECT_LIBRARY target Halide_initmod
+
+build src/runtime/CMakeFiles/Halide_initmod.dir/_initmod_posix.cpp.o: CXX_COMPILER__Halide_initmod_unscanned_Release src/runtime/_initmod_posix.cpp
+  DEP_FILE = src/runtime/CMakeFiles/Halide_initmod.dir/_initmod_posix.cpp.o.d
+  FLAGS = -O3 -DNDEBUG -arch arm64 -fPIC
+  OBJECT_DIR = src/runtime/CMakeFiles/Halide_initmod.dir
+  OBJECT_FILE_DIR = src/runtime/CMakeFiles/Halide_initmod.dir
+
+# =============================================================================
+# Object build statements for SHARED_LIBRARY target Halide
+
+build src/CMakeFiles/Halide.dir/Func.cpp.o: CXX_COMPILER__Halide_unscanned_Release /work/src/src/Func.cpp || cmake_object_order_depends_target_binary2cpp
+  DEFINES = -DHalide_EXPORTS -DWITH_X86
+  DEP_FILE = src/CMakeFiles/Halide.dir/Func.cpp.o.d
+  FLAGS = -O3 -DNDEBUG -std=c++17 -arch arm64 -fPIC
+  INCLUDES = -I/work/src/src -isystem /opt/homebrew/opt/llvm@22/include
+  OBJECT_DIR = src/CMakeFiles/Halide.dir
+  OBJECT_FILE_DIR = src/CMakeFiles/Halide.dir
+
+# =============================================================================
+# Link build statements for SHARED_LIBRARY target Halide
+
+
+#############################################
+# Link the shared library src/libHalide.22.0.0.dylib
+
+build src/libHalide.22.0.0.dylib: CXX_SHARED_LIBRARY_LINKER__Halide_Release src/CMakeFiles/Halide.dir/Func.cpp.o src/runtime/CMakeFiles/Halide_initmod.dir/_initmod_posix.cpp.o | /opt/homebrew/opt/llvm@22/lib/libLLVM.dylib
+  ARCH_FLAGS = -arch arm64
+  INSTALLNAME_DIR = @rpath/
+  LANGUAGE_COMPILE_FLAGS = -O3 -DNDEBUG
+  LINK_LIBRARIES = /opt/homebrew/opt/llvm@22/lib/libLLVM.dylib
+  OBJECT_DIR = src/CMakeFiles/Halide.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  SONAME = libHalide.22.dylib
+  SONAME_FLAG = -install_name
+  TARGET_FILE = src/libHalide.22.0.0.dylib
+
+
+#############################################
+# Create library symlink src/libHalide.dylib
+
+build src/libHalide.22.dylib src/libHalide.dylib: CMAKE_SYMLINK_LIBRARY src/libHalide.22.0.0.dylib
+  POST_BUILD = :
+  SONAME = src/libHalide.22.dylib
+
+#############################################
+# Utility command for Halide_py_thing
+
+build python_bindings/CMakeFiles/Halide_py_thing.util: CUSTOM_COMMAND
+  COMMAND = cd /work/build/python_bindings && /usr/bin/true
+
+build Halide_py_thing: phony python_bindings/CMakeFiles/Halide_py_thing.util
+
+#############################################
+# Re-run CMake if any of its inputs changed.
+
+build build.ninja: RERUN_CMAKE | /work/src/CMakeLists.txt
+  pool = console
+
+#############################################
+# Target aliases.
+
+build Halide: phony src/libHalide.dylib
+
+build binary2cpp: phony tools/binary2cpp
+
+#############################################
+# Folder: /work/build
+
+build all: phony src/libHalide.dylib tools/binary2cpp
+
+default all

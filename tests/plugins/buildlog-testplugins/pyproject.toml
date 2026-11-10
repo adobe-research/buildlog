@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+[project]
+name = "buildlog-testplugins"
+version = "0.1.0"
+description = "Tier-1 plugin fixtures for the buildlog test suite (not for use in projects)"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = ["buildlog"]
+
+[project.entry-points."buildlog.plugins"]
+test-runaway = "buildlog_testplugins:runaway"
+test-bad-probe = "buildlog_testplugins:bad_probe"
+test-bad-entry = "buildlog_testplugins:bad_entry"
+test-discover = "buildlog_testplugins:discover"
+test-version-skew = "buildlog_testplugins:version_skew"
+test-provider = "buildlog_testplugins:provider"
+
+[build-system]
+requires = ["uv_build>=0.8.0,<0.9"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+buildlog = { workspace = true }

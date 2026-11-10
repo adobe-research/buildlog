@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Bind nlohmann_json by building it in-tree from its spec (the case study's
+# project; its own source root). Its options are namespaced by the source
+# project's name and are the user's: nlohmann-diagnostics.toml turns
+# nlohmann_json.JSON_Diagnostics on.
+source_project = [["nlohmann_json", "../../../project"]]

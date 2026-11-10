@@ -1,0 +1,2 @@
+uses = ["buildlog-cpp"]
+spec = ["spec.toml"]

@@ -1,0 +1,7 @@
+// Layers must not contain IO: the loader generates .input/.output from the
+// manifest. Both directives below must be rejected.
+.decl seeded(x:symbol)
+.input seeded
+.decl leaked(x:symbol)
+leaked(x) :- seeded(x).
+.output leaked

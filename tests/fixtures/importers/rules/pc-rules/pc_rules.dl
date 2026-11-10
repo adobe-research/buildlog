@@ -1,0 +1,6 @@
+.decl pc_rules_marker(o:symbol)
+pc_rules_marker("out:pc-rules/marker").
+action(o, "PC_RULES") :- pc_rules_marker(o).
+action_arg(o, 0, "", "touch") :- pc_rules_marker(o).
+action_arg(o, 1, "", o) :- pc_rules_marker(o).
+default_output(o) :- pc_rules_marker(o).

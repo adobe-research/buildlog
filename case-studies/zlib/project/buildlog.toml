@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# zlib 1.3.2, as its CMakeLists.txt builds it on this Mac (the zlib case
+# study; case-studies/zlib/README.md). Configure with a user file:
+#   uv run --frozen buildlog configure --user case-studies/zlib/project/presets/apple-clang-arm64.toml \
+#     -C BUILD case-studies/zlib/project
+uses = ["buildlog-cpp"]
+source_root = "${ZLIB_SRC}"
+spec = ["spec.toml", "configured.toml", "tests.toml", "install.toml", "rules.dl"]
+
+[vars]
+# The pinned checkout the CMake baseline builds (tag v1.3.2, da607da7; see
+# baseline/run-cmake.sh).
+ZLIB_SRC = "${REPO_ROOT}/case-studies/zlib/upstream"
+# The installation prefix zlib.pc names (CMake's CMAKE_INSTALL_PREFIX and
+# its default); an invoker's decision, overridden with -D INSTALL_PREFIX=...
+INSTALL_PREFIX = "/usr/local"

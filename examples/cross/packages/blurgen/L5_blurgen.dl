@@ -1,0 +1,45 @@
+// L5: a project-local code-generator layer for `blurgen`, a stand-in for a
+// Halide-style generator (a host tool that emits a target library + header).
+// It only *extends* lower layers: it adds targets (L1), actions (L0), link
+// files (L3) and C-family interface properties (L4 keys). It never says
+// where the generator runs: the action names it by reference (action_run),
+// and core infers that it is built for the exec configuration.
+
+.decl blurgen_library(l:symbol, generator:symbol, fn:symbol)
+
+target(l) :- blurgen_library(l, _, _).
+tc_required("c", c) :- needed(l, c), blurgen_library(l, _, _).
+
+// The generator's support code is C built on the generator's host, so ask
+// buildlog-cpp's cc_capability probe about (toolchain, "c", exec platform).
+// The request depends on derived need/exec_config, not merely declared facts;
+// the domain stays owned by buildlog-cpp and must cover it.
+.decl blurgen_host(tc:symbol, p:symbol)
+blurgen_host(tc, p) :- needed(l, c), blurgen_library(l, _, _), exec_config(c, e), config_platform(e, p),
+  toolchain_runs_on(tc, p).
+req_cc_capability(id, tc, "c", p) :- blurgen_host(tc, p), domain_cc_capability(id, tc, "c", p).
+// It breaks every blurgen library whose generator runs on that host.
+error_at("blurgen host compiler cannot compile C", cat(tc, " on ", p), l, c) :- needed(l, c),
+  blurgen_library(l, _, _), exec_config(c, e), config_platform(e, p), blurgen_host(tc, p),
+  req_cc_capability(id, tc, "c", p), res_cc_capability(id, tc, "c", p, "no").
+
+.decl blurgen_out(l:symbol, c:Cfg, dir:symbol, fn:symbol)
+blurgen_out(l, c, cat("out:gen/", n, "/", l), fn) :- needed(l, c), blurgen_library(l, _, fn), cfg_name(c, n).
+
+// The same interface facts a compiled C library would expose.
+link_file(l, c, cat(d, "/", fn, ".a")) :- blurgen_out(l, c, d, fn).
+// The generated library is compiled for its configuration's platform.
+artifact_covers(cat(d, "/", fn, ".a"), p) :- blurgen_out(_, c, d, fn), config_platform(c, p).
+iface(l, c, "cc.include_dir", d) :- blurgen_out(l, c, d, _).
+iface(l, c, "cc.generated_header", cat(d, "/", fn, ".h")) :- blurgen_out(l, c, d, fn).
+
+action(cat(d, "/", fn, ".a"), "BLURGEN") :- blurgen_out(_, _, d, fn).
+target_action(l, c, cat(d, "/", fn, ".a")) :- blurgen_out(l, c, d, fn).
+action_out(cat(d, "/", fn, ".a"), cat(d, "/", fn, ".h")) :- blurgen_out(_, _, d, fn).
+action_run(cat(d, "/", fn, ".a"), 0, "", g, "run") :- blurgen_out(l, _, d, fn), blurgen_library(l, g, _).
+action_arg(cat(d, "/", fn, ".a"), 1, "-o ", d) :- blurgen_out(_, _, d, fn).
+action_arg(cat(d, "/", fn, ".a"), 2, "-f ", fn) :- blurgen_out(_, _, d, fn).
+action_arg(cat(d, "/", fn, ".a"), 3, "-target ", tr) :- blurgen_out(_, c, d, fn), config_platform(c, p),
+  platform(p, tr).
+action_arg(cat(d, "/", fn, ".a"), 4, "-cc ", cc) :- blurgen_out(_, c, d, fn), tc_for("c", c, tc),
+  toolchain_tool(tc, "cc", cc).

@@ -1,0 +1,8 @@
+# A binding source that aliases names to target ids (like an importer's
+# alias("PNG::PNG", "pc:libpng")).
+name = "ids-alias"
+version = "0.1.0"
+rank = 2
+layers = ["aliases.dl"]
+extends = ["alias"]
+requires = { buildlog = ">=0.1" }

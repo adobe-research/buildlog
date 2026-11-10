@@ -1,0 +1,23 @@
+{
+ "backtrace": 0,
+ "backtraceGraph": {
+  "commands": [],
+  "files": [
+   "python_bindings/CMakeLists.txt"
+  ],
+  "nodes": [
+   {
+    "file": 0
+   }
+  ]
+ },
+ "dependencies": [],
+ "id": "Halide_py_thing::@4",
+ "name": "Halide_py_thing",
+ "paths": {
+  "build": "python_bindings",
+  "source": "python_bindings"
+ },
+ "sources": [],
+ "type": "UTILITY"
+}

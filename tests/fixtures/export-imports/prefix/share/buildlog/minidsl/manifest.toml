@@ -1,0 +1,19 @@
+# An upstream whose install has only a CMake export: this hand-written
+# manifest imports it and ships the rules (the layer is copied in by the test
+# from tests/fixtures/export-rules).
+name = "minidsl"
+version = "1.0.0"
+rank = 5
+namespace = "minidsl"
+layers = ["L5_minidsl.dl"]
+requires = { buildlog-cpp = ">=0.1" }
+imports = [{ format = "cmake", file = "../../../lib/cmake/minidsl/minidslTargets.cmake" }]
+extends = [
+  "source_claimed",
+  "path_want",
+  "cxx_generated_source",
+  "action",
+  "action_arg",
+  "action_in",
+  "target_action",
+]

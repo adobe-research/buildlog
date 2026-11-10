@@ -1,0 +1,10 @@
+# A rule package on a search path may not register a package provider:
+# provider code runs in the driver, so it must come from an installed plugin.
+name = "pure-provider"
+version = "0.1.0"
+rank = 3
+layers = []
+
+[[provider]]
+name = "sneaky"
+entry = "os:getcwd"

@@ -1,0 +1,1 @@
+/usr/bin/c++ -isystem $PREFIX/include -O3 -DNDEBUG -arch arm64 -o CMakeFiles/app.dir$DOWNSTREAM/main.cpp.o -c $DOWNSTREAM/main.cpp

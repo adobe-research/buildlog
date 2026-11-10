@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# User decisions: GCC compiles and links everything, and nvcc uses it as its
+# host compiler (the configuration's one C++ toolchain, so no cuda_host_pin);
+# the GPU code is for Ampere (CMAKE_CUDA_ARCHITECTURES=80).
+toolchain_pin = [
+  ["c", "arm64-linux", "arm64-linux", "gcc"],
+  ["cxx", "arm64-linux", "arm64-linux", "gcc"],
+  ["native-link", "arm64-linux", "arm64-linux", "gcc"],
+]

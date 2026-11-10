@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# A downstream of nlohmann/json: one program, ../main.cpp, that depends on
+# the name nlohmann_json. Which nlohmann_json is the user's choice, made in a
+# user file, never here (case-studies/nlohmann-json/README.md):
+#   presets/in-tree.toml       build it in-tree from its spec (source_project)
+#   presets/import-cps.toml    import an install's CPS file (-D NLOHMANN_PREFIX=...)
+#   presets/import-pc.toml     ... its pkg-config file
+#   presets/import-cmake.toml  ... its CMake export file
+uses = ["buildlog-cpp"]
+source_root = ".."
+
+config_decl = { release = "arm64-macos" }
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = ["app"]
+
+[target.app]
+kind = "executable"
+sources = ["main.cpp"]
+deps = { private = ["nlohmann_json"] }

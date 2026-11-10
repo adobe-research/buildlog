@@ -1,0 +1,9 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+.decl toy_rules_marker(o:symbol)
+toy_rules_marker(cat("out:toy/", t)) :- imported(t), substr(t, 0, 4) = "toy:".
+action(o, "TOY") :- toy_rules_marker(o).
+action_arg(o, 0, "", "touch") :- toy_rules_marker(o).
+action_arg(o, 1, "", o) :- toy_rules_marker(o).
+default_output(o) :- toy_rules_marker(o).

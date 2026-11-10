@@ -1,0 +1,7 @@
+load_backend: loaded CPU backend from $BUILD/bin/libggml-cpu-armv8.2_2.so
+Testing 1 devices
+
+Backend 1/1: CPU
+  Skipping CPU backend
+1/1 backends passed
+[1;32mOK[0m

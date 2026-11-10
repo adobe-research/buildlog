@@ -1,0 +1,19 @@
+ 1/18 Test  #1: zlib_example ...................................   Passed
+ 2/18 Test  #2: zlib_example64 .................................   Passed
+ 3/18 Test  #3: zlib_static_example ............................   Passed
+ 4/18 Test  #4: zlib_coverage ..................................   Passed
+ 5/18 Test  #5: zlib_coverage-summary ..........................   Passed
+ 6/18 Test  #6: zlib_static_example64 ..........................   Passed
+ 7/18 Test  #7: zlib_install ...................................   Passed
+ 8/18 Test  #8: zlib_find_package_configure ....................   Passed
+ 9/18 Test  #9: zlib_find_package_build ........................   Passed
+10/18 Test #10: zlib_find_package_test .........................   Passed
+11/18 Test #11: zlib_find_package_no_components_configure ......   Passed
+12/18 Test #12: zlib_find_package_wrong_components_configure ...   Passed
+13/18 Test #13: zlib_add_subdirectory_configure ................   Passed
+14/18 Test #14: zlib_add_subdirectory_build ....................   Passed
+15/18 Test #15: zlib_add_subdirectory_test .....................   Passed
+16/18 Test #16: zlib_add_subdirectory_exclude_configure ........   Passed
+17/18 Test #17: zlib_add_subdirectory_exclude_build ............   Passed
+18/18 Test #18: zlib_add_subdirectory_exclude_test .............   Passed
+100% tests passed out of 18

@@ -1,0 +1,8 @@
+# A pure rule package that no project lists: the test-discover plugin's probe
+# finds it (outer loop, mechanism A).
+name = "found"
+version = "0.1.0"
+rank = 5
+namespace = "found"
+layers = ["found.dl"]
+extends = ["action", "action_arg", "default_output"]

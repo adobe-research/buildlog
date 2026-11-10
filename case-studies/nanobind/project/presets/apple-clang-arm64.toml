@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# User decision for this Mac: Apple's clang compiles C++ and links (what
+# scikit-build-core picks from sysconfig's CXX). The interpreters to build
+# for are a separate decision: interpreters.toml here, or the interpreter a
+# PEP 517 frontend runs the backend in (buildlog_python.backend).
+toolchain_pin = [
+  ["cxx", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "arm64-macos", "apple-clang"],
+]

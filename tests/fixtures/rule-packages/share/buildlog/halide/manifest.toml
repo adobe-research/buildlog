@@ -1,0 +1,66 @@
+# Halide as a pure (tier-2) rule package: Datalog and facts only, found on a
+# search path (<prefix>/share/buildlog/halide) and loaded through `uses` or
+# by its namespace.
+name = "halide"
+version = "0.1.0"
+rank = 5
+namespace = "halide"
+layers = ["L5_halide_real.dl"]
+facts = ["halide.facts.toml"]
+# Target ids are Halide::<name>, the CMake export names. The
+# relation namespace stays lowercase; the target namespace is declared.
+target_namespace = "Halide"
+requires = { buildlog-cpp = ">=0.1" }
+extends = [
+  "target",
+  "dep",
+  "action_run",
+  "prop",
+  "iface",
+  "tc_required",
+  "native_kind",
+  "linkage_require",
+  "cxx_source",
+  "native_object",
+  "link_file",
+  "action",
+  "action_arg",
+  "action_in",
+  "action_out",
+  "action_arg_set",
+  "default_output",
+  "error",
+  "error_at",
+  "target_action",
+  "join_item",
+  "join_rank",
+  "join_sep",
+  "artifact_covers",
+  "coverage_need"
+]
+accepts = [
+  "halide_generator",
+  "halide_generator_source",
+  "halide_generator_include",
+  "halide_stub",
+  "halide_generator_uses_stub",
+  "halide_library",
+  "halide_library_output",
+  "halide_library_param",
+  "halide_library_feature",
+  "halide_library_autoscheduler",
+  "halide_runtime_strip_feature",
+  "halide_feature_order",
+  "halide_incompatible_feature",
+  "halide_feature_framework",
+  "halide_target_arch",
+  "halide_target_os",
+  "halide_output_kind",
+  "halide_include_dir",
+]
+user = [
+  "halide_imported_tool",
+]
+outputs = ["halide_triple", "halide_runtime_target", "halide_runtime_piece"]
+structural = ["halide_runtime_piece"]
+legend = ["cfg_name"]

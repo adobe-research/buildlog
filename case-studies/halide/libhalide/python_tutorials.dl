@@ -1,0 +1,38 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// python_bindings/halide/tutorial/CMakeLists.txt: the lessons' tests are
+// halide_py_test rows (python_tutorial_<stem>). Lesson 10's generate script
+// writes lesson_10_halide.o and lesson_10_halide.py.cpp, which build the module
+// the run script imports. Lessons 15, 16 and 21 have script generators, their
+// libraries, and (16, 21) their extension modules.
+.decl halide_py_tut_generator(n:symbol, script:symbol)
+.decl halide_py_tut_lib(l:symbol, gen:symbol, generator:symbol, function:symbol, module:symbol)
+.decl halide_py_tut_lib_param(l:symbol, p:symbol)
+
+halide_py_launched(l, cat("python_bindings/halide/tutorial/", f)) :- halide_py_tut_lib(l, g, _, _, _), halide_py_tut_generator(g, f).
+halide_build_library(l, cat("py_gen_tutorial_", g), gn, fn, ""), dep_when("halide_py_requests", l, "private", "halide.python") :- halide_py_tut_lib(l, g, gn, fn, _).
+halide_build_library_emit(l, "python_extension") :- halide_py_tut_lib(l, _, _, _, m), m != "".
+halide_build_library_param_set(l, l) :- halide_py_tut_lib_param(l, _).
+halide_build_params(l, j, p) :- halide_py_tut_lib_param(l, p), j = count : { halide_py_tut_lib_param(l, q), q < p }.
+halide_build_library_autoscheduler("python_auto_schedule_true", "Mullapudi2016", "autoschedule_mullapudi2016") :-
+  halide_py_tut_lib("python_auto_schedule_true", _, _, _, _).
+halide_build_pyext(cat("python_ext_", m), m), halide_build_pyext_library(cat("python_ext_", m), 0, l) :-
+  halide_py_tut_lib(l, _, _, _, m), m != "".
+
+// Lesson 10: python_bindings/halide/tutorial/CMakeLists.txt compiles the
+// generate script's two outputs into the module lesson_10_halide.
+.decl halide_py_l10_dir(c:Cfg, d:symbol)
+halide_py_l10_dir(c, cat("out:gen/", n, "/py_lesson_10")) :- needed("py_lesson_10_halide", c), cfg_name(c, n).
+target("py_lesson_10_halide"), native_kind("py_lesson_10_halide", "module_library"), dep_when("halide_py_requests", "py_lesson_10_halide", "private", "halide.python"),
+dep("py_lesson_10_halide", "Halide_Runtime", "private"), dep("py_lesson_10_halide", "Python::Module", "private"),
+prop("py_lesson_10_halide", "cxx.std", "17", "private"),
+python_extension("py_lesson_10_halide", "", "lesson_10_halide") :- halide_py_fixtures().
+action(o, "GENERATOR"), target_action("py_lesson_10_halide", c, o), action_out(o, p), action_cwd(o, d),
+action_arg(o, 0, "", "env"), action_arg(o, 1, "PYTHONPATH=", root), action_arg(o, 2, "", py),
+action_arg(o, 3, "", "src:python_bindings/halide/tutorial/lesson_10_aot_compilation_generate.py"),
+action_in(o, "src:python_bindings/halide/tutorial/lesson_10_aot_compilation_generate.py", "implicit"),
+native_object("py_lesson_10_halide", c, o), cxx_generated_source("py_lesson_10_halide", c, p) :-
+  halide_py_l10_dir(c, d), python_cfg(c, _, py), python_tree(c, root),
+  o = cat(d, "/lesson_10_halide.o"), p = cat(d, "/lesson_10_halide.py.cpp").
+action_in(o, f, "implicit") :- halide_py_l10_dir(c, d), o = cat(d, "/lesson_10_halide.o"), python_staged(c, r, f), substr(r, 0, 7) = "halide/".

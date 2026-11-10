@@ -1,0 +1,6 @@
+# Rejected: a target namespace may not contain "::".
+name = "ids-tq-bad"
+version = "0.1.0"
+rank = 1
+target_namespace = "a::b"
+layers = []

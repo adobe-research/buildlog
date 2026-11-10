@@ -1,0 +1,10 @@
+$ ./test-backend-ops -o ADD   # NATIVE=ON + ALL_VARIANTS=ON, arm64
+Testing 0 devices
+
+0/0 backends passed
+[1;32mOK[0m
+$ nm -gU libggml-cpu-apple_m1.so | grep score   # (nothing)
+libggml-cpu-apple_m1.so
+libggml-cpu-apple_m2_m3.so
+libggml-cpu-apple_m4.so
+test-backend-ops

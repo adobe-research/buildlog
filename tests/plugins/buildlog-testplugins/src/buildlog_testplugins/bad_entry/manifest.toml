@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Rejected: the probe entry point cannot be imported.
+name = "test-bad-entry"
+version = "0.1.0"
+rank = 5
+layers = ["bad_entry.dl"]
+
+[[probe]]
+kind = "bad_entry"
+request = "req_bad_entry"
+domain = "domain_bad_entry"
+result = "res_bad_entry"
+entry = "buildlog_testplugins.no_such_module:probe"

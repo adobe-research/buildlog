@@ -1,0 +1,7 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Clang's facts, as Clang would ship them next to lib/cmake/clang: the
+// targets are ClangTargets.cmake's (imported by the manifest).
+.decl clang_version(major:symbol, minor:symbol, patch:symbol)
+package_version("Clang", p, a, b, c) :- import_target_on("Clang::clang", p), clang_version(a, b, c).

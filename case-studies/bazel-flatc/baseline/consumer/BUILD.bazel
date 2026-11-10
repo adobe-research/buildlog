@@ -1,0 +1,29 @@
+load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+# The upstream macro: a genrule running flatc (tools = [flatc], i.e. exec config)
+# plus a cc_library wrapping the generated header (target config).
+flatbuffer_cc_library(
+    name = "monster_fbs",
+    srcs = ["monster.fbs"],
+)
+
+# A consumer so that the generated header is compiled in the target config.
+cc_binary(
+    name = "sample_binary",
+    srcs = ["sample_binary.cpp"],
+    deps = [":monster_fbs"],
+)
+
+# The annotation experiment (README): the same flatc run, with flatc in srcs
+# instead of tools. Nothing checks it: under --platforms=darwin_x86_64 Bazel
+# builds flatc for x86_64 and the genrule runs it (Rosetta on this Mac).
+genrule(
+    name = "monster_misannotated",
+    srcs = [
+        "monster.fbs",
+        "@com_github_google_flatbuffers//:flatc",
+    ],
+    outs = ["misannotated/monster_generated.h"],
+    cmd = "$(location @com_github_google_flatbuffers//:flatc) -c -o $(@D) $(location monster.fbs)",
+)

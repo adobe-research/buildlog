@@ -1,0 +1,8 @@
+.decl joindemo_item(g:symbol, item:symbol)
+.decl joindemo_rank(g:symbol, item:symbol, pos:number)
+.decl joindemo_sep(g:symbol, sep:symbol)
+join_item(cat("joindemo:", g), i) :- joindemo_item(g, i).
+join_rank(cat("joindemo:", g), i, o) :- joindemo_rank(g, i, o).
+join_sep(cat("joindemo:", g), s) :- joindemo_sep(g, s).
+.decl joindemo_text(g:symbol, text:symbol)
+joindemo_text(g, t) :- joindemo_item(g, _), joined(cat("joindemo:", g), t).

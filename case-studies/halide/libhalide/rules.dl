@@ -1,0 +1,340 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Project-local authoring abstractions for Halide's tests. HalideTestHelpers'
+// tests(GROUPS g... SOURCES f... [ARGS a...] [USE_EXIT_CODE_ONLY]) is one
+// [halide_tests.<set>] table: its prefix (the first group), source directory,
+// groups (the ctest labels), files and arguments. Each file is an executable
+// <prefix>_<stem> linked to Halide::Test and Halide::TerminateHandler, and a
+// test of the same name. Per-test exceptions are keyed by the target.
+.decl halide_tests(set:symbol)
+.decl halide_tests_prefix(set:symbol, prefix:symbol)
+.decl halide_tests_dir(set:symbol, dir:symbol)
+.decl halide_tests_group(set:symbol, group:symbol)
+.decl halide_tests_source(set:symbol, file:symbol)
+// The position is the map key (TOML keys are text).
+.decl halide_tests_arg(set:symbol, i:symbol, value:symbol)
+.decl halide_tests_arg_ref(set:symbol, i:symbol, ref:symbol)
+.decl halide_tests_exit_code_only(set:symbol)
+.decl halide_tests_pass(set:symbol, re:symbol)
+.decl halide_test_dep(t:symbol, dep:symbol)
+.decl halide_test_define(t:symbol, d:symbol)
+.decl halide_test_include(t:symbol, dir:symbol)
+.decl halide_test_exports(t:symbol)
+
+// (set, file, target, path, language)
+.decl halide_tests_target(set:symbol, file:symbol, t:symbol, path:symbol, lang:symbol)
+halide_tests_target(s, f, cat(p, "_", substr(f, 0, strlen(f) - 4)), cat(d, "/", f), "cxx") :-
+  halide_tests_source(s, f), halide_tests_prefix(s, p), halide_tests_dir(s, d), match(".*\\.cpp", f).
+halide_tests_target(s, f, cat(p, "_", substr(f, 0, strlen(f) - 2)), cat(d, "/", f), "c") :-
+  halide_tests_source(s, f), halide_tests_prefix(s, p), halide_tests_dir(s, d), match(".*\\.c", f).
+error("tests() source is neither .cpp nor .c", cat(s, ": ", f)) :-
+  halide_tests_source(s, f), !match(".*\\.cpp", f), !match(".*\\.c", f).
+
+target(t), native_kind(t, "executable"), request_all(t), halide_build_test(t, t) :-
+  halide_tests_target(_, _, t, _, _).
+cxx_source(t, path) :- halide_tests_target(_, _, t, path, "cxx").
+c_source(t, path) :- halide_tests_target(_, _, t, path, "c").
+dep(t, "Halide_test", "private"), dep(t, "Halide_terminate_handler", "private"),
+dep(t, "test_defaults", "private"), dep(t, "test_warnings", "private") :-
+  halide_tests_target(_, _, t, _, _).
+halide_build_test_group(t, g) :- halide_tests_target(s, _, t, _, _), halide_tests_group(s, g).
+halide_build_test_exit_code_only(t) :- halide_tests_target(s, _, t, _, _), halide_tests_exit_code_only(s).
+halide_build_test_pass(t, re) :- halide_tests_target(s, _, t, _, _), halide_tests_pass(s, re).
+test_arg(t, to_number(i), v) :- halide_tests_target(s, _, t, _, _), halide_tests_arg(s, i, v).
+test_arg_ref(t, to_number(i), r) :- halide_tests_target(s, _, t, _, _), halide_tests_arg_ref(s, i, r).
+
+dep(t, d, "private") :- halide_test_dep(t, d).
+prop(t, "cc.define", d, "private") :- halide_test_define(t, d).
+prop(t, "cc.include_dir", cat("src:", i), "private") :- halide_test_include(t, i).
+// ENABLE_EXPORTS: the JIT calls back into the executable (Mach-O executables
+// already export), CMake defines <target>_EXPORTS, ELF links export-dynamic.
+prop(t, "cc.define", cat(t, "_EXPORTS"), "private") :- halide_test_exports(t).
+prop_when(t, "native.link_option", "-Wl,--export-dynamic", "private", "halide.linux"),
+prop_when(t, "native.link_option", "-rdynamic", "private", "halide.linux") :- halide_test_exports(t).
+
+// add_halide_generator: each sampled test/generator executable follows the
+// same pattern: <name>.generator from test/generator/<name>_generator.cpp,
+// linked to Halide::Generator, generator options and test_defaults. Only
+// stubuser has extra source files and stub deps.
+.decl halide_generator(name:symbol)
+.decl generator_extra_source(name:symbol, path:symbol)
+.decl generator_extra_dep(name:symbol, dep:symbol)
+.decl halide_generator_target(name:symbol, target:symbol)
+halide_generator_target(n, cat(n, ".generator")) :- halide_generator(n).
+
+target(t), native_kind(t, "executable"), cxx_source(t, cat("test/generator/", n, "_generator.cpp")) :-
+  halide_generator_target(n, t).
+dep(t, "Halide_Generator", "private"), dep(t, "halide_generator_options", "private"),
+dep(t, "test_defaults", "private") :- halide_generator_target(_, t).
+cxx_source(t, p) :- generator_extra_source(n, p), halide_generator_target(n, t).
+dep(t, d, "private") :- generator_extra_dep(n, d), halide_generator_target(n, t).
+
+// AOT tests: the row states the logical name, concrete target and test
+// source; per-test libraries and labels are the genuine variations.
+.decl halide_aot(name:symbol, target:symbol, source:symbol)
+.decl aot_library(name:symbol, dep:symbol)
+.decl aot_group(name:symbol, group:symbol)
+.decl aot(name:symbol)
+halide_aot(n, cat("generator_aot_", n), cat(n, "_aottest.cpp")) :- aot(n).
+
+target(t), native_kind(t, "executable"), request_all(t), halide_build_test(t, t),
+cxx_source(t, cat("test/generator/", s)) :- halide_aot(_, t, s).
+dep(t, "halide_aot_test", "private"), dep(t, "test_defaults", "private"),
+dep(t, "test_warnings", "private") :- halide_aot(_, t, _).
+dep(t, d, "private") :- halide_aot(n, t, _), aot_library(n, d).
+halide_build_test_group(t, g) :- halide_aot(n, t, _), aot_group(n, g).
+
+// test/generator's _add_halide_libraries(n [FROM] [GENERATOR_NAME] [FUNCTION_NAME]
+// [USE_RUNTIME] [FEATURES] [PARAMS] [PLUGINS] [AUTOSCHEDULER] [GRADIENT_DESCENT]
+// [REGISTRATION] [EXTERNS] [OMIT_C_BACKEND]) is one [hl_lib.<n>] table. It makes
+// the library n and, unless omitted, its C-backend twin n_cpp, whose header is
+// n's. Without FROM it also makes n.generator from n_generator.cpp. Features,
+// params and plugins are sets; their command-line order is alphabetical.
+.decl hl_lib(n:symbol)
+.decl hl_lib_from(n:symbol, g:symbol)
+.decl hl_lib_generator(n:symbol, g:symbol)
+.decl hl_lib_function(n:symbol, f:symbol)
+.decl hl_lib_feature(n:symbol, f:symbol)
+.decl hl_lib_param(n:symbol, p:symbol)
+.decl hl_lib_param_set(n:symbol, set:symbol)
+.decl hl_lib_plugin(n:symbol, a:symbol)
+.decl hl_lib_scheduler(n:symbol, a:symbol)
+.decl hl_lib_extern(n:symbol, e:symbol)
+.decl hl_lib_call(n:symbol, e:symbol)   // n's object calls e's function (define_extern), though CMake states no link edge
+.decl hl_lib_registration(n:symbol, consumer:symbol)
+.decl hl_lib_gradient(n:symbol)
+.decl hl_lib_omit_c(n:symbol)
+// Plain pairs: _add_halide_libraries(n) and _add_halide_aot_tests(n).
+.decl hl_simple(n:symbol)
+.decl halide_scheduler_plugin(a:symbol, plugin:symbol)
+halide_scheduler_plugin("Adams2019", "autoschedule_adams2019").
+halide_scheduler_plugin("Li2018", "autoschedule_li2018").
+halide_scheduler_plugin("Mullapudi2016", "autoschedule_mullapudi2016").
+halide_scheduler_plugin("Anderson2021", "autoschedule_anderson2021").
+
+hl_lib(n) :- hl_simple(n).
+hl_aot(n) :- hl_simple(n).
+halide_generator(n) :- hl_lib(n), !hl_lib_from(n, _).
+
+.decl hl_lib_e(n:symbol, c:symbol, twin:symbol)
+hl_lib_e(n, n, "") :- hl_lib(n).
+hl_lib_e(n, cat(n, "_cpp"), n) :- hl_lib(n), !hl_lib_omit_c(n).
+.decl hl_lib_from_e(n:symbol, g:symbol)
+hl_lib_from_e(n, g) :- hl_lib_from(n, g).
+hl_lib_from_e(n, cat(n, ".generator")) :- hl_lib(n), !hl_lib_from(n, _).
+.decl hl_lib_generator_e(n:symbol, g:symbol)
+hl_lib_generator_e(n, g) :- hl_lib_generator(n, g).
+hl_lib_generator_e(n, n) :- hl_lib(n), !hl_lib_generator(n, _).
+.decl hl_lib_function_e(n:symbol, f:symbol)
+hl_lib_function_e(n, f) :- hl_lib_function(n, f).
+hl_lib_function_e(n, n) :- hl_lib(n), !hl_lib_function(n, _).
+
+halide_build_library(c, g, gn, f, "") :- hl_lib_e(n, c, _), hl_lib_from_e(n, g), hl_lib_generator_e(n, gn),
+  hl_lib_function_e(n, f).
+halide_build_library_c_backend(c, twin) :- hl_lib_e(_, c, twin), twin != "".
+halide_build_library_emit(c, "function_info_header") :- hl_lib_e(_, c, _).
+dep(c, "test_defaults", "private"), dep(c, cat(n, ".runtime"), "private") :- hl_lib_e(n, c, twin), twin != "".
+halide_build_library_feature(c, j, f) :- hl_lib_e(n, c, _), hl_lib_feature(n, f),
+  j = count : { hl_lib_feature(n, g), g < f }.
+halide_build_library_param_set(c, n) :- hl_lib_e(n, c, _), hl_lib_param(n, _).
+halide_build_library_param_set(c, s) :- hl_lib_e(n, c, _), hl_lib_param_set(n, s).
+halide_build_params(n, j, p) :- hl_lib_param(n, p), j = count : { hl_lib_param(n, q), q < p }.
+halide_build_library_plugin(c, j, plugin) :- hl_lib_e(n, c, _), hl_lib_plugin(n, a), halide_scheduler_plugin(a, plugin),
+  j = count : { hl_lib_plugin(n, b), b < a }.
+halide_build_library_autoscheduler(c, a, plugin) :- hl_lib_e(n, c, _), hl_lib_scheduler(n, a), halide_scheduler_plugin(a, plugin).
+halide_build_library_gradient(c) :- hl_lib_e(n, c, _), hl_lib_gradient(n).
+dep(c, e, "interface") :- hl_lib_e(n, c, _), hl_lib_extern(n, e).
+// A call between libraries is a link-order fact for a one-pass linker (GNU ld
+// reads an archive once): the caller's archive comes before the callee's. CMake
+// reaches the same order from the user's HALIDE_LIBRARIES list; the call
+// is the dependency behind that list. A twin calls the callee's twin.
+dep(c, e, "interface") :- hl_lib_e(n, c, ""), hl_lib_call(n, e).
+dep(c, cat(e, "_cpp"), "interface") :- hl_lib_e(n, c, t), t != "", hl_lib_call(n, e).
+// The registration is made for the library itself, not its twin.
+halide_build_library_emit(n, "registration"), halide_build_library_registration(n, k) :- hl_lib_registration(n, k).
+
+// _add_halide_aot_tests(n [HALIDE_LIBRARIES] [HALIDE_RUNTIME] [SRCS] [GROUPS]
+// [INCLUDES] [LINK_TO_GPU]) is one [hl_aot.<n>] table: generator_aot_<n>
+// links the libraries (default n) and the runtime (default n.runtime), and
+// generator_aotcpp_<n> their twins unless a library omits its C backend.
+.decl hl_aot(n:symbol)
+.decl hl_aot_library(n:symbol, l:symbol)
+.decl hl_aot_runtime(n:symbol, r:symbol)
+.decl hl_aot_source(n:symbol, s:symbol)
+.decl hl_aot_group(n:symbol, g:symbol)
+.decl hl_aot_include(n:symbol, dir:symbol)
+.decl hl_aot_library_e(n:symbol, l:symbol)
+hl_aot_library_e(n, l) :- hl_aot_library(n, l).
+hl_aot_library_e(n, n) :- hl_aot(n), !hl_aot_library(n, _).
+.decl hl_aot_runtime_e(n:symbol, r:symbol)
+hl_aot_runtime_e(n, r) :- hl_aot_runtime(n, r).
+hl_aot_runtime_e(n, cat(n, ".runtime")) :- hl_aot(n), !hl_aot_runtime(n, _).
+.decl hl_aot_no_twin(n:symbol)
+hl_aot_no_twin(n) :- hl_aot_library_e(n, l), hl_lib_omit_c(l).
+// (n, test target, library suffix)
+.decl hl_aot_target(n:symbol, t:symbol, suffix:symbol)
+hl_aot_target(n, cat("generator_aot_", n), "") :- hl_aot(n).
+hl_aot_target(n, cat("generator_aotcpp_", n), "_cpp") :- hl_aot(n), !hl_aot_no_twin(n).
+halide_aot(t, t, s) :- hl_aot_target(n, t, _), hl_aot_source(n, s).
+halide_aot(t, t, cat(n, "_aottest.cpp")) :- hl_aot_target(n, t, _), !hl_aot_source(n, _).
+aot_library(t, cat(l, x)) :- hl_aot_target(n, t, x), hl_aot_library_e(n, l).
+aot_library(t, r) :- hl_aot_target(n, t, _), hl_aot_runtime_e(n, r).
+aot_group(t, "generator") :- hl_aot_target(_, t, _).
+aot_group(t, g) :- hl_aot_target(n, t, _), hl_aot_group(n, g).
+prop(t, "cc.include_dir", cat("src:", i), "private") :- hl_aot_target(n, t, _), hl_aot_include(n, i).
+
+// Generator tests which run the stub from the JIT: generator_jit_<n> is
+// n_jittest.cpp and n_generator.cpp linked to n.stub.
+.decl hl_jit(n:symbol)
+halide_build_stub(cat(n, ".stub"), cat(n, ".generator"), n) :- hl_jit(n).
+.decl hl_jit_target(n:symbol, t:symbol)
+hl_jit_target(n, cat("generator_jit_", n)) :- hl_jit(n).
+target(t), native_kind(t, "executable"), request_all(t), halide_build_test(t, t),
+cxx_source(t, cat("test/generator/", n, "_jittest.cpp")), cxx_source(t, cat("test/generator/", n, "_generator.cpp")),
+dep(t, "Halide_test", "private"), dep(t, cat(n, ".stub"), "private"), dep(t, "test_defaults", "private"),
+dep(t, "test_warnings", "private"), halide_build_test_group(t, "generator") :- hl_jit_target(n, t).
+
+// registration_test links three pipelines' registration.cpp, each compiled with
+// its own HALIDE_REGISTER_EXTRA_KEY_VALUE_PAIRS_FUNC (set_source_files_properties).
+generated_source_prop("registration_test", cat(n, ".registration.cpp"), "cc.define",
+  cat("HALIDE_REGISTER_EXTRA_KEY_VALUE_PAIRS_FUNC=halide_register_extra_key_value_pairs_", n)) :-
+  hl_lib_registration(n, "registration_test").
+
+// test/runtime: halide_define_runtime_internal_test(n) is runtime_internal_n from
+// n.cpp and the shared runtime_internal_common objects, built with the runtime's
+// include paths and defines (halide_runtime_options).
+.decl halide_runtime_test(n:symbol)
+target(t), native_kind(t, "executable"), request_all(t), halide_build_test(t, t),
+cxx_source(t, cat("test/runtime/", n, ".cpp")), halide_build_test_group(t, "runtime_internal"),
+dep(t, "runtime_internal_common", "private"), dep(t, "halide_runtime_options", "private"),
+dep(t, "Halide_test", "private"), dep(t, "test_defaults", "private"), dep(t, "test_warnings", "private") :-
+  halide_runtime_test(n), t = cat("runtime_internal_", n).
+prop_when("halide_runtime_options", "cc.compile_flag", "-Wno-builtin-declaration-mismatch", "interface", "halide.gcc").
+
+// Autoscheduler modules: the common add_autoscheduler pattern. Cost-model
+// tools and other irregular pieces stay as raw facts in autoschedulers.toml.
+.decl halide_autoscheduler(name:symbol, target:symbol, include_dir:symbol, define:symbol)
+.decl autoscheduler_source(name:symbol, path:symbol)
+.decl autoscheduler_library(name:symbol, dep:symbol)
+
+target(t), native_kind(t, "module_library"), request_all(t) :- halide_autoscheduler(_, t, _, _).
+cxx_source(t, p) :- halide_autoscheduler(n, t, _, _), autoscheduler_source(n, p).
+dep(t, "Halide_Plugin", "private") :- halide_autoscheduler(_, t, _, _).
+dep(t, d, "private") :- halide_autoscheduler(n, t, _, _), autoscheduler_library(n, d).
+prop(t, "cc.define", d, "private"), prop(t, "cc.define", "Halide_EXPORTS", "private") :-
+  halide_autoscheduler(_, t, _, d).
+prop(t, "cc.include_dir", inc, "private") :- halide_autoscheduler(_, t, inc, _), inc != "".
+prop(t, "cxx.std", "17", "private"),
+prop(t, "cc.compile_flag", "-fvisibility=hidden", "private"),
+prop(t, "cc.compile_flag", "-fvisibility-inlines-hidden", "private"),
+prop_when(t, "native.link_option", "-Wl,-headerpad_max_install_names", "private", "halide.macos") :-
+  halide_autoscheduler(_, t, _, _).
+
+// Reusable target-property defaults from src/autoschedulers/CMakeLists.txt.
+.decl halide_autoscheduler_cxx17(target:symbol)
+.decl halide_autoscheduler_hidden(target:symbol)
+.decl halide_autoscheduler_exe_link_defaults(target:symbol)
+
+prop(t, "cxx.std", "17", "private") :- halide_autoscheduler_cxx17(t).
+prop(t, "cc.compile_flag", "-fvisibility=hidden", "private"),
+prop(t, "cc.compile_flag", "-fvisibility-inlines-hidden", "private") :- halide_autoscheduler_hidden(t).
+prop_when(t, "native.link_option", "-Wl,-search_paths_first", "private", "halide.macos"),
+prop_when(t, "native.link_option", "-Wl,-headerpad_max_install_names", "private", "halide.macos") :-
+  halide_autoscheduler_exe_link_defaults(t).
+
+// What CMake spells with platform and compiler tests: Halide's src/CMakeLists.txt,
+// test/CMakeLists.txt and tools: Mach-O link flags (APPLE), and each family's own
+// warnings ($<CXX_COMPILER_ID:...>).
+condition("halide.macos", $Eq("platform.os", "macos")).
+condition("halide.clang", $Eq("cxx.family", "clang")).
+condition("halide.gcc", $Eq("cxx.family", "gcc")).
+// Mach-O link defaults of libHalide, the host tools and the tests.
+.decl halide_macos_link_default(t:symbol, opt:symbol, vis:symbol)
+halide_macos_link_default("Halide", "-Wl,-headerpad_max_install_names", "private").
+halide_macos_link_default(t, "-Wl,-search_paths_first", "private") :- halide_tool(t).
+halide_macos_link_default(t, "-Wl,-headerpad_max_install_names", "private") :- halide_tool(t).
+.decl halide_tool(t:symbol)
+halide_tool("binary2cpp"). halide_tool("build_halide_h"). halide_tool("regexp_replace").
+halide_macos_link_default("test_defaults", "-Wl,-search_paths_first", "interface").
+halide_macos_link_default("test_defaults", "-Wl,-headerpad_max_install_names", "interface").
+prop_when(t, "native.link_option", o, v, "halide.macos") :- halide_macos_link_default(t, o, v).
+.decl halide_family_warning(t:symbol, family:symbol, flag:symbol, vis:symbol)
+halide_family_warning("Halide", "clang", "-Wvla-extension", "private").
+halide_family_warning("Halide", "clang", "-Winconsistent-missing-destructor-override", "private").
+halide_family_warning("Halide", "clang", "-Winconsistent-missing-override", "private").
+halide_family_warning("Halide", "gcc", "-Wsuggest-override", "private").
+halide_family_warning("test_warnings", "clang", "-Wvla-extension", "interface").
+halide_family_warning("test_warnings", "clang", "-Winconsistent-missing-destructor-override", "interface").
+halide_family_warning("test_warnings", "clang", "-Winconsistent-missing-override", "interface").
+halide_family_warning("test_warnings", "gcc", "-Wsuggest-override", "interface").
+prop_when(t, "cc.compile_flag", f, v, cat("halide.", fam)) :- halide_family_warning(t, fam, f, v).
+
+// The top-level directory's CMAKE_CXX_FLAGS_RELEASE (-O3 -DNDEBUG) are on the
+// link lines of every target, and test/'s HalideTestHelpers.cmake wipes both
+// (wipe_standard_flags "[/-]D *NDEBUG" and "[/-]O[^ ]+") from the directory's
+// variables, so its targets compile and link without them. The tests take it
+// from test_defaults; Halide_terminate_handler does not use test_defaults.
+prop(t, "native.link_config_flags", "on", "private") :- target(t), !imported(t).
+prop("test_defaults", "native.wipe_config_flag", "-DNDEBUG", "interface").
+prop("test_defaults", "native.wipe_config_flag", "-O.*", "interface").
+prop("Halide_terminate_handler", "native.wipe_config_flag", "-DNDEBUG", "private").
+prop("Halide_terminate_handler", "native.wipe_config_flag", "-O.*", "private").
+
+condition("halide.linux", $Eq("platform.os", "linux")).
+
+// test/autoschedulers' demos: a generator <n>.generator from <dir>/<file>, a
+// library <n> scheduled by <scheduler> for "cmake" (with the features), a
+// RunGenMain executable <exe> and the test of the same name that runs it
+// (--benchmarks=all ... --success, plus --skip_bad_environment for CUDA).
+.decl hl_demo(n:symbol)
+.decl hl_demo_dir(n:symbol, d:symbol)
+.decl hl_demo_file(n:symbol, f:symbol)
+.decl hl_demo_generator(n:symbol, g:symbol)
+.decl hl_demo_function(n:symbol, f:symbol)
+.decl hl_demo_scheduler(n:symbol, a:symbol)
+.decl hl_demo_exe(n:symbol, e:symbol)
+.decl hl_demo_function_e(n:symbol, f:symbol)
+hl_demo_function_e(n, f) :- hl_demo_function(n, f).
+hl_demo_function_e(n, n) :- hl_demo(n), !hl_demo_function(n, _).
+.decl hl_demo_group(n:symbol, g:symbol)
+.decl hl_demo_feature(n:symbol, f:symbol)
+.decl hl_demo_skip_bad_environment(n:symbol)
+target(cat(n, ".generator")), native_kind(cat(n, ".generator"), "executable"),
+cxx_source(cat(n, ".generator"), cat("test/autoschedulers/", d, "/", f)),
+dep(cat(n, ".generator"), "Halide_Generator", "private"), dep(cat(n, ".generator"), "halide_generator_options", "private"),
+dep(cat(n, ".generator"), "test_defaults", "private") :- hl_demo(n), hl_demo_dir(n, d), hl_demo_file(n, f).
+halide_build_library(n, cat(n, ".generator"), g, fn, ""), halide_build_library_target(n, 0, "cmake"),
+halide_build_library_emit(n, "registration"), halide_build_library_registration(n, e) :-
+  hl_demo(n), hl_demo_generator(n, g), hl_demo_exe(n, e), hl_demo_function_e(n, fn).
+halide_build_library_autoscheduler(n, a, p) :- hl_demo_scheduler(n, a), halide_scheduler_plugin(a, p).
+halide_build_library_feature(n, j, f) :- hl_demo_feature(n, f), j = count : { hl_demo_feature(n, g), g < f }.
+target(e), native_kind(e, "executable"), request_all(e), cxx_source(e, "tools/RunGenMain.cpp"),
+dep(e, n, "private"), dep(e, "Halide_RunGenMain", "private"), dep(e, "test_defaults", "private"),
+dep(e, "test_warnings", "private"), halide_build_test(e, e) :- hl_demo_exe(n, e).
+halide_build_test_group(e, g) :- hl_demo_exe(n, e), hl_demo_group(n, g).
+test_arg(e, 0, "--benchmarks=all"), test_arg(e, 1, "--benchmark_min_time=1"), test_arg(e, 2, "--estimate_all"),
+test_arg(e, 3, "--success") :- hl_demo_exe(_, e).
+test_arg(e, 4, "--skip_bad_environment") :- hl_demo_exe(n, e), hl_demo_skip_bad_environment(n).
+
+// The other add_executable + add_halide_test pairs in test/autoschedulers:
+// [halide_as_tests.<set>] is a directory of test_*.cpp files linked only to
+// Halide::Plugin, with the sources a test adds from the autoscheduler's own
+// directory in halide_as_test_extra(<target>, file).
+.decl halide_as_tests(set:symbol)
+.decl halide_as_tests_prefix(set:symbol, prefix:symbol)
+.decl halide_as_tests_dir(set:symbol, dir:symbol)
+.decl halide_as_tests_src(set:symbol, dir:symbol)
+.decl halide_as_tests_group(set:symbol, group:symbol)
+.decl halide_as_tests_include(set:symbol, dir:symbol)
+.decl halide_as_tests_source(set:symbol, file:symbol)
+.decl halide_as_test_extra(t:symbol, file:symbol)
+.decl halide_as_test_target(set:symbol, file:symbol, t:symbol)
+halide_as_test_target(s, f, cat(p, "_", substr(f, 0, strlen(f) - 4))) :- halide_as_tests_source(s, f), halide_as_tests_prefix(s, p), p != "".
+halide_as_test_target(s, f, substr(f, 0, strlen(f) - 4)) :- halide_as_tests_source(s, f), halide_as_tests_prefix(s, "").
+target(t), native_kind(t, "executable"), request_all(t), halide_build_test(t, t), dep(t, "Halide_Plugin", "private"),
+dep(t, "test_defaults", "private"), dep(t, "test_warnings", "private") :- halide_as_test_target(_, _, t).
+cxx_source(t, cat(d, "/", f)) :- halide_as_test_target(s, f, t), halide_as_tests_dir(s, d).
+cxx_source(t, cat(d, "/", f)) :- halide_as_test_target(s, _, t), halide_as_tests_src(s, d), halide_as_test_extra(t, f).
+prop(t, "cc.include_dir", cat("src:", i), "private") :- halide_as_test_target(s, _, t), halide_as_tests_include(s, i).
+halide_build_test_group(t, g) :- halide_as_test_target(s, _, t), halide_as_tests_group(s, g).

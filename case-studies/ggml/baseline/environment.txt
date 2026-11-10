@@ -1,0 +1,8 @@
+# Environment
+Darwin arm64
+26.5.2
+Apple M3 Max
+cmake version 4.4.3
+ninja 1.13.2
+Apple clang version 21.0.0 (clang-2100.1.1.101)
+ggml v0.25.3 353b63b439f27ab2cc19dac97ab1681ba6d2d084

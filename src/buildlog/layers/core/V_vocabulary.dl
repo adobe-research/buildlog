@@ -1,0 +1,95 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// The authoring vocabulary Short names
+// for what specs state most often, each desugaring to the core relations
+// above, so `why` shows the vocabulary row that stated a fact. It is part
+// of core (loaded by default, billed as core); a spec may always state the
+// underlying relations instead.
+//
+// The loader resolves a key k inside a subject table [R.x] to the relation
+// R_k when that relation accepts facts, else to k (facts.py). So
+// [target.X] kind = "executable" is target_kind(X, "executable"), and
+// [export.P] version = "1.0" is the existing export_version(P, "1.0").
+// Column order puts the few-valued columns first, so TOML's nested map
+// form reads naturally: private = { "cc.define" = ["A", "B"] } and
+// when = { "!X" = { interface = { "cc.define" = "Y" } } }.
+
+// ---- [target.X] ----
+.decl target_kind(t:symbol, kind:symbol)                       // native_kind
+.decl target_private(t:symbol, key:symbol, value:symbol)       // prop(t, key, value, "private")
+.decl target_public(t:symbol, key:symbol, value:symbol)
+.decl target_interface(t:symbol, key:symbol, value:symbol)
+.decl target_when(t:symbol, cond:symbol, vis:symbol, key:symbol, value:symbol)   // prop_when
+.decl target_deps(t:symbol, vis:symbol, d:symbol)              // dep(t, d, vis)
+.decl target_deps_when(t:symbol, cond:symbol, vis:symbol, d:symbol)   // dep_when
+.decl target_test(t:symbol, on:symbol)                         // test = true: a test named t running t
+.decl target_sources(t:symbol, file:symbol)                    // claimed by a language plugin, by suffix
+.decl target_install_when(t:symbol, cond:symbol, file:symbol)  // install_file_when, grouped by condition
+.decl source_claimed(t:symbol, file:symbol)                    // open: a plugin compiles (or knowingly ignores) it
+
+// kind is the default of a kind_when that holds (L1_options).
+native_kind(t, k) :- target_kind(t, k), !target_kind_decided(t).
+prop(t, k, v, "private") :- target_private(t, k, v).
+prop(t, k, v, "public") :- target_public(t, k, v).
+prop(t, k, v, "interface") :- target_interface(t, k, v).
+prop_when(t, k, v, vis, n) :- target_when(t, n, vis, k, v).
+dep(t, d, vis) :- target_deps(t, vis, d).
+dep_when(t, d, vis, n) :- target_deps_when(t, n, vis, d).
+install_file_when(t, f, n) :- target_install_when(t, n, f).
+// A test is built wherever it can run: in every declared configuration,
+// unless request_when gates it on options.
+// A test requests its program (L1_targets); request_when gates it too.
+test(t, t) :- target_test(t, "true"), !request_gated(t).
+test(t, t) :- target_test(t, "true"), request_when(t, e), opt_holds(e).
+.decl request_gated(t:symbol)
+request_gated(t) :- request_when(t, _).
+
+error("test = must be true or false", cat(t, ": ", v)) :- target_test(t, v), v != "true", v != "false".
+error("no plugin compiles this source (by its suffix)", cat(t, ": ", f)) :-
+  target_sources(t, f), !source_claimed(t, f).
+// A template's sources (L1's target_template) are its instances'.
+tmpl_want(b, f) :- target_template(b), target_sources(b, f).
+target_sources(t, x) :- instance_of(t, b), target_sources(b, f), tmpl_value(t, b, f, x).
+
+// ---- [owner.X] member = [...] ----
+.decl owner(o:symbol)
+
+// ---- [export.P] version / compat / description / component ----
+.decl export(pkg:symbol)
+export_package(p) :- export(p).
+
+// ---- Path helpers ----
+// Soufflé has no user functions, so these are relations over the paths a
+// rule asks about: state path_want(p) and read path_basename(p, b),
+// path_dirname(p, d) ("" without a slash), path_stem(p, s) (the basename
+// without its last extension) and path_ext(p, e) (".fbs", or "").
+// build_defs.bzl's s.split("/")[-1].replace(".fbs", "") is path_stem.
+.decl path_want(p:symbol)                    // open
+.decl path_basename(p:symbol, b:symbol)
+.decl path_dirname(p:symbol, d:symbol)
+.decl path_stem(p:symbol, s:symbol)
+.decl path_ext(p:symbol, e:symbol)
+.decl path_slash(p:symbol, i:number)
+path_slash(p, i) :- path_want(p), i = range(0, strlen(p)), substr(p, i, 1) = "/".
+.decl path_last_slash(p:symbol, i:number)
+path_last_slash(p, i) :- path_slash(p, _), i = max j : { path_slash(p, j) }.
+.decl path_has_slash(p:symbol)
+path_has_slash(p) :- path_slash(p, _).
+path_basename(p, substr(p, i + 1, strlen(p) - i - 1)), path_dirname(p, substr(p, 0, i)) :-
+  path_last_slash(p, i).
+path_basename(p, p), path_dirname(p, "") :- path_want(p), !path_has_slash(p).
+// A leading dot is not an extension (".clang-format" has none).
+.decl path_dot(p:symbol, i:number)
+path_dot(p, i) :- path_basename(p, b), i = range(1, strlen(b)), substr(b, i, 1) = ".".
+.decl path_has_dot(p:symbol)
+path_has_dot(p) :- path_dot(p, _).
+path_stem(p, substr(b, 0, i)), path_ext(p, substr(b, i, strlen(b) - i)) :-
+  path_basename(p, b), path_dot(p, _), i = max j : { path_dot(p, j) }.
+path_stem(p, b), path_ext(p, "") :- path_basename(p, b), !path_has_dot(p).
+
+// ---- Generated files' directory ----
+// gen_dir(owner, c, d): where owner's generated files go in c,
+// out:gen/<configuration>/<owner>, as configured files (configured_file).
+.decl gen_dir(owner:symbol, c:Cfg, d:symbol)
+gen_dir(o, c, cat("out:gen/", n, "/", o)) :- needed(o, c), cfg_name(c, n).

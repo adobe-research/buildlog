@@ -1,0 +1,113 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The slice of flatbuffers' Bazel build (BUILD.bazel, src/BUILD.bazel,
+# grpc/src/compiler/BUILD.bazel, build_defs.bzl) the Bazel baseline builds:
+# `bazel build //:sample_binary` in baseline/consumer, which pulls in
+# //:flatc through flatbuffer_cc_library's genrule. Configurations mirror
+# Bazel's: "native" is `-c fastbuild` (debug), "opt" is `-c opt`, "cross"
+# is `--platforms=@build_bazel_apple_support//platforms:darwin_x86_64`.
+config_decl = [["native", "arm64-macos"], ["opt", "arm64-macos"], ["cross", "x86_64-macos"]]
+config_decl_setting = [
+  ["native", "native.opt", "debug"],
+  ["opt", "native.opt", "release"],
+  ["cross", "native.opt", "debug"],
+]
+# Only the product is requested. flatc is not: it is needed because an
+# action runs it, and in the configuration that running implies.
+request_all = [["sample_binary"]]
+
+# flatbuffer_cc_library(name = "monster_fbs", srcs = ["monster.fbs"]):
+# DEFAULT_FLATC_ARGS, then the language flag (-c).
+generate = [["fbs_cc", "monster_fbs", "samples/monster.fbs", "monster_generated.h"]]
+
+# The parser and code-generator core (Bazel: //src:flatbuffers,
+# //src:code_generators and //src:generate_fbs, three cc_librarys; CMake's
+# FlatBuffers library). Their strip_include_prefix dirs (/include, /src)
+# reach every dependent, as Bazel's _virtual_includes do.
+[target.flatbuffers]
+kind = "library"
+sources = [
+  "src/code_generators.cpp",
+  "src/idl_gen_fbs.cpp",
+  "src/idl_gen_text.cpp",
+  "src/idl_parser.cpp",
+  "src/reflection.cpp",
+  "src/util.cpp",
+]
+public = { "cc.include_dir" = ["src:include", "src:src"], "cxx.std" = "17" }
+
+# The compiler (Bazel: //:flatc = cc_binary over //src:flatc,
+# //src:flatc_library, six //grpc/src/compiler generators and
+# //include/codegen:python). An ordinary executable: nothing marks it as a
+# build tool.
+[target.flatc]
+kind = "executable"
+sources = [
+  "grpc/src/compiler/cpp_generator.cc",
+  "grpc/src/compiler/go_generator.cc",
+  "grpc/src/compiler/java_generator.cc",
+  "grpc/src/compiler/python_generator.cc",
+  "grpc/src/compiler/swift_generator.cc",
+  "grpc/src/compiler/ts_generator.cc",
+  "include/codegen/python.cc",
+  "src/annotated_binary_text_gen.cpp",
+  "src/bfbs_gen_lua.cpp",
+  "src/bfbs_gen_nim.cpp",
+  "src/binary_annotator.cpp",
+  "src/file_manager.cpp",
+  "src/file_name_manager.cpp",
+  "src/flatc.cpp",
+  "src/flatc_main.cpp",
+  "src/idl_gen_binary.cpp",
+  "src/idl_gen_cpp.cpp",
+  "src/idl_gen_csharp.cpp",
+  "src/idl_gen_dart.cpp",
+  "src/idl_gen_go.cpp",
+  "src/idl_gen_grpc.cpp",
+  "src/idl_gen_java.cpp",
+  "src/idl_gen_json_schema.cpp",
+  "src/idl_gen_kotlin.cpp",
+  "src/idl_gen_kotlin_kmp.cpp",
+  "src/idl_gen_lobster.cpp",
+  "src/idl_gen_php.cpp",
+  "src/idl_gen_python.cpp",
+  "src/idl_gen_rust.cpp",
+  "src/idl_gen_swift.cpp",
+  "src/idl_gen_ts.cpp",
+]
+private = { "cc.include_dir" = "src:grpc" }
+deps = { private = ["flatbuffers"] }
+
+[target.sample_binary]
+kind = "executable"
+sources = "samples/sample_binary.cpp"
+deps = { private = ["monster_fbs"] }
+
+# flatbuffer_cc_library(name = "monster_fbs", srcs = ["monster.fbs"]):
+# flatc generates monster_generated.h, a header-only library over the
+# parser core (build_defs.bzl's deps on //:runtime_cc and //:flatbuffers).
+[target.monster_fbs]
+deps = { public = ["flatbuffers"] }
+gen_include = { interface = [""] }
+
+# flatbuffer_cc_library(name = "monster_fbs", srcs = ["monster.fbs"]):
+# DEFAULT_FLATC_ARGS, then the language flag (-c).
+[generator.fbs_cc]
+params = ["owner", "schema", "header"]
+owner = "{owner}"
+label = "FLATC"
+run = ["flatc", "-I", "src:", "${list:FBS_CC_FLAGS}", "-o", "${gen}", "${src:{schema}}"]
+output = ["{header}"]
+
+[word_list]
+FBS_CC_FLAGS = [
+  "--gen-object-api",
+  "--gen-compare",
+  "--no-includes",
+  "--gen-mutable",
+  "--reflect-names",
+  "--cpp-ptr-type",
+  "flatbuffers::unique_ptr",
+  "-c",
+]

@@ -1,0 +1,6 @@
+# Rejected: a bare target id; package targets are always <q>::<name>.
+name = "ids-bare"
+version = "0.1.0"
+rank = 1
+layers = []
+facts = ["facts.toml"]

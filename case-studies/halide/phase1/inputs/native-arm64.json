@@ -1,0 +1,33 @@
+{
+  "name": "native-arm64",
+  "cc": "/usr/bin/cc",
+  "cxx": "/usr/bin/c++",
+  "sysroot": "",
+  "triple": "arm64-apple-macos",
+  "build_type": "Release",
+  "llvm_root": "/opt/homebrew/opt/llvm@22",
+  "registration": {
+    "name": "halide_llvm",
+    "module_path": "../../upstream/cmake",
+    "package": "Halide_LLVM",
+    "args": ["22", "REQUIRED", "COMPONENTS", "WebAssembly", "X86",
+             "OPTIONAL_COMPONENTS", "AArch64", "ARM", "Hexagon", "NVPTX", "PowerPC", "RISCV"],
+    "cache": {"Halide_LLVM_ROOT": "{llvm_root}"},
+    "root_regex": "^Halide_LLVM::",
+    "roots": ["clang", "llvm-as"],
+    "var_regex": "^(LLVM|Clang|CLANG|LLD|Halide_LLVM)_",
+    "variables": {
+      "Halide_LLVM_VERSION": "halide_llvm.version",
+      "Halide_LLVM_COMPONENTS": "halide_llvm.components",
+      "Halide_LLVM_SHARED_LIBS": "halide_llvm.shared_libs",
+      "LLVM_ENABLE_RTTI": "halide_llvm.rtti"
+    },
+    "rename": {
+      "LLVM": "LLVM::LLVM",
+      "clang": "LLVM::clang",
+      "llvm-as": "LLVM::llvm-as",
+      "lldWasm": "LLD::lldWasm",
+      "lldCommon": "LLD::lldCommon"
+    }
+  }
+}

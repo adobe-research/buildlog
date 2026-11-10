@@ -1,0 +1,38 @@
+// Toolchains: which one compiles a target follows from where it runs and
+// what it targets (L2), never from a pin.
+toolchain("tcx", "toy", "1").
+toolchain_runs_on("tcx", "toy").
+toolchain_can_target("tcx", "toy", "toy-a").
+toolchain_tool("tcx", "cc", "cp").
+toolchain("tcy", "toy", "1").
+toolchain_runs_on("tcy", "toy").
+toolchain_can_target("tcy", "toy", "toy").
+toolchain_tool("tcy", "cc", "/bin/cp").
+
+// execdemo_tool(t, src): t is "compiled" from src (a copy; cp keeps the mode).
+// execdemo_gen(t, tool, symbol, input): t is `tool symbol [plugin] < input`.
+// execdemo_plugin(t, plugin): t's generator also loads plugin.
+.decl execdemo_tool(t:symbol, src:symbol)
+.decl execdemo_gen(t:symbol, tool:symbol, sym:symbol, in:symbol)
+.decl execdemo_plugin(t:symbol, plugin:symbol)
+
+.decl execdemo_out(t:symbol, c:Cfg, o:symbol)
+execdemo_out(t, c, cat("out:", n, "/", t)) :- needed(t, c), execdemo_tool(t, _), cfg_name(c, n).
+execdemo_out(t, c, cat("out:", n, "/", t)) :- needed(t, c), execdemo_gen(t, _, _, _), cfg_name(c, n).
+target_action(t, c, o) :- execdemo_out(t, c, o).
+default_output(o) :- execdemo_out(_, _, o).
+action_in(o, i, "implicit") :- execdemo_out(t, c, o), eff_dep(t, c, d, _), execdemo_out(d, c, i).
+
+tc_required("toy", c) :- needed(t, c), execdemo_tool(t, _).
+action(o, "TOYCC") :- execdemo_out(t, _, o), execdemo_tool(t, _).
+action_arg(o, 0, "", p) :- execdemo_out(t, c, o), execdemo_tool(t, _), tc_for("toy", c, tc), toolchain_tool(tc, "cc", p).
+action_arg(o, 1, "", cat("src:", s)), action_in(o, cat("src:", s), "explicit") :- execdemo_out(t, _, o), execdemo_tool(t, s).
+action_arg(o, 2, "", o) :- execdemo_out(t, _, o), execdemo_tool(t, _).
+run_artifact(t, c, o) :- execdemo_out(t, c, o), execdemo_tool(t, _).
+
+action(o, "TOYGEN") :- execdemo_out(t, _, o), execdemo_gen(t, _, _, _).
+action_run(o, 0, "", g, "run") :- execdemo_out(t, _, o), execdemo_gen(t, g, _, _).
+action_arg(o, 1, "", s) :- execdemo_out(t, _, o), execdemo_gen(t, _, s, _).
+action_run(o, 2, "", p, "load") :- execdemo_out(t, _, o), execdemo_plugin(t, p).
+action_stdin(o, cat("src:", i)) :- execdemo_out(t, _, o), execdemo_gen(t, _, _, i).
+action_stdout(o, o) :- execdemo_out(t, _, o), execdemo_gen(t, _, _, _).

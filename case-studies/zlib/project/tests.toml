@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# test/CMakeLists.txt's programs and tests. CMake builds each program twice,
+# against zlib and against zlibstatic (zlib_static_example, static_minigzip);
+# here each is one program, built in both configurations. The twins'
+# compile definitions differ as upstream states them: HAVE_HIDDEN is on
+# zlib_static_example and minigzip but not on zlib_example or
+# static_minigzip, so it is conditioned on the configuration's linkage.
+request_all = ["zlib_example", "minigzip"]
+
+[target.zlib_example]
+kind = "executable"
+sources = ["test/example.c"]
+deps = { private = ["zlib"] }
+test = true
+private = { "cc.define" = "ZLIB_BUILD" }
+when."cc.check.HAVE___ATTR__VIS_HIDDEN & native.linkage == static".private."cc.define" = "HAVE_HIDDEN"
+
+[target.minigzip]
+kind = "executable"
+sources = ["test/minigzip.c"]
+deps = { private = ["zlib"] }
+when."cc.check.HAVE___ATTR__VIS_HIDDEN & native.linkage != static".private."cc.define" = "HAVE_HIDDEN"

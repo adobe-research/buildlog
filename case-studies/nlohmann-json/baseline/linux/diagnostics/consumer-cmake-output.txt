@@ -1,0 +1,3 @@
+version 3.12.0
+JSON_DIAGNOSTICS=1
+[json.exception.type_error.302] (/a/b) type must be string, but is number

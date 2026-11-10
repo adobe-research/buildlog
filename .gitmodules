@@ -1,0 +1,39 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+[submodule "case-studies/zlib/upstream"]
+	path = case-studies/zlib/upstream
+	url = https://github.com/madler/zlib.git
+[submodule "case-studies/zlib-ng/upstream"]
+	path = case-studies/zlib-ng/upstream
+	url = https://github.com/zlib-ng/zlib-ng.git
+[submodule "case-studies/nlohmann-json/upstream"]
+	path = case-studies/nlohmann-json/upstream
+	url = https://github.com/nlohmann/json.git
+[submodule "case-studies/fribidi/upstream"]
+	path = case-studies/fribidi/upstream
+	url = https://github.com/fribidi/fribidi.git
+[submodule "case-studies/ggml/upstream"]
+	path = case-studies/ggml/upstream
+	url = https://github.com/ggml-org/ggml.git
+[submodule "case-studies/nanobind/upstream"]
+	path = case-studies/nanobind/upstream
+	url = https://github.com/wjakob/nanobind_example.git
+[submodule "case-studies/spirv-tools/upstream"]
+	path = case-studies/spirv-tools/upstream
+	url = https://github.com/KhronosGroup/SPIRV-Tools.git
+[submodule "case-studies/flatbuffers/upstream"]
+	path = case-studies/flatbuffers/upstream
+	url = https://github.com/google/flatbuffers.git
+[submodule "case-studies/bazel-flatc/upstream"]
+	path = case-studies/bazel-flatc/upstream
+	url = https://github.com/google/flatbuffers.git
+[submodule "case-studies/halide/upstream"]
+	path = case-studies/halide/upstream
+	url = https://github.com/halide/Halide.git
+[submodule "case-studies/tcc/upstream"]
+	path = case-studies/tcc/upstream
+	url = https://github.com/TinyCC/tinycc.git
+[submodule "case-studies/stdgpu/upstream"]
+	path = case-studies/stdgpu/upstream
+	url = https://github.com/stotko/stdgpu

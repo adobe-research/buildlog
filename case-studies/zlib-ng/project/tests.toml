@@ -1,0 +1,82 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# test/CMakeLists.txt's programs, and the ctest tests that run one of them
+# with arguments (no stdin, no output file). configure_test_executable()
+# gives each program the source tree and the build dir (the configured
+# headers) as private include dirs: rules.dl's library_include. The tests
+# that pipe data through minigzip/minideflate or compare a generated table
+# with the source's run cmake -P scripts (README ledger).
+request_all = [
+  ["example"],
+  ["minigzip"],
+  ["minideflate"],
+  ["switchlevels"],
+  ["infcover"],
+  ["makefixed"],
+  ["maketrees"],
+  ["makecrct"],
+]
+test = [
+  ["example", "example"],
+  ["infcover", "infcover"],
+  ["minigzip-help", "minigzip"],
+  ["minigzip-invalid", "minigzip"],
+  ["minideflate-help", "minideflate"],
+  ["minideflate-invalid", "minideflate"],
+  ["switchlevels-help", "switchlevels"],
+]
+test_arg = [
+  ["minigzip-help", 0, "--help"],
+  ["minigzip-invalid", 0, "--invalid"],
+  ["minideflate-help", 0, "--help"],
+  ["minideflate-invalid", 0, "--invalid"],
+  ["switchlevels-help", 0, "--help"],
+]
+# run-and-redirect.cmake -DSUCCESS_EXIT=64: the usage message and exit 64.
+# buildlog's test has no expected exit status; the usage message decides.
+test_regex = [
+  ["minigzip-invalid", "pass", "Usage: minigzip"],
+  ["minideflate-invalid", "pass", "Usage: minideflate"],
+]
+
+# Every program compiles against the library's headers.
+[defaults.target]
+kind = "executable"
+library_include = "zlib-ng"
+
+[target.example]
+c_source = "test/example.c"
+dep = { zlib-ng = "private" }
+dep_linkage = [["zlib-ng", "shared", "test/CMakeLists.txt links the shared zlib-ng"]]
+
+# Without BUILD_SHARED_LIBS, minigzip links the static library.
+[target.minigzip]
+c_source = "test/minigzip.c"
+dep = { zlib-ng = "private" }
+dep_linkage = [["zlib-ng", "static", "test/CMakeLists.txt links minigzip to zlib-ng-static"]]
+
+[target.minideflate]
+c_source = "test/minideflate.c"
+dep = { zlib-ng = "private" }
+dep_linkage = [["zlib-ng", "shared", "test/CMakeLists.txt links the shared zlib-ng"]]
+
+[target.switchlevels]
+c_source = "test/switchlevels.c"
+dep = { zlib-ng = "private" }
+dep_linkage = [["zlib-ng", "shared", "test/CMakeLists.txt links the shared zlib-ng"]]
+
+# infcover exercises inflate's internals: it compiles inftrees.c itself.
+[target.infcover]
+c_source = ["test/infcover.c", "inftrees.c"]
+dep = { zlib-ng = "private" }
+dep_linkage = [["zlib-ng", "shared", "test/CMakeLists.txt links the shared zlib-ng"]]
+
+[target.makefixed]
+c_source = ["tools/makefixed.c", "inftrees.c"]
+
+[target.maketrees]
+c_source = ["tools/maketrees.c", "trees.c", "zutil.c"]
+
+[target.makecrct]
+c_source = "tools/makecrct.c"

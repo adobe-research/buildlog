@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# source/CMakeLists.txt's generator commands: Python scripts from utils/ over
+# SPIRV-Headers' grammar files (rules.dl, "Python generators"). They write
+# into out:gen/<config>/spirv-tools-tables (CMake: ${spirv-tools_BINARY_DIR}).
+# The interpreter is the target python3, which the user binds (presets/); the
+# grammars are data files of the imported package SPIRV-Headers::SPIRV-Headers
+# (its CMake export), found where the user's package selection says.
+
+# The grammar files, below the package's include dir (upstream: GRAMMAR_DIR =
+# ${SPIRV_HEADER_INCLUDE_DIR}/spirv/unified1; rules.dl makes each a package_data
+# of SPIRV-Headers), and the XML registry.
+spv_grammar = [
+  ["core", "spirv.core.grammar.json"],
+  ["glsl", "extinst.glsl.std.450.grammar.json"],
+  ["opencl", "extinst.opencl.std.100.grammar.json"],
+  ["cldebuginfo", "extinst.opencl.debuginfo.100.grammar.json"],
+  ["ns_debuginfo", "extinst.nonsemantic.shader.debuginfo.grammar.json"],
+  ["amd_evp", "extinst.spv-amd-shader-explicit-vertex-parameter.grammar.json"],
+  ["amd_trimm", "extinst.spv-amd-shader-trinary-minmax.grammar.json"],
+  ["amd_gcn", "extinst.spv-amd-gcn-shader.grammar.json"],
+  ["amd_ballot", "extinst.spv-amd-shader-ballot.grammar.json"],
+  ["debuginfo", "extinst.debuginfo.grammar.json"],
+  ["ns_clspvreflect", "extinst.nonsemantic.clspvreflection.grammar.json"],
+  ["ns_vkspreflect", "extinst.nonsemantic.vkspreflection.grammar.json"],
+  ["tosa_001000_1", "extinst.tosa.001000.1.grammar.json"],
+  ["arm_motion_engine_100", "extinst.arm.motion-engine.100.grammar.json"],
+  ["ns_graph_debug_info", "extinst.nonsemantic.graph.debuginfo.grammar.json"],
+  ["arm_experimental_ml_operations", "extinst.arm.experimental-ml-operations.grammar.json"],
+]
+package_data = [["xml_registry", "SPIRV-Headers::SPIRV-Headers", "spirv/spir-v.xml"]]
+
+[defaults.generator]
+owner = "spirv-tools-tables"
+label = "PYGEN"
+
+# ggt.py: the core and extended-instruction tables.
+[generator.core_tables]
+run = [
+  "python3",
+  "${src:utils/ggt.py}",
+  "--core-tables-body-output=${out:core_tables_body.inc}",
+  "--core-tables-header-output=${out:core_tables_header.inc}",
+  "--spirv-core-grammar=${pkg:core}",
+  "--extinst=,${pkg:glsl}",
+  "--extinst=,${pkg:opencl}",
+  "--extinst=CLDEBUG100_,${pkg:cldebuginfo}",
+  "--extinst=SHDEBUG100_,${pkg:ns_debuginfo}",
+  "--extinst=,${pkg:amd_evp}",
+  "--extinst=,${pkg:amd_trimm}",
+  "--extinst=,${pkg:amd_gcn}",
+  "--extinst=,${pkg:amd_ballot}",
+  "--extinst=,${pkg:debuginfo}",
+  "--extinst=,${pkg:ns_clspvreflect}",
+  "--extinst=,${pkg:ns_vkspreflect}",
+  "--extinst=TOSA_,${pkg:tosa_001000_1}",
+  "--extinst=,${pkg:arm_motion_engine_100}",
+  "--extinst=,${pkg:ns_graph_debug_info}",
+  "--extinst=,${pkg:arm_experimental_ml_operations}",
+]
+
+# generate_registry_tables.py: the generator vendors in the XML registry.
+[generator.generators]
+run = [
+  "python3",
+  "${src:utils/generate_registry_tables.py}",
+  "--xml=${pkg:xml_registry}",
+  "--generator-output=${out:generators.inc}",
+]
+
+# generate_language_headers.py: DebugInfo.h and OpenCLDebugInfo100.h.
+[generator.debuginfo_h]
+run = [
+  "python3",
+  "${src:utils/generate_language_headers.py}",
+  "--extinst-grammar=${pkg:debuginfo}",
+  "--extinst-output-path=${out:DebugInfo.h}",
+]
+
+[generator.opencl_debuginfo_h]
+run = [
+  "python3",
+  "${src:utils/generate_language_headers.py}",
+  "--extinst-grammar=${pkg:cldebuginfo}",
+  "--extinst-output-path=${out:OpenCLDebugInfo100.h}",
+]
+
+# update_build_version.py CHANGES build-version.inc: the version from CHANGES
+# and `git describe` of the source checkout (an input CMake does not declare
+# either; the README's ledger).
+[generator.build_version]
+run = [
+  "python3",
+  "${src:utils/update_build_version.py}",
+  "${src:CHANGES}",
+  "${out:build-version.inc}"
+]
+
+# The owner of the generated files; it is where the imported package and the
+# interpreter are needed. Its users compile against them (gen_user).
+[target.spirv-tools-tables]
+deps = { private = ["SPIRV-Headers::SPIRV-Headers"] }

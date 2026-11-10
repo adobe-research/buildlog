@@ -1,0 +1,9 @@
+# A rule package that withdraws its own discovery: it makes the test-discover
+# plugin's rule that discovered it stop holding.
+name = "withdrawing"
+version = "0.1.0"
+rank = 5
+namespace = "withdrawing"
+layers = ["withdrawing.dl"]
+requires = { test-discover = ">=0.1" }
+extends = ["withdrawn"]

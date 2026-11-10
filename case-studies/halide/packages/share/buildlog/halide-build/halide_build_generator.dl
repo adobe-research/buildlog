@@ -1,0 +1,422 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// [M3 phase 4] Halide generators (HalideGeneratorHelpers.cmake's
+// add_halide_library) and standalone runtimes (add_halide_runtime). The
+// generator and gengen are target references: core builds them for the exec
+// configuration by inference (no annotation). What they write is for the
+// configuration of the library that owns it: its Halide target comes from
+// that configuration's platform, never from where the tool runs.
+// [M3 phase 6] The rest of add_halide_library that test/ uses: TARGETS,
+// FEATURES, PARAMS, PLUGINS, AUTOSCHEDULER, GRADIENT_DESCENT, the extra
+// outputs, C_BACKEND, multitarget libraries, the implicit per-library
+// runtime, and add_halide_stub.
+
+// The Halide target of a configuration: <arch>-<bits>-<os>, Halide's names
+// for the platform's cpu and os.
+.decl halide_build_arch(cpu:symbol, arch:symbol)
+halide_build_arch("arm64", "arm-64"). halide_build_arch("x86_64", "x86-64"). halide_build_arch("wasm32", "wasm-32").
+.decl halide_build_os(os:symbol, hos:symbol)
+halide_build_os("macos", "macos"). halide_build_os("linux", "linux"). halide_build_os("windows", "windows").
+// Android's Halide target is <arch>-<bits>-android; WebAssembly under
+// Emscripten is wasm-32-wasmrt (Halide's WebAssembly runtime).
+halide_build_os("android", "android"). halide_build_os("emscripten", "wasmrt").
+.decl halide_build_target(c:Cfg, t:symbol)
+halide_build_target(c, cat(a, "-", o)) :- config_platform(c, p), platform_constraint(p, "cpu", x),
+  halide_build_arch(x, a), platform_constraint(p, "os", y), halide_build_os(y, o).
+
+// add_halide_generator(name SOURCES ...): [target.name] halide_build_generator
+// = true, with the sources in the table. What the helper does for every
+// generator: an executable linked to Halide::Generator and, under GNU and
+// Clang compilers, -Wdeprecated-declarations (NO_DEFAULT_FLAGS omits the
+// flag; the sugar is the default).
+.decl halide_build_generator(name:symbol, on:symbol)
+native_kind(t, "executable"), dep(t, "Halide::Generator", "private"),
+prop(t, "cc.compile_flag", "-Wdeprecated-declarations", "private") :- halide_build_generator(t, "true").
+
+// The Halide features a configuration's CPU features give its target
+// (neutral name, Halide's, and the rank in the target string).
+.decl halide_build_cpu_feature(cpu:symbol, f:symbol, hf:symbol, rank:number)
+halide_build_cpu_feature("wasm32", "simd128", "wasm_simd128", 0).
+halide_build_cpu_feature("wasm32", "threads", "wasm_threads", 1).
+.decl halide_build_cfg_feat(c:Cfg, f:symbol, k:number)
+halide_build_cfg_feat(c, hf, 2000 + r) :- config_cpu_feature(c, f), config_platform(c, p),
+  platform_constraint(p, "cpu", cpu), halide_build_cpu_feature(cpu, f, hf, r).
+
+// halide_build_library(lib, from, generator, function, runtime):
+// add_halide_library(lib FROM from GENERATOR generator FUNCTION_NAME function
+// USE_RUNTIME runtime), written [target.lib] halide_build_library = { from =
+// "gen" } with the other keys optional. An empty generator and function are
+// CMake's defaults, the library's own name; an empty runtime is CMake's too
+// (below). The sugar's other keys state the library's other relations:
+// emit, registration, params. gen writes lib.h and lib.o, without a runtime
+// (-no_runtime), into out:gen/<config>/<lib>, run there. lib is a static
+// library of lib.o; it depends on its runtime, and its consumers get lib.h.
+// The default runtime is the library's own <lib>.runtime, made by
+// halide_build_runtime_defaults(tool, headers)'s gengen (none for the C
+// backend).
+.decl halide_build_library(lib:symbol, from:symbol, generator:symbol, function:symbol, runtime:symbol)
+.decl halide_build_runtime_defaults(tool:symbol, headers:symbol)
+// TARGETS: halide_build_library_target(lib, i, base) with base "host" (the
+// machine the generator runs on; only when that is the library's platform)
+// or "cmake" (the library's configuration's Halide target), and
+// halide_build_library_target_feature(lib, i, j, f) for "cmake-f"; absent,
+// CMake's default Halide_TARGET: host when the library's configuration runs
+// where it is built, else cmake. FEATURES: halide_build_library_feature(lib,
+// j, f), appended to every target. Two or more targets make a multitarget
+// library (lib-<target>.o per target and lib_wrapper.o).
+.decl halide_build_library_target(lib:symbol, i:number, base:symbol)
+.decl halide_build_library_target_feature(lib:symbol, i:number, j:number, f:symbol)
+.decl halide_build_library_feature(lib:symbol, j:number, f:symbol)
+// PARAMS: named lists, halide_build_params(set, j, p), used by a library
+// (halide_build_library_param_set) or a runtime (halide_build_runtime_params).
+.decl halide_build_params(set:symbol, j:number, p:symbol)
+.decl halide_build_library_param_set(lib:symbol, set:symbol)
+.decl halide_build_runtime_params(rt:symbol, set:symbol)
+// A library's PARAMS, argument 20+j, in the configurations where the
+// condition holds (params = { "<condition>" = ["p=v"] }): the app's own
+// fact, so one pipeline built in several configurations states it by
+// configuration. (The named lists above are shared by name.)
+.decl halide_build_library_params(lib:symbol, cond:symbol, p:symbol, j:number)
+// PLUGINS (-p, loaded by the generator: target references too) and
+// AUTOSCHEDULER (name and plugin; the plugin is appended to PLUGINS).
+.decl halide_build_library_plugin(lib:symbol, j:number, plugin:symbol)
+.decl halide_build_library_autoscheduler(lib:symbol, name:symbol, plugin:symbol)
+// GRADIENT_DESCENT; FUNCTION_INFO_HEADER and REGISTRATION
+// (halide_build_library_emit: "function_info_header" | "registration"); the
+// registration source compiled into a consumer (registration = "consumer"
+// states both: a library with a consumer emits one).
+.decl halide_build_library_gradient(lib:symbol)
+.decl halide_build_library_emit(lib:symbol, what:symbol)
+.decl halide_build_library_registration(lib:symbol, consumer:symbol)
+// C_BACKEND: lib.halide_generated.cpp, compiled into lib (PIC, -Wno-psabi),
+// no runtime. twin (or ""): a library of the same pipeline whose header the
+// consumers include (test/'s _add_halide_libraries writes NAME.h and NAME_cpp
+// into one directory and orders NAME first).
+.decl halide_build_library_c_backend(lib:symbol, twin:symbol)
+// add_halide_stub(stub FROM gen GENERATOR generator): an interface target
+// whose consumers get <generator>.stub.h.
+.decl halide_build_stub(stub:symbol, gen:symbol, generator:symbol)
+// GENERATOR and FUNCTION_NAME default to the library's name.
+.decl halide_build_lib_names(lib:symbol, generator:symbol, function:symbol)
+halide_build_lib_names(l, gn, f) :- halide_build_library(l, _, g, h, _),
+  (g != "", gn = g ; g = "", gn = l), (h != "", f = h ; h = "", f = l).
+.decl halide_build_fb(lib:symbol, base:symbol)
+halide_build_fb(l, l) :- halide_build_library(l, _, _, _, _).
+
+.decl halide_build_cback(l:symbol)
+halide_build_cback(l) :- halide_build_library_c_backend(l, _).
+.decl halide_build_multi(l:symbol)
+halide_build_multi(l) :- halide_build_library_target(l, i, _), halide_build_library_target(l, j, _), i < j.
+.decl halide_build_has_tspec(l:symbol)
+halide_build_has_tspec(l) :- halide_build_library_target(l, _, _).
+.decl halide_build_lib_i(l:symbol, i:number)
+halide_build_lib_i(l, i) :- halide_build_library_target(l, i, _).
+halide_build_lib_i(l, 0) :- halide_build_library(l, _, _, _, _), !halide_build_has_tspec(l).
+
+// Where the generator runs: the library's exec configuration.
+.decl halide_build_same_platform(c:Cfg)
+halide_build_same_platform(c) :- exec_config(c, e), config_platform(c, p), config_platform(e, p).
+.decl halide_build_lib_dir(l:symbol, c:Cfg, d:symbol)
+halide_build_lib_dir(l, c, cat("out:gen/", n, "/", l)) :- halide_build_library(l, _, _, _, _), needed(l, c), cfg_name(c, n).
+
+// The spelled target i of lib in c: its base, then its features in order
+// (the target's own, the library's, no_runtime).
+.decl halide_build_lib_base(l:symbol, c:Cfg, i:number, b:symbol)
+halide_build_lib_base(l, c, i, "host") :- halide_build_lib_dir(l, c, _), halide_build_library_target(l, i, "host").
+halide_build_lib_base(l, c, i, t) :- halide_build_lib_dir(l, c, _), halide_build_library_target(l, i, "cmake"),
+  halide_build_target(c, t).
+halide_build_lib_base(l, c, 0, "host") :- halide_build_lib_dir(l, c, _), !halide_build_has_tspec(l),
+  halide_build_same_platform(c).
+halide_build_lib_base(l, c, 0, t) :- halide_build_lib_dir(l, c, _), !halide_build_has_tspec(l),
+  !halide_build_same_platform(c), halide_build_target(c, t).
+error("Halide target base is host or cmake", cat(l, ": ", b)) :-
+  halide_build_library_target(l, _, b), b != "host", b != "cmake".
+error_at("Halide target host, but the generator runs on another platform (use cmake)", l, l, c) :-
+  halide_build_lib_dir(l, c, _), halide_build_library_target(l, _, "host"), !halide_build_same_platform(c).
+// A target's features, "-"-joined in rank order. Its own fold, not core's
+// join: the target list below joins these strings with core's join, and a
+// join over joined text would put core's aggregate in a recursion.
+.decl halide_build_fitem(g:symbol, k:number, f:symbol)
+.decl halide_build_fnext(g:symbol, k:number, n:number)
+halide_build_fnext(g, k, n) :- halide_build_fitem(g, k, _), n = min m : { halide_build_fitem(g, m, _), m > k }.
+// Gated like core's join: a group with a tie is an error and is not folded,
+// so each rank has one suffix instead of one per choice (2^n strings).
+.decl halide_build_fbad(g:symbol)
+halide_build_fbad(g) :- halide_build_fitem(g, k, a), halide_build_fitem(g, k, b), a < b.
+.decl halide_build_fsuffix(g:symbol, k:number, s:symbol)
+halide_build_fsuffix(g, k, f) :- halide_build_fitem(g, k, f), !halide_build_fnext(g, k, _), !halide_build_fbad(g).
+halide_build_fsuffix(g, k, cat(f, "-", r)) :- halide_build_fitem(g, k, _), !halide_build_fbad(g),
+  n = min m : { halide_build_fitem(g, m, _), m > k }, k < n,
+  mf = min ord(f0) : { halide_build_fitem(g, k, f0) }, halide_build_fitem(g, k, f), ord(f) = mf,
+  halide_build_fsuffix(g, n, r).
+.decl halide_build_fjoined(g:symbol, s:symbol)
+halide_build_fjoined(g, s) :- halide_build_fsuffix(g, k, s), k = min m : { halide_build_fitem(g, m, _) }.
+error("Halide feature ranked twice", cat(g, ": ", a, " / ", b)) :- halide_build_fitem(g, k, a), halide_build_fitem(g, k, b), a < b.
+.decl halide_build_lib_feat(l:symbol, i:number, f:symbol, k:number)
+halide_build_lib_feat(l, i, f, j) :- halide_build_library_target_feature(l, i, j, f).
+halide_build_lib_feat(l, i, f, 1000 + j) :- halide_build_lib_i(l, i), halide_build_library_feature(l, j, f).
+.decl halide_build_tgroup(l:symbol, c:Cfg, i:number, g:symbol)
+halide_build_tgroup(l, c, i, cat("halide_build_t|", l, "|", n, "|", to_string(i))) :-
+  halide_build_lib_base(l, c, i, _), cfg_name(c, n).
+halide_build_fitem(g, k, f) :- halide_build_tgroup(l, _, i, g), halide_build_lib_feat(l, i, f, k).
+halide_build_fitem(g, k, f) :- halide_build_tgroup(_, c, _, g), halide_build_cfg_feat(c, f, k).
+halide_build_fitem(g, 100000, "no_runtime") :- halide_build_tgroup(_, _, _, g).
+.decl halide_build_lib_tstr(l:symbol, c:Cfg, i:number, s:symbol)
+halide_build_lib_tstr(l, c, i, cat(b, "-", x)) :- halide_build_tgroup(l, c, i, g), halide_build_lib_base(l, c, i, b),
+  halide_build_fjoined(g, x).
+.decl halide_build_lib_tlist(l:symbol, c:Cfg, s:symbol)
+join_item(g, s), join_rank(g, s, i), join_sep(g, ",") :-
+  halide_build_lib_tstr(l, c, i, s), cfg_name(c, n), g = cat("halide_build_tl|", l, "|", n).
+halide_build_lib_tlist(l, c, s) :- halide_build_lib_dir(l, c, _), cfg_name(c, n), joined(cat("halide_build_tl|", l, "|", n), s).
+
+// The outputs: the header, then the object (a multitarget library: its
+// wrapper; the C backend: the source), which names the action.
+.decl halide_build_lib_out(lib:symbol, c:Cfg, dir:symbol, h:symbol, o:symbol)
+halide_build_lib_out(l, c, d, cat(d, "/", b, ".h"), cat(d, "/", b, ".o")) :-
+  halide_build_lib_dir(l, c, d), halide_build_fb(l, b), !halide_build_multi(l), !halide_build_cback(l).
+halide_build_lib_out(l, c, d, cat(d, "/", b, ".h"), cat(d, "/", b, "_wrapper.o")) :-
+  halide_build_lib_dir(l, c, d), halide_build_fb(l, b), halide_build_multi(l), !halide_build_cback(l).
+halide_build_lib_out(l, c, d, cat(d, "/", b, ".h"), cat(d, "/", b, ".halide_generated.cpp")) :-
+  halide_build_lib_dir(l, c, d), halide_build_fb(l, b), halide_build_cback(l).
+error("a C-backend Halide library has one target", l) :- halide_build_cback(l), halide_build_multi(l).
+target(l), native_kind(l, "library"),
+linkage_require(l, "static", "add_halide_library: the generator emits object code for one pipeline, archived into a static library") :-
+  halide_build_library(l, _, _, _, _).
+action(o, "GENERATOR"), target_action(l, c, o), action_out(o, h), action_cwd(o, d),
+iface(l, c, "cc.include_dir", d), iface(l, c, "cc.generated_header", h) :- halide_build_lib_out(l, c, d, h, o).
+native_object(l, c, o) :- halide_build_lib_out(l, c, _, _, o), !halide_build_cback(l).
+native_object(l, c, x), action_out(o, x) :- halide_build_lib_out(l, c, d, _, o), halide_build_multi(l),
+  halide_build_fb(l, b), halide_build_lib_tstr(l, c, _, s), x = cat(d, "/", b, "-", s, ".o").
+cxx_generated_source(l, c, o) :- halide_build_lib_out(l, c, _, _, o), halide_build_cback(l).
+prop(l, "cc.pic", "on", "private"), prop(l, "cc.compile_flag", "-Wno-psabi", "private") :- halide_build_cback(l).
+action_out(o, cat(d, "/", b, ".function_info.h")), iface(l, c, "cc.generated_header", cat(d, "/", b, ".function_info.h")) :-
+  halide_build_lib_out(l, c, d, _, o), halide_build_fb(l, b), halide_build_library_emit(l, "function_info_header").
+action_out(o, cat(d, "/", b, ".registration.cpp")) :-
+  halide_build_lib_out(l, c, d, _, o), halide_build_fb(l, b), halide_build_reg_in(l, c).
+cxx_generated_source(u, c, cat(d, "/", b, ".registration.cpp")) :-
+  halide_build_library_registration(l, u), needed(u, c), halide_build_lib_out(l, c, d, _, _), halide_build_fb(l, b).
+iface(l, c, "cc.include_dir", d), iface(l, c, "cc.generated_header", h) :-
+  halide_build_library_c_backend(l, t), t != "", halide_build_lib_dir(l, c, _), halide_build_lib_out(t, c, d, h, _).
+error("unknown Halide library output (function_info_header, registration, python_extension)", cat(l, ": ", w)) :-
+  halide_build_library_emit(l, w), w != "function_info_header", w != "registration", w != "python_extension".
+action_out(o, cat(d, "/", b, ".py.cpp")) :-
+  halide_build_lib_out(l, c, d, _, o), halide_build_fb(l, b), halide_build_library_emit(l, "python_extension").
+.decl halide_build_twin_built(l:symbol, c:Cfg)
+halide_build_twin_built(l, c) :- halide_build_library_c_backend(l, t), halide_build_lib_dir(t, c, _).
+error_at("C-backend twin not built in this configuration", l, l, c) :-
+  halide_build_library_c_backend(l, t), t != "", halide_build_lib_dir(l, c, _), !halide_build_twin_built(l, c).
+
+// -e: c_header, object or c_source, function_info_header, registration,
+// python_extension. The
+// registration is written where a consumer of it is built (a library that
+// states emit "registration" and no consumer writes it everywhere): one
+// pipeline built in several configurations registers only where the program
+// that runs it exists.
+.decl halide_build_has_reg_consumer(l:symbol)
+halide_build_has_reg_consumer(l) :- halide_build_library_registration(l, _).
+.decl halide_build_reg_in(l:symbol, c:Cfg)
+halide_build_reg_in(l, c) :- halide_build_library_emit(l, "registration"), halide_build_lib_dir(l, c, _),
+  !halide_build_has_reg_consumer(l).
+halide_build_reg_in(l, c) :- halide_build_library_registration(l, u), halide_build_lib_dir(l, c, _), needed(u, c).
+.decl halide_build_e_group(l:symbol, c:Cfg, g:symbol)
+halide_build_e_group(l, c, cat("halide_build_e|", l, "|", n)) :- halide_build_lib_dir(l, c, _), cfg_name(c, n).
+join_item(g, "c_header"), join_rank(g, "c_header", 0), join_sep(g, ",") :- halide_build_e_group(_, _, g).
+join_item(g, "object"), join_rank(g, "object", 1) :- halide_build_e_group(l, _, g), !halide_build_cback(l).
+join_item(g, "c_source"), join_rank(g, "c_source", 1) :- halide_build_e_group(l, _, g), halide_build_cback(l).
+join_item(g, "function_info_header"), join_rank(g, "function_info_header", 2) :-
+  halide_build_e_group(l, _, g), halide_build_library_emit(l, "function_info_header").
+join_item(g, "registration"), join_rank(g, "registration", 3) :-
+  halide_build_e_group(l, c, g), halide_build_reg_in(l, c).
+join_item(g, "python_extension"), join_rank(g, "python_extension", 4) :-
+  halide_build_e_group(l, _, g), halide_build_library_emit(l, "python_extension").
+
+// gen -n lib -d 0|1 -g generator -f function -e <outputs> [-p plugins] -o dir/
+// target=<targets> [autoscheduler=name] [params].
+// A generator that is not an executable target (a Python script) is run by a
+// launcher: halide_build_launcher_words(l, n) says library l's command opens
+// with n words, halide_build_launcher(l, c, k, prefix, value) states them in
+// configuration c (argv 0..n-1), halide_build_launcher_in the files it needs
+// built first. Without one, argv 0 is the generator target (action_run) and
+// the arguments follow it; with n words the arguments move up by n - 1. The
+// word count is a declaration, not a per-configuration fact: whether a
+// command names a tool decides what is built.
+.decl halide_build_launcher_words(l:symbol, n:number)
+.decl halide_build_launcher(l:symbol, c:Cfg, k:number, pre:symbol, v:symbol)
+.decl halide_build_launcher_in(l:symbol, c:Cfg, f:symbol)
+.decl halide_build_has_launcher(l:symbol)
+halide_build_has_launcher(l) :- halide_build_launcher_words(l, _).
+.decl halide_build_ro(o:symbol, r:number)
+halide_build_ro(o, 0) :- halide_build_lib_out(l, _, _, _, o), !halide_build_has_launcher(l).
+halide_build_ro(o, n - 1) :- halide_build_lib_out(l, _, _, _, o), halide_build_launcher_words(l, n).
+.decl halide_build_lib_plugin(l:symbol, j:number, p:symbol)
+halide_build_lib_plugin(l, j, p) :- halide_build_library_plugin(l, j, p).
+halide_build_lib_plugin(l, 1000000, p) :- halide_build_library_autoscheduler(l, _, p).
+.decl halide_build_has_plugin(l:symbol)
+halide_build_has_plugin(l) :- halide_build_lib_plugin(l, _, _).
+action_run(o, 0, "", g, "run") :- halide_build_lib_out(l, _, _, _, o), halide_build_library(l, g, _, _, _),
+  !halide_build_has_launcher(l).
+action_arg(o, k, pre, v) :- halide_build_lib_out(l, c, _, _, o), halide_build_launcher(l, c, k, pre, v).
+action_in(o, f, "implicit") :- halide_build_lib_out(l, c, _, _, o), halide_build_launcher_in(l, c, f).
+action_arg(o, r + 1, "", "-n"), action_arg(o, r + 2, "", b), action_arg(o, r + 3, "", "-d"),
+action_arg(o, r + 5, "", "-g"), action_arg(o, r + 6, "", gn), action_arg(o, r + 7, "", "-f"), action_arg(o, r + 8, "", f),
+action_arg(o, r + 9, "", "-e"), action_arg(o, r + 13, "", "-o"), action_arg(o, r + 14, "", cat(d, "/")) :-
+  halide_build_lib_out(l, _, d, _, o), halide_build_fb(l, b), halide_build_lib_names(l, gn, f), halide_build_ro(o, r).
+action_arg(o, r + 4, "", "1") :- halide_build_lib_out(l, _, _, _, o), halide_build_library_gradient(l), halide_build_ro(o, r).
+action_arg(o, r + 4, "", "0") :- halide_build_lib_out(l, _, _, _, o), !halide_build_library_gradient(l), halide_build_ro(o, r).
+action_arg(o, r + 10, "", e) :- halide_build_lib_out(l, c, _, _, o), halide_build_e_group(l, c, g), joined(g, e),
+  halide_build_ro(o, r).
+action_arg(o, r + 11, "", "-p"), action_run_list(o, r + 12, "", ",") :- halide_build_lib_out(l, _, _, _, o),
+  halide_build_has_plugin(l), halide_build_ro(o, r).
+action_run_item(o, r + 12, j, p, "load") :- halide_build_lib_out(l, _, _, _, o), halide_build_lib_plugin(l, j, p),
+  halide_build_ro(o, r).
+action_arg(o, r + 15, "target=", s) :- halide_build_lib_out(l, c, _, _, o), halide_build_lib_tlist(l, c, s),
+  halide_build_ro(o, r).
+action_arg(o, r + 16, "autoscheduler=", a) :- halide_build_lib_out(l, _, _, _, o),
+  halide_build_library_autoscheduler(l, a, _), halide_build_ro(o, r).
+action_arg(o, r + 20 + j, "", p) :- halide_build_lib_out(l, _, _, _, o), halide_build_library_param_set(l, s),
+  halide_build_params(s, j, p), halide_build_ro(o, r).
+action_arg(o, r + 20 + j, "", p) :- halide_build_lib_out(l, c, _, _, o), halide_build_library_params(l, n, p, j),
+  cond_holds(c, n), halide_build_ro(o, r).
+error("unknown Halide params list", cat(l, ": ", s)) :- halide_build_library_param_set(l, s), !halide_build_params(s, _, _).
+error("unknown Halide params list", cat(r, ": ", s)) :- halide_build_runtime_params(r, s), !halide_build_params(s, _, _).
+
+// halide_build_runtime_library(rt, tool, headers): add_halide_runtime(rt).
+// tool (gengen) -r writes rt.o, the Halide runtime for rt's configuration's
+// Halide target, into out:gen/<config>/<rt>, run there. rt is a static
+// library of it; its consumers get the runtime's headers (headers, an
+// interface target: CMake's Halide::Runtime). Its target is its libraries'
+// targets without the features that do not change a runtime (CMake's
+// _Halide_get_runtime_targets), each once.
+.decl halide_build_runtime_library(rt:symbol, tool:symbol, headers:symbol)
+.decl halide_build_rt(rt:symbol, tool:symbol, headers:symbol)
+halide_build_rt(r, t, h) :- halide_build_runtime_library(r, t, h).
+halide_build_rt(cat(l, ".runtime"), t, h) :- halide_build_library(l, _, _, _, ""), !halide_build_cback(l),
+  halide_build_runtime_defaults(t, h).
+.decl halide_build_lib_rt(l:symbol, rt:symbol)
+halide_build_lib_rt(l, r) :- halide_build_library(l, _, _, _, r), r != "".
+halide_build_lib_rt(l, cat(l, ".runtime")) :- halide_build_library(l, _, _, _, ""), !halide_build_cback(l).
+dep(l, r, "public") :- halide_build_lib_rt(l, r).
+.decl halide_build_has_rt_defaults()
+halide_build_has_rt_defaults() :- halide_build_runtime_defaults(_, _).
+error("Halide library needs its own runtime, but no halide_build_runtime_defaults", l) :-
+  halide_build_library(l, _, _, _, ""), !halide_build_cback(l), !halide_build_has_rt_defaults().
+
+.decl halide_build_rtlib_out(rt:symbol, c:Cfg, dir:symbol, o:symbol)
+halide_build_rtlib_out(r, c, d, cat(d, "/", r, ".o")) :-
+  halide_build_rt(r, _, _), needed(r, c), cfg_name(c, n), d = cat("out:gen/", n, "/", r).
+target(r), native_kind(r, "library"), dep(r, h, "public"),
+linkage_require(r, "static", "add_halide_runtime: the generator emits the runtime as one object, archived into a static library") :-
+  halide_build_rt(r, _, h).
+action(o, "GENRT"), target_action(r, c, o), action_cwd(o, d), native_object(r, c, o) :-
+  halide_build_rtlib_out(r, c, d, o).
+action_run(o, 0, "", g, "run") :- halide_build_rtlib_out(r, _, _, o), halide_build_rt(r, g, _).
+action_arg(o, 1, "", "-r"), action_arg(o, 2, "", cat(d, "/", r)), action_arg(o, 3, "", "-o"),
+action_arg(o, 4, "", cat(d, "/")), action_arg(o, 5, "", "-e"), action_arg(o, 6, "", "object") :-
+  halide_build_rtlib_out(r, _, d, o).
+action_arg(o, 7, "target=", s) :- halide_build_rtlib_out(r, c, _, o), halide_build_rt_tlist(r, c, s).
+action_arg(o, 8 + j, "", p) :- halide_build_rtlib_out(r, _, _, o), halide_build_runtime_params(r, s), halide_build_params(s, j, p).
+
+// add_halide_library gives each runtime library Threads::Threads and
+// ${CMAKE_DL_LIBS} (HalideGeneratorHelpers.cmake); Halide::Runtime itself
+// states neither. Their per-OS values are buildlog-cpp's
+// (platform_os_threads_arg, platform_os_dl_lib); these two interface targets
+// carry them as link flags, as the targets Threads::Threads and the dl
+// library are, and every runtime library depends on both publicly, so its
+// consumers' links get them. An OS with no stated value is an error, not an
+// empty default. (Threads::Threads is only the link flag here: CMake's
+// FindThreads also puts -pthread on compiles, which glibc 2.34+ makes empty.)
+imported("halide_build::threads"). imported_kind("halide_build::threads", "interface").
+imported("halide_build::dl"). imported_kind("halide_build::dl", "interface").
+dep(r, "halide_build::threads", "public"), dep(r, "halide_build::dl", "public") :- halide_build_rt(r, _, _).
+.decl halide_build_rt_os(r:symbol, c:Cfg, os:symbol)
+halide_build_rt_os(r, c, os) :- halide_build_rtlib_out(r, c, _, _), config_platform(c, p), platform_constraint(p, "os", os).
+prop_in("halide_build::threads", c, "native.link_flag", a, "interface") :-
+  halide_build_rt_os(_, c, os), platform_os_threads_arg(os, a), a != "".
+prop_in("halide_build::dl", c, "native.link_flag", cat("-l", l), "interface") :-
+  halide_build_rt_os(_, c, os), platform_os_dl_lib(os, l), l != "".
+error("Halide runtime library: the OS's threads flag is not stated (platform_os_threads_arg)", cat(r, " on ", os)) :-
+  halide_build_rt_os(r, _, os), !platform_os_threads_arg(os, _).
+error("Halide runtime library: the OS's dl library is not stated (platform_os_dl_lib)", cat(r, " on ", os)) :-
+  halide_build_rt_os(r, _, os), !platform_os_dl_lib(os, _).
+
+.decl halide_build_rt_strip(f:symbol)
+halide_build_rt_strip("user_context"). halide_build_rt_strip("no_asserts"). halide_build_rt_strip("no_bounds_query").
+halide_build_rt_strip("no_runtime"). halide_build_rt_strip("profile").
+.decl halide_build_rt_use(r:symbol, c:Cfg, l:symbol, i:number, g:symbol)
+halide_build_rt_use(r, c, l, i, cat("halide_build_r|", r, "|", n, "|", l, "|", to_string(i))) :-
+  halide_build_rtlib_out(r, c, _, _), halide_build_lib_rt(l, r), halide_build_lib_base(l, c, i, _), cfg_name(c, n).
+.decl halide_build_rt_part(g:symbol)
+halide_build_rt_part(g), halide_build_fitem(g, k, f) :-
+  halide_build_rt_use(_, _, l, i, g), halide_build_lib_feat(l, i, f, k), !halide_build_rt_strip(f).
+halide_build_rt_part(g), halide_build_fitem(g, k, f) :-
+  halide_build_rt_use(_, c, _, _, g), halide_build_cfg_feat(c, f, k), !halide_build_rt_strip(f).
+.decl halide_build_rt_str(r:symbol, c:Cfg, i:number, s:symbol)
+halide_build_rt_str(r, c, i, cat(b, "-", x)) :- halide_build_rt_use(r, c, l, i, g), halide_build_lib_base(l, c, i, b),
+  halide_build_fjoined(g, x).
+halide_build_rt_str(r, c, i, b) :- halide_build_rt_use(r, c, l, i, g), halide_build_lib_base(l, c, i, b), !halide_build_rt_part(g).
+join_item(g, s), join_rank(g, s, k), join_sep(g, ",") :- halide_build_rt_str(r, c, _, s), cfg_name(c, n),
+  g = cat("halide_build_rl|", r, "|", n), k = min i : { halide_build_rt_str(r, c, i, s) }.
+.decl halide_build_rt_tlist(r:symbol, c:Cfg, s:symbol)
+halide_build_rt_tlist(r, c, s) :- halide_build_rtlib_out(r, c, _, _), cfg_name(c, n), joined(cat("halide_build_rl|", r, "|", n), s).
+
+.decl halide_build_has_target(c:Cfg)
+halide_build_has_target(c) :- halide_build_target(c, _).
+error("no Halide target for the configuration", cat(l, " in ", n)) :-
+  halide_build_lib_dir(l, c, _), !halide_build_has_target(c), cfg_name(c, n).
+error("no Halide target for the configuration", cat(r, " in ", n)) :-
+  halide_build_rtlib_out(r, c, _, _), !halide_build_has_target(c), cfg_name(c, n).
+.decl halide_build_rt_has_tlist(r:symbol, c:Cfg)
+halide_build_rt_has_tlist(r, c) :- halide_build_rt_tlist(r, c, _).
+error("Halide runtime built without any of its libraries (no target to derive)", cat(r, " in ", n)) :-
+  halide_build_rtlib_out(r, c, _, _), !halide_build_rt_has_tlist(r, c), cfg_name(c, n).
+
+// add_halide_stub: gen -g generator -n generator -o dir -e cpp_stub.
+.decl halide_build_stub_out(s:symbol, c:Cfg, d:symbol, h:symbol)
+halide_build_stub_out(s, c, d, cat(d, "/", gn, ".stub.h")) :-
+  halide_build_stub(s, _, gn), needed(s, c), cfg_name(c, n), d = cat("out:gen/", n, "/", s).
+target(s) :- halide_build_stub(s, _, _).
+action(h, "GENSTUB"), target_action(s, c, h), action_cwd(h, d),
+iface(s, c, "cc.include_dir", d), iface(s, c, "cc.generated_header", h) :- halide_build_stub_out(s, c, d, h).
+action_run(h, 0, "", g, "run") :- halide_build_stub_out(s, _, _, h), halide_build_stub(s, g, _).
+action_arg(h, 1, "", "-g"), action_arg(h, 2, "", gn), action_arg(h, 3, "", "-n"), action_arg(h, 4, "", gn),
+action_arg(h, 5, "", "-o"), action_arg(h, 6, "", d), action_arg(h, 7, "", "-e"), action_arg(h, 8, "", "cpp_stub") :-
+  halide_build_stub_out(s, _, d, h), halide_build_stub(s, _, gn).
+
+// add_halide_python_extension_library(ext MODULE_NAME module HALIDE_LIBRARIES
+// libs): a module library of the libraries' .py.cpp sources (each library
+// states emit "python_extension") and the module definition the runtime
+// generator writes (gengen -r <ext>_module_definition -e python_extension),
+// defined as CMake defines it: the module name and one X(function) per
+// library. The libraries must share one runtime. What makes it a Python
+// module (the interpreter's headers, its file name) is the Python layer's.
+.decl halide_build_pyext(ext:symbol, module:symbol)
+.decl halide_build_pyext_library(ext:symbol, i:number, lib:symbol)
+target(e), native_kind(e, "module_library"), prop(e, "cxx.std", "17", "private"),
+prop(e, "cc.define", "HALIDE_PYTHON_EXTENSION_OMIT_MODULE_DEFINITION", "private"),
+prop(e, "cc.define", cat("HALIDE_PYTHON_EXTENSION_MODULE_NAME=", m), "private") :- halide_build_pyext(e, m).
+dep(e, l, "private") :- halide_build_pyext_library(e, _, l).
+error("Halide python extension library without libraries", e) :- halide_build_pyext(e, _), !halide_build_pyext_library(e, _, _).
+error("python extension library is not a Halide library that emits python_extension", cat(e, ": ", l)) :-
+  halide_build_pyext_library(e, _, l), !halide_build_library_emit(l, "python_extension").
+.decl halide_build_pyext_rt(e:symbol, r:symbol)
+halide_build_pyext_rt(e, r) :- halide_build_pyext_library(e, _, l), halide_build_lib_rt(l, r).
+error("python extension library needs one Halide runtime", cat(e, ": ", a, " / ", b)) :-
+  halide_build_pyext_rt(e, a), halide_build_pyext_rt(e, b), a < b.
+join_item(g, cat("X(", f, ")")), join_rank(g, cat("X(", f, ")"), i), join_sep(g, " ") :-
+  halide_build_pyext_library(e, i, l), halide_build_lib_names(l, _, f), g = cat("halide_build_pf|", e).
+prop(e, "cc.define", cat("HALIDE_PYTHON_EXTENSION_FUNCTIONS= ", fs), "private") :-
+  halide_build_pyext(e, _), joined(cat("halide_build_pf|", e), fs).
+.decl halide_build_pyext_out(e:symbol, c:Cfg, d:symbol, o:symbol)
+halide_build_pyext_out(e, c, d, cat(d, "/", e, "_module_definition.py.cpp")) :-
+  halide_build_pyext(e, _), needed(e, c), cfg_name(c, n), d = cat("out:gen/", n, "/", e, ".module").
+cxx_generated_source(e, c, cat(d, "/", b, ".py.cpp")) :- halide_build_pyext_library(e, _, l), needed(e, c),
+  halide_build_lib_out(l, c, d, _, _), halide_build_fb(l, b).
+action(o, "GENPYEXT"), target_action(e, c, o), action_cwd(o, d), cxx_generated_source(e, c, o) :-
+  halide_build_pyext_out(e, c, d, o).
+action_run(o, 0, "", g, "run") :- halide_build_pyext_out(_, _, _, o), halide_build_runtime_defaults(g, _).
+action_arg(o, 1, "", "-r"), action_arg(o, 2, "", cat(e, "_module_definition")), action_arg(o, 3, "", "-e"),
+action_arg(o, 4, "", "python_extension"), action_arg(o, 5, "", "-o"), action_arg(o, 6, "", cat(d, "/")) :-
+  halide_build_pyext_out(e, _, d, o).
+action_arg(o, 7, "target=", "host") :- halide_build_pyext_out(_, c, _, o), halide_build_same_platform(c).
+action_arg(o, 7, "target=", t) :- halide_build_pyext_out(_, c, _, o), !halide_build_same_platform(c), halide_build_target(c, t).

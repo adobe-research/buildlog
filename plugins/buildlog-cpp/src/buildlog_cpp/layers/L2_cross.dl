@@ -1,0 +1,65 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L2 (buildlog-cpp): toolchains that target only platforms of their own.
+// A plugin for an SDK (the Android NDK, Emscripten) states cross_target(tc, p)
+// for its toolchain and its platforms; its inventory probe's results,
+// res_cross_<name>_*, are read by the capability probes beside the host
+// inventory's (probes.inventory_rows). Core L2 selects among toolchains by
+// what can compile for the platform: no other toolchain targets a cross
+// toolchain's platform, and a cross toolchain targets nothing else, so nothing
+// needs a pin. Those pairs are not probed (the host clang compiles an empty
+// function for any triple and fails only at the link): there is no answer,
+// so the toolchain is not a candidate.
+.decl cross_target(tc:symbol, p:symbol)                // open
+.decl cross_toolchain(tc:symbol)
+.decl cross_platform(p:symbol)
+cross_toolchain(tc) :- cross_target(tc, _).
+cross_platform(p) :- cross_target(_, p).
+.decl cross_mismatch(tc:symbol, p:symbol)
+cross_mismatch(tc, p) :- cross_toolchain(tc), platform(p, _), !cross_target(tc, p).
+cross_mismatch(tc, p) :- toolchain(tc, _, _), !cross_toolchain(tc), cross_platform(p).
+
+// The OS release a platform's triple is built for: Android's API level
+// (build.gradle's minSdk), which clang spells into the triple
+// (aarch64-linux-android23). A decision of the project, not of the toolchain.
+.decl platform_os_level(os:symbol, level:symbol)       // spec
+.decl platform_leveled(p:symbol)
+platform_leveled(p) :- platform_constraint(p, "os", os), platform_os_level(os, _).
+error("platform_os_level twice", cat(os, ": ", a, " and ", b)) :-
+  platform_os_level(os, a), platform_os_level(os, b), a < b.
+
+// CPU features a configuration enables beyond its platform's baseline, in
+// the neutral spelling of the ISA ("simd128", "threads" for WebAssembly). An
+// SDK plugin states them from its settings; a project's rules (Halide's
+// target features) read them, so neither names the other.
+.decl config_cpu_feature(c:Cfg, f:symbol)              // open
+
+// ---- a Linux platform built from another OS: a clang and a sysroot ----
+// The user states that toolchain tc builds for the Linux platform p against
+// the sysroot (the root of a Linux file system: usr/include, usr/lib, ...,
+// e.g. exported from a container image) and, optionally, links with the ELF
+// linker at path ld (an LLVM install may not ship lld). This is what a CMake
+// toolchain file's CMAKE_SYSROOT and CMAKE_<LANG>_COMPILER_TARGET say. The
+// platform need not be one the inventory found (a macOS host finds none);
+// it is declared here, in the inventory's own names. The pair is stated, not
+// probed: a probe of the host clang would need the sysroot, which only this
+// fact carries. Every other toolchain is no candidate for p, so no pin is
+// needed for it; the user's pins still apply where several toolchains are
+// stated for p.
+.decl cross_sysroot(tc:symbol, p:symbol, root:symbol)    // user
+.decl cross_linker(tc:symbol, p:symbol, path:symbol)     // user
+.decl linux_cpu_triple(p:symbol, cpu:symbol, triple:symbol)
+linux_cpu_triple("arm64-linux", "arm64", "aarch64-linux-gnu").
+linux_cpu_triple("x86_64-linux", "x86_64", "x86_64-linux-gnu").
+platform(p, tr), platform_constraint(p, "cpu", cpu), platform_constraint(p, "os", "linux") :-
+  cross_sysroot(_, p, _), linux_cpu_triple(p, cpu, tr).
+error("cross_sysroot names no Linux platform", p) :- cross_sysroot(_, p, _), !linux_cpu_triple(p, _, _).
+error("cross_sysroot names no clang toolchain", tc) :- cross_sysroot(tc, _, _), !toolchain(tc, "clang", _).
+error("cross_linker without cross_sysroot", cat(tc, " for ", p)) :- cross_linker(tc, p, _), !cross_sysroot(tc, p, _).
+cross_mismatch(tc, p) :- cross_sysroot(_, p, _), toolchain(tc, _, _).
+toolchain_can_target(tc, l, p) :- cross_sysroot(tc, p, _), toolchain(tc, "clang", _),
+  (l = "c" ; l = "cxx" ; l = "native-link").
+tc_platform_arg(tc, p, "--sysroot=", root) :- cross_sysroot(tc, p, root).
+tc_link_arg(tc, p, cat("--ld-path=", ld)) :- cross_linker(tc, p, ld).
+platform_sysroot(p, root) :- cross_sysroot(_, p, root).

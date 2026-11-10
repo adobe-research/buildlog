@@ -1,0 +1,6 @@
+.decl found_marker(o:symbol)
+found_marker("out:found/marker").
+action(o, "FOUND") :- found_marker(o).
+action_arg(o, 0, "", "touch") :- found_marker(o).
+action_arg(o, 1, "", o) :- found_marker(o).
+default_output(o) :- found_marker(o).

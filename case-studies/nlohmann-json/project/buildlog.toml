@@ -1,0 +1,88 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# nlohmann/json 3.12.0, the header-only library as its CMakeLists.txt
+# defines, installs and exports it (the nlohmann/json case study;
+# case-studies/nlohmann-json/README.md). Configure, then install:
+#   uv run --frozen buildlog configure --preset apple-clang-arm64 \
+#     -D INSTALL_PREFIX=/opt/nlohmann -C BUILD case-studies/nlohmann-json/project
+#   ninja -C BUILD/souffle install          # DESTDIR=/stage ninja ... stages it
+uses = ["buildlog-cpp"]
+source_root = "${JSON_SRC}"
+spec = ["headers.toml"]
+
+# nlohmann/json (CMakeLists.txt, v3.12.0): one INTERFACE library,
+# nlohmann_json, with its options, installed and exported as the package
+# nlohmann_json. The unit tests (tests/, JSON_BuildTests) are out of scope.
+#
+# One configuration: a header-only library compiles nothing, so its
+# configuration only fixes the platform the options are evaluated on.
+config_decl = [["release", "arm64-macos"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = ["nlohmann_json"]
+
+# CMakeLists.txt's option()s that change the library's interface, with
+# upstream's defaults (off unless stated). An option is the condition of its
+# own name. The user states other values (-O JSON_Diagnostics=on). Not
+# options here: JSON_Install (whether to install is the user's: the install
+# target; a source project's install is dropped, nlohmann/json #2946) and
+# JSON_SystemInclude (a dependency's include dirs are always -isystem to its
+# consumers; notes.md, "Include-directory order").
+[option]
+JSON_Diagnostics = {}
+JSON_Diagnostic_Positions = {}
+JSON_DisableEnumSerialization = {}
+JSON_GlobalUDLs = { default = "on" }
+JSON_ImplicitConversions = { default = "on" }
+JSON_LegacyDiscardedValueComparison = {}
+JSON_MultipleHeaders = { default = "on" }
+
+# The package: install(EXPORT ... NAMESPACE nlohmann_json::), the config
+# and version files (SameMajorVersion, without the pointer-size check:
+# #1697) and nlohmann_json.pc. Where they go is the format plugin's
+# convention (share/ for an architecture-independent package) unless the
+# user says otherwise (install_dir).
+[export.nlohmann_json]
+version = "3.12.0"
+compat = "same_major"
+description = "JSON for Modern C++"
+component = { nlohmann_json = "nlohmann_json" }
+
+# target_compile_features(... INTERFACE cxx_std_11),
+# target_compile_definitions(... INTERFACE $<$<NOT:$<BOOL:${JSON_GlobalUDLs}>>:JSON_USE_GLOBAL_UDLS=0> ...)
+# and target_include_directories(... INTERFACE
+# $<BUILD_INTERFACE:${NLOHMANN_JSON_INCLUDE_BUILD_DIR}> $<INSTALL_INTERFACE:include>):
+# the build interface is here, the install interface is install_map's.
+[target.nlohmann_json]
+interface = { "cxx.std" = "11" }
+when."!JSON_GlobalUDLs".interface."cc.define" = "JSON_USE_GLOBAL_UDLS=0"
+when."!JSON_ImplicitConversions".interface."cc.define" = "JSON_USE_IMPLICIT_CONVERSIONS=0"
+when.JSON_DisableEnumSerialization.interface."cc.define" = "JSON_DISABLE_ENUM_SERIALIZATION=1"
+when.JSON_Diagnostics.interface."cc.define" = "JSON_DIAGNOSTICS=1"
+when.JSON_Diagnostic_Positions.interface."cc.define" = "JSON_DIAGNOSTIC_POSITIONS=1"
+when.JSON_LegacyDiscardedValueComparison.interface."cc.define" = "JSON_USE_LEGACY_DISCARDED_VALUE_COMPARISON=1"
+when.JSON_MultipleHeaders.interface."cc.include_dir" = "src:include"
+when."!JSON_MultipleHeaders".interface."cc.include_dir" = "src:single_include"
+# Where the build interface's files go: either include dir to <includedir>
+# (CMake's install(DIRECTORY ${NLOHMANN_JSON_INCLUDE_BUILD_DIR} DESTINATION
+# ${NLOHMANN_JSON_INCLUDE_INSTALL_DIR})). The files are headers.toml's.
+install_map = [["src:include", "includedir", ""], ["src:single_include", "includedir", ""]]
+
+[vars]
+# The pinned checkout the CMake baseline builds (tag v3.12.0, 55f93686; see
+# baseline/run-cmake.sh).
+JSON_SRC = "${REPO_ROOT}/case-studies/nlohmann-json/upstream"
+
+# Example user choices (a user's own go in a --user file).
+[presets.apple-clang-arm64]
+# Apple's clang (the /usr/bin/c++ CMake picks). A header-only library
+# compiles nothing; its consumers do.
+toolchain_pin = [
+  ["c", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["cxx", "arm64-macos", "arm64-macos", "apple-clang"],
+  ["native-link", "arm64-macos", "arm64-macos", "apple-clang"],
+]
+
+[presets.install-prefix]
+# -D INSTALL_PREFIX=/abs/path; there is no default.
+install_prefix = "${INSTALL_PREFIX}"

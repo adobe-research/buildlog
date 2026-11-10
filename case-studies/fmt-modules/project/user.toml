@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+toolchain_pin = [
+  ["c", "arm64-macos", "arm64-macos", "llvm"],
+  ["cxx", "arm64-macos", "arm64-macos", "llvm"],
+  ["native-link", "arm64-macos", "arm64-macos", "llvm"],
+]

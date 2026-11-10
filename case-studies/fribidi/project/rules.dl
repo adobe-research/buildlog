@@ -1,0 +1,79 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// fribidi's remaining project-owned abstractions: configured-file variables
+// shared by an owner, the version split used by fribidi-config.h, source-file
+// scripts as runnable test programs, and Meson's reference-test table.
+
+// 1. Configured-file variables stated once for an owner (Meson's
+//    configuration_data: one set of values per generated file), given to
+//    every member as core requires. owner_check_define(g, var, n): var is
+//    defined (no value) where check n answers yes, undefined where no
+//    (cdata.set(var, cc.has_x())); owner_check_10: var is 1 or 0
+//    (cdata.set10); owner_check_size(g, var, lang, type): var is the size a
+//    type check of type in lang found (cc.sizeof()). A project rule cannot
+//    read a check by name (cc_check is buildlog-cpp's, not exported), so the
+//    row restates the check's language and subject.
+.decl owner_define(g:symbol, var:symbol, value:symbol)
+.decl owner_define_when(g:symbol, var:symbol, value:symbol, cond:symbol)
+.decl owner_undefine_when(g:symbol, var:symbol, cond:symbol)
+.decl owner_check_define(g:symbol, var:symbol, check:symbol)
+.decl owner_check_10(g:symbol, var:symbol, check:symbol)
+.decl owner_check_size(g:symbol, var:symbol, lang:symbol, type:symbol)
+prop(t, "configure.define", cat(x, "=", v), "private") :- owner_define(g, x, v), owner_member(g, t).
+prop_when(t, "configure.define", cat(x, "=", v), "private", n) :- owner_define_when(g, x, v, n), owner_member(g, t).
+prop_when(t, "configure.undefine", x, "private", n) :- owner_undefine_when(g, x, n), owner_member(g, t).
+.decl check_condition(check:symbol, answer:symbol, cond:symbol)
+check_condition(k, r, cat("cc.check.", k, "=", r)) :- (owner_check_define(_, _, k) ; owner_check_10(_, _, k)),
+  (r = "yes" ; r = "no").
+condition(n, $Eq(cat("cc.check.", k), r)) :- check_condition(k, r, n).
+owner_define_when(g, x, "1", n) :- owner_check_define(g, x, k), check_condition(k, "yes", n).
+owner_undefine_when(g, x, n) :- owner_check_define(g, x, k), check_condition(k, "no", n).
+owner_define_when(g, x, "1", n) :- owner_check_10(g, x, k), check_condition(k, "yes", n).
+owner_define_when(g, x, "0", n) :- owner_check_10(g, x, k), check_condition(k, "no", n).
+prop_in(t, c, "configure.define", cat(x, "=", z), "private") :- owner_check_size(g, x, l, s), owner_member(g, t),
+  needed(t, c), tc_for(l, c, tc), config_platform(c, p), exec_config(c, e),
+  config_platform(e, q), cc_check_type_size(tc, q, p, l, s, _, _, z).
+
+// The versions. meson.build states the project version and the library's
+// interface numbers once; everything else is derived from them: the
+// library's version soversion.interface_version.interface_age (libversion)
+// and fribidi-config.h's major, minor and micro (version.split('.')).
+.decl project_version(v:symbol)
+.decl library_interface(t:symbol, soversion:symbol, interface_version:symbol, interface_age:symbol)
+native_version(t, cat(s, ".", iv, ".", a), s) :- library_interface(t, s, iv, a).
+.decl version_parts(v:symbol, major:symbol, minor:symbol, micro:symbol)
+version_parts(v, substr(v, 0, i), substr(v, i + 1, j - i - 1), substr(v, j + 1, strlen(v) - j - 1)) :-
+  project_version(v), i = range(0, strlen(v)), substr(v, i, 1) = ".", j = range(i + 1, strlen(v)),
+  substr(v, j, 1) = ".".
+owner_define("config", "FRIBIDI_VERSION", v), owner_define("config", "FRIBIDI_MAJOR_VERSION", x),
+owner_define("config", "FRIBIDI_MINOR_VERSION", y), owner_define("config", "FRIBIDI_MICRO_VERSION", z) :-
+  version_parts(v, x, y, z).
+owner_define("config", "FRIBIDI_INTERFACE_VERSION", iv) :- library_interface(_, _, iv, _).
+
+// fribidi-config.h's MSVC placeholder line (lib/meson.build: cc.get_id() ==
+// 'msvc'), from the C toolchain's family in each configuration.
+prop_in(t, c, "configure.define", cat("FRIBIDI_MSVC_BUILD_PLACEHOLDER=", x), "private") :-
+  owner_member("config", t), needed(t, c), tc_for("c", c, tc), toolchain(tc, f, _),
+  (f = "msvc", x = "#define FRIBIDI_BUILT_WITH_MSVC" ; f != "msvc", x = "#undef FRIBIDI_BUILT_WITH_MSVC").
+
+// 2. A program that is a source file (Meson's find_program('test-runner.py'),
+//    run by its #! line). buildlog runs only built artifacts, so the script
+//    is copied (mode kept) into bin/<cfg>/ and the copy is its run artifact.
+.decl script(t:symbol, src:symbol)
+.decl script_out(t:symbol, c:Cfg, o:symbol)
+target(t) :- script(t, _).
+script_out(t, c, cat("out:bin/", n, "/", t)) :- script(t, _), needed(t, c), cfg_name(c, n).
+target_action(t, c, o), run_artifact(t, c, o), action(o, "COPY"), action_builtin(o, "copy"),
+action_arg(o, 1, "", cat("src:", s)), action_arg(o, 2, "", o), action_in(o, cat("src:", s), "explicit") :-
+  script_out(t, c, o), script(t, s).
+
+// 3. test/meson.build's reference tests: `test-runner.py fribidi CHARSET
+//    test_<charset>_<suffix>.input test_<charset>_<suffix>.reference`, one per
+//    row of its `tests` table, named <charset>_<suffix>.
+.decl reference_test(charset:symbol, suffix:symbol)
+.decl reference_test_name(n:symbol, charset:symbol)
+reference_test_name(cat(x, "_", y), x) :- reference_test(x, y).
+test(n, "test-runner.py"), test_arg_ref(n, 0, "fribidi"), test_arg(n, 1, x),
+test_arg(n, 2, cat("src:test/test_", n, ".input")), test_arg(n, 3, cat("src:test/test_", n, ".reference")) :-
+  reference_test_name(n, x).

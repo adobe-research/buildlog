@@ -1,0 +1,10 @@
+# Linux platforms for tests/test_install_layout.py: buildlog-cpp's inventory
+# knows only macOS, so this pure rule package states the platform facts a
+# Linux platform plugin would (os, cpu and the distribution family).
+name = "test-linux"
+version = "0.1.0"
+rank = 5
+layers = ["linux.dl"]
+requires = { buildlog-cpp = ">=0.1" }
+extends = ["platform", "platform_constraint", "platform_distro"]
+accepts = ["test_linux_platform", "test_linux_distro"]

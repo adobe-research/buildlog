@@ -1,0 +1,48 @@
+target = [["bilateral_grid_process"]]
+native_kind = [["bilateral_grid_process", "executable"]]
+cxx_source = [["bilateral_grid_process", "bilateral_grid/filter.cpp"]]
+prop = [["bilateral_grid_process", "cxx.std", "17", "private"]]
+dep = [
+  ["bilateral_grid_process", "bilateral_grid", "private"],
+  ["bilateral_grid_process", "bilateral_grid_auto_schedule", "private"],
+  ["bilateral_grid_process", "Halide::ImageIO", "private"],
+  ["bilateral_grid_process", "Halide::Tools", "private"],
+  ["bilateral_grid.generator", "Halide::Tools", "private"],
+]
+request = [
+  ["bilateral_grid_process", "native-release"],
+  ["bilateral_grid_process", "x86_64-release"],
+  ["bilateral_grid", "universal2-release"],
+  ["bilateral_grid_auto_schedule", "universal2-release"]
+]
+halide_generator = [["bilateral_grid.generator"]]
+halide_generator_source = [
+  ["bilateral_grid.generator", "bilateral_grid/bilateral_grid_generator.cpp"]
+]
+halide_library = [
+  ["bilateral_grid", "bilateral_grid", "bilateral_grid.generator", "bilateral_grid"],
+  [
+    "bilateral_grid_auto_schedule",
+    "bilateral_grid",
+    "bilateral_grid.generator",
+    "bilateral_grid"
+  ]
+]
+halide_library_output = [
+  ["bilateral_grid", "registration"],
+  ["bilateral_grid", "schedule"],
+  ["bilateral_grid", "stmt"],
+  ["bilateral_grid_auto_schedule", "schedule"],
+  ["bilateral_grid_auto_schedule", "stmt"]
+]
+halide_library_autoscheduler = [
+  [
+    "bilateral_grid_auto_schedule",
+    "Mullapudi2016",
+    "${HALIDE_PREFIX}/lib/libautoschedule_mullapudi2016.so"
+  ]
+]
+halide_library_param = [
+  ["bilateral_grid_auto_schedule", 0, "autoscheduler.last_level_cache_size=10000"],
+  ["bilateral_grid_auto_schedule", 1, "autoscheduler.experimental_gpu_schedule=1"]
+]

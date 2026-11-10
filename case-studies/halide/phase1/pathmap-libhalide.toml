@@ -1,0 +1,318 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Path map for compare.py: buildlog's libHalide graph (side b) onto the CMake
+# baseline (side a). Only layout renames; every rule is a pure rename of a file
+# the two builds both produce or both read, never a change of meaning.
+
+# Tests (phase 6), before everything else: the catch-alls below exclude the
+# phase 1-5 targets by name.
+# CMake's target directories: test/ (Halide_terminate_handler, _test_internal),
+# test/correctness, test/autoschedulers/adams2019 (adams2019_demo*) and
+# test/generator (everything else). Objects: obj/<config>/<target>/<source
+# path> -> <dir>/CMakeFiles/<target>.dir/<path relative to dir>.
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/(Halide_terminate_handler|_test_internal)/test/'
+to = '\1test/CMakeFiles/\2.dir/'
+
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/(correctness_[\w.]+)/test/correctness/'
+to = '\1test/correctness/CMakeFiles/\2.dir/'
+
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/(adams2019_demo[\w.]*)/test/autoschedulers/adams2019/'
+to = '\1test/autoschedulers/adams2019/CMakeFiles/\2.dir/'
+
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/((?!adams2019_(?!demo)|anderson2021_|autoschedule_|Halide|gengen|binary2cpp|build_halide_h|regexp_replace|get_host_target|featurization_to_sample)[^/]+)/test/generator/'
+to = '\1test/generator/CMakeFiles/\2.dir/'
+
+# RunGenMain.cpp, an interface source of the consumer: CMake's object path
+# climbs out of the target's directory with __/.
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/(adams2019_demo_apps_autoscheduler)/tools/'
+to = '\1test/autoschedulers/adams2019/CMakeFiles/\2.dir/__/__/__/tools/'
+
+# Objects of generated sources (registration, C backend): buildlog
+# obj/<config>/<target>/gen/<config>/<lib>/X, CMake <dir>/CMakeFiles/<target>.dir/X
+# (the source is in the target's binary directory).
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/(adams2019_demo[\w.]*)/gen/arm64-macos\.release\.none/[^/]+/'
+to = '\1test/autoschedulers/adams2019/CMakeFiles/\2.dir/'
+
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/((?!adams2019_(?!demo)|anderson2021_|autoschedule_|Halide|gengen|binary2cpp|build_halide_h|regexp_replace|get_host_target|featurization_to_sample)[^/]+)/gen/arm64-macos\.release\.none/[^/]+/'
+to = '\1test/generator/CMakeFiles/\2.dir/'
+
+# Generated files: buildlog gen/<config>/<lib>/ (one directory per library,
+# stub or runtime), CMake the directory of add_halide_library's caller.
+[[map]]
+side = "b"
+from = '\$BUILD/gen/arm64-macos\.release\.none/(adams2019_demo[\w.]*)(/|$)'
+to = '$BUILD/test/autoschedulers/adams2019\2'
+
+[[map]]
+side = "b"
+from = '\$BUILD/gen/arm64-macos\.release\.none/((?!adams2019_(?!demo)|anderson2021_|autoschedule_|Halide|gengen|binary2cpp|build_halide_h|regexp_replace|get_host_target|featurization_to_sample)[^/]+)(/|$)'
+to = '$BUILD/test/generator\2'
+
+[[map]]
+side = "b"
+from = '^(-I)?gen/arm64-macos\.release\.none/(adams2019_demo[\w.]*)(/|$)'
+to = '\1$BUILD/test/autoschedulers/adams2019\3'
+
+[[map]]
+side = "b"
+from = '^(-I)?gen/arm64-macos\.release\.none/((?!adams2019_(?!demo)|anderson2021_|autoschedule_|Halide|gengen|binary2cpp|build_halide_h|regexp_replace|get_host_target|featurization_to_sample)[^/]+)(/|$)'
+to = '\1$BUILD/test/generator\3'
+
+# Executables and archives: buildlog bin/<config>/ and lib/<config>/, CMake the
+# target's directory.
+[[map]]
+side = "b"
+from = '\$BUILD/bin/arm64-macos\.release\.none/(_test_internal)$'
+to = '$BUILD/test/\1'
+
+[[map]]
+side = "b"
+from = '\$BUILD/bin/arm64-macos\.release\.none/(correctness_[\w.]+)$'
+to = '$BUILD/test/correctness/\1'
+
+[[map]]
+side = "b"
+from = '\$BUILD/bin/arm64-macos\.release\.none/(adams2019_demo[\w.]*)$'
+to = '$BUILD/test/autoschedulers/adams2019/\1'
+
+[[map]]
+side = "b"
+from = '\$BUILD/bin/arm64-macos\.release\.none/(generator_aot\w+|rungen_test|(?!adams2019_(?!demo)|anderson2021_|autoschedule_|Halide|gengen|binary2cpp|build_halide_h|regexp_replace|get_host_target|featurization_to_sample)[\w]+\.generator)$'
+to = '$BUILD/test/generator/\1'
+
+[[map]]
+side = "b"
+from = '\$BUILD/lib/arm64-macos\.release\.none/lib(adams2019_demo[\w.]*\.a)$'
+to = '$BUILD/test/autoschedulers/adams2019/lib\1'
+
+[[map]]
+side = "b"
+from = '\$BUILD/lib/arm64-macos\.release\.none/lib((?!adams2019_(?!demo)|anderson2021_|autoschedule_|Halide|gengen|binary2cpp|build_halide_h|regexp_replace|get_host_target|featurization_to_sample)[\w.]+\.a)$'
+to = '$BUILD/test/generator/lib\1'
+
+# Tools and autoschedulers (phase 4), before the general rules: buildlog
+# names targets by output name (gengen, autoschedule_<name>) and lays out
+# obj/<config>/<target>/<source path>, bin/<config>/, lib/<config>/ and
+# gen/<config>/<target>/; CMake uses the target names Halide_GenRT and
+# Halide_<Name>, <dir>/CMakeFiles/<target>.dir/ and the target's directory.
+# Each rule matches an output path ($BUILD/...) or a depfile (relative).
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/autoschedule_adams2019/src/autoschedulers/adams2019/'
+to = '\1src/autoschedulers/adams2019/CMakeFiles/Halide_Adams2019.dir/'
+
+[[map]]
+side = "b"
+from = '\$BUILD/lib/arm64-macos\.release\.none/libautoschedule_adams2019\.so'
+to = "$BUILD/src/autoschedulers/adams2019/libautoschedule_adams2019.so"
+
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/autoschedule_anderson2021/src/autoschedulers/anderson2021/'
+to = '\1src/autoschedulers/anderson2021/CMakeFiles/Halide_Anderson2021.dir/'
+
+[[map]]
+side = "b"
+from = '\$BUILD/lib/arm64-macos\.release\.none/libautoschedule_anderson2021\.so'
+to = "$BUILD/src/autoschedulers/anderson2021/libautoschedule_anderson2021.so"
+
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/autoschedule_li2018/src/autoschedulers/li2018/'
+to = '\1src/autoschedulers/li2018/CMakeFiles/Halide_Li2018.dir/'
+
+[[map]]
+side = "b"
+from = '\$BUILD/lib/arm64-macos\.release\.none/libautoschedule_li2018\.so'
+to = "$BUILD/src/autoschedulers/li2018/libautoschedule_li2018.so"
+
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/autoschedule_mullapudi2016/src/autoschedulers/mullapudi2016/'
+to = '\1src/autoschedulers/mullapudi2016/CMakeFiles/Halide_Mullapudi2016.dir/'
+
+[[map]]
+side = "b"
+from = '\$BUILD/lib/arm64-macos\.release\.none/libautoschedule_mullapudi2016\.so'
+to = "$BUILD/src/autoschedulers/mullapudi2016/libautoschedule_mullapudi2016.so"
+
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/((adams2019|anderson2021)_weights_obj)/gen/arm64-macos\.release\.none/(adams2019|anderson2021)_weights_obj/'
+to = '\1src/autoschedulers/\3/CMakeFiles/\2.dir/'
+
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/((adams2019|anderson2021)_[\w.]+)/src/autoschedulers/(adams2019|anderson2021)/'
+to = '\1src/autoschedulers/\4/CMakeFiles/\2.dir/'
+
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/(Halide_ASLog|get_host_target|featurization_to_sample)/src/autoschedulers/common/'
+to = '\1src/autoschedulers/common/CMakeFiles/\2.dir/'
+
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/Halide_GenGen/tools/'
+to = '\1tools/CMakeFiles/Halide_GenGen.dir/'
+
+[[map]]
+side = "b"
+from = '(\$BUILD/|^)obj/arm64-macos\.release\.none/gengen/tools/'
+to = '\1tools/CMakeFiles/Halide_GenRT.dir/'
+
+[[map]]
+side = "b"
+from = '\$BUILD/gen/arm64-macos\.release\.none/((adams2019|anderson2021)_[\w.]+)(/|$)'
+to = '$BUILD/src/autoschedulers/\2\3'
+
+[[map]]
+side = "b"
+from = '\$BUILD/bin/arm64-macos\.release\.none/((adams2019|anderson2021)_[\w.]+)$'
+to = '$BUILD/src/autoschedulers/\2/\1'
+
+[[map]]
+side = "b"
+from = '\$BUILD/bin/arm64-macos\.release\.none/(get_host_target|featurization_to_sample)$'
+to = '$BUILD/src/autoschedulers/common/\1'
+
+[[map]]
+side = "b"
+from = '\$BUILD/lib/arm64-macos\.release\.none/lib((adams2019|anderson2021)_[\w.]+\.a)$'
+to = '$BUILD/src/autoschedulers/\2/lib\1'
+
+[[map]]
+side = "b"
+from = '\$BUILD/lib/arm64-macos\.release\.none/libHalide_ASLog\.a$'
+to = "$BUILD/src/autoschedulers/common/libHalide_ASLog.a"
+
+[[map]]
+side = "b"
+from = '\$BUILD/lib/arm64-macos\.release\.none/libHalide_GenGen\.a$'
+to = "$BUILD/tools/libHalide_GenGen.a"
+
+# The generated libraries' header dirs (phase 4), as -I names them.
+[[map]]
+side = "b"
+from = '^(-I)?gen/arm64-macos\.release\.none/((adams2019|anderson2021)_[\w.]+)(/|$)'
+to = '\1$BUILD/src/autoschedulers/\3\4'
+
+# Runtime objects (phase 3): buildlog compiles gen/<config>/Halide/runtime/X.cpp
+# into Halide (obj/<config>/Halide/gen/<config>/Halide/runtime/X.cpp.o), CMake
+# into its OBJECT library Halide_initmod. (Before the phase 2 rule.)
+[[map]]
+side = "b"
+from = '\$BUILD/obj/arm64-macos\.release\.none/Halide/gen/arm64-macos\.release\.none/Halide/runtime/'
+to = "$BUILD/src/runtime/CMakeFiles/Halide_initmod.dir/"
+
+# Object files of generated sources (phase 2): buildlog compiles
+# gen/<config>/Halide/X.cpp into obj/<config>/Halide/gen/<config>/Halide/X.cpp.o,
+# CMake compiles src/X.cpp into src/CMakeFiles/Halide.dir/X.cpp.o. (Before the
+# general object rule, which would otherwise take them.)
+[[map]]
+side = "b"
+from = '\$BUILD/obj/arm64-macos\.release\.none/Halide/gen/arm64-macos\.release\.none/Halide/'
+to = "$BUILD/src/CMakeFiles/Halide.dir/"
+
+# Object files: buildlog puts them under obj/<config>/<target>/<source path>,
+# CMake under src/CMakeFiles/Halide.dir/.
+[[map]]
+side = "b"
+from = '\$BUILD/obj/arm64-macos\.release\.none/Halide/src/'
+to = "$BUILD/src/CMakeFiles/Halide.dir/"
+
+# Generated sources (phase 2): buildlog gen/<config>/Halide/, CMake src/.
+[[map]]
+side = "b"
+from = '\$BUILD/gen/arm64-macos\.release\.none/Halide(/|$)'
+to = '$BUILD/src\1'
+
+# The host tools (phase 2): buildlog bin/<config>/ and
+# obj/<config>/<tool>/tools/, CMake tools/ and tools/CMakeFiles/<tool>.dir/.
+[[map]]
+side = "b"
+from = '\$BUILD/bin/arm64-macos\.release\.none/'
+to = "$BUILD/tools/"
+
+[[map]]
+side = "b"
+from = '\$BUILD/obj/arm64-macos\.release\.none/(binary2cpp|build_halide_h|regexp_replace)/tools/'
+to = '$BUILD/tools/CMakeFiles/\1.dir/'
+
+# Halide.h (phase 2): buildlog include/<config>/, CMake include/.
+[[map]]
+side = "b"
+from = '\$BUILD/include/arm64-macos\.release\.none/'
+to = "$BUILD/include/"
+
+# The library and its symlinks: buildlog lib/<config>/, CMake src/.
+[[map]]
+side = "b"
+from = '\$BUILD/lib/arm64-macos\.release\.none/'
+to = "$BUILD/src/"
+
+# flatc's include dir (phase 5) and Halide.h's (phase 4 consumers): -I names
+# them relative to the build directory, in buildlog's include/<config>/ layout.
+[[map]]
+side = "b"
+from = '^(-I)?include/arm64-macos\.release\.none(/|$)'
+to = '\1$BUILD/include\2'
+
+# Inputs of later phases that the buildlog graph takes from the CMake build
+# tree: they are the CMake build's own files, so they are $BUILD on side a.
+# (None since phase 5; kept for partial models.)
+[[map]]
+side = "b"
+from = '\$CMAKE/'
+to = "$BUILD/"
+
+# Depfiles: -MF names the depfile relative to the build directory, in each
+# build's object layout (the same rename as the objects).
+[[map]]
+side = "b"
+from = '^obj/arm64-macos\.release\.none/Halide/gen/arm64-macos\.release\.none/Halide/runtime/'
+to = "src/runtime/CMakeFiles/Halide_initmod.dir/"
+
+[[map]]
+side = "b"
+from = '^obj/arm64-macos\.release\.none/Halide/gen/arm64-macos\.release\.none/Halide/'
+to = "src/CMakeFiles/Halide.dir/"
+
+[[map]]
+side = "b"
+from = '^obj/arm64-macos\.release\.none/Halide/src/'
+to = "src/CMakeFiles/Halide.dir/"
+
+[[map]]
+side = "b"
+from = '^obj/arm64-macos\.release\.none/(binary2cpp|build_halide_h|regexp_replace)/tools/'
+to = 'tools/CMakeFiles/\1.dir/'
+
+# The runtime's clang depfile (phase 3): buildlog names it relative to the
+# build directory (the compile runs there), CMake relative to src/runtime,
+# its working directory (normalized to $BUILD/src/runtime/).
+[[map]]
+side = "b"
+from = '^gen/arm64-macos\.release\.none/Halide/runtime/'
+to = "$BUILD/src/runtime/"
+
+[ignore]
+# -MT sets the target named inside the depfile. CMake passes the object's
+# absolute path, buildlog leaves clang's default (the -o path); Ninja's
+# deps = gcc reads only the dependency list, so the value has no effect.
+flags = ["-MT"]

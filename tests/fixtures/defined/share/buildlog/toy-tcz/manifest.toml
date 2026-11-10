@@ -1,0 +1,8 @@
+# A third toy toolchain for scoped pins: tcz runs on toy and
+# targets both toy and toy-a, so with exec-demo's tcx and tcy every
+# (language, exec, target) triple a cross build uses has two candidates.
+name = "toy-tcz"
+version = "0.1.0"
+rank = 1
+layers = ["toy_tcz.dl"]
+extends = ["toolchain", "toolchain_tool", "toolchain_runs_on", "toolchain_can_target"]

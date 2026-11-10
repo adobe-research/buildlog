@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Rejected: the manifest version disagrees with the distribution version.
+name = "test-version-skew"
+version = "9.9.9"
+rank = 5
+layers = []

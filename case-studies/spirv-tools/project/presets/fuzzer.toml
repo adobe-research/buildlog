@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# -DSPIRV_BUILD_FUZZER=ON: not modelled (it needs protobuf and libFuzzer);
+# the spec rejects it.
+option_value = [["SPIRV_BUILD_FUZZER", "on"]]

@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Warnings as errors: upstream's SPIRV_WERROR (default ON) as the user's
+# decision (cc_werror), for every target the requests reach in release.
+cc_werror = [["release", "*"]]

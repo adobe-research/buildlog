@@ -1,0 +1,37 @@
+| role | kind | actions Bazel | actions buildlog | both | only Bazel | only buildlog |
+|---|---|---|---|---|---|---|
+| exec | archive | 12 | 1 | 1 | 11 | 0 |
+| exec | compile | 41 | 37 | 37 | 0 | 0 |
+| exec | link | 1 | 1 | 1 | 0 | 0 |
+| target | archive | 3 | 1 | 1 | 2 | 0 |
+| target | compile | 7 | 7 | 7 | 0 | 0 |
+| target | custom | 1 | 1 | 1 | 0 | 0 |
+| target | link | 1 | 1 | 1 | 0 | 0 |
+
+Bazel compiles one source twice in one configuration (two targets list it): exec/$SRC/src/bfbs_gen_lua.cpp, exec/$SRC/src/bfbs_gen_nim.cpp, exec/$SRC/src/idl_gen_text.cpp, exec/$SRC/src/util.cpp
+only Bazel: exec/archive/libcode_generators.a, exec/archive/libcpp_generator.a, exec/archive/libflatc.a, exec/archive/libflatc_library.a, exec/archive/libgenerate_fbs.a, exec/archive/libgo_generator.a, exec/archive/libjava_generator.a, exec/archive/libpython.a, exec/archive/libpython_generator_private.a, exec/archive/libswift_generator.a, exec/archive/libts_generator.a, target/archive/libcode_generators.a, target/archive/libgenerate_fbs.a
+
+exec archive (1 matched):
+  only bazel: -D[1] -no_warning_for_no_symbols[1] -static[1]
+  only buildlog: rcs[1]
+exec compile (37 matched):
+  only bazel: -DNS_BLOCK_ASSERTIONS=1[37] -D_FORTIFY_SOURCE=1[37] -D__DATE__="redacted"[37] -D__TIMESTAMP__="redacted"[37] -D__TIME__="redacted"[37] -O2[37] -Wall[37] -Wno-builtin-macro-redefined[37] -Wself-assign[37] -Wthread-safety[37] -fcolor-diagnostics[37] -fno-omit-frame-pointer[37] -fstack-protector[37] -g0[37] -no-canonical-prefixes[37] -pthread[37] -target[37] arm64-apple-macosx26.5[37]
+  only buildlog: --target=arm64-apple-macos13[37] -O3[37]
+  search paths: Bazel [3, 4, 5, 7, 8, 10, 18], buildlog [2, 3]
+exec link (1 matched):
+  only bazel: -Wl,-no_warn_duplicate_libraries[1] -dead_strip[1] -fobjc-link-runtime[1] -framework[1] -headerpad_max_install_names[1] -lc++[1] -no-canonical-prefixes[1] -target[1] Foundation[1] STRIP_DEBUG_SYMBOLS[1] arm64-apple-macosx26.5[1]
+  only buildlog: --target=arm64-apple-macos13[1]
+target archive (1 matched):
+  only bazel: -D[1] -no_warning_for_no_symbols[1] -static[1]
+  only buildlog: rcs[1]
+target compile (7 matched):
+  only bazel: -DDEBUG[7] -D_FORTIFY_SOURCE=1[7] -D__DATE__="redacted"[7] -D__TIMESTAMP__="redacted"[7] -D__TIME__="redacted"[7] -Wall[7] -Wno-builtin-macro-redefined[7] -Wself-assign[7] -Wthread-safety[7] -fcolor-diagnostics[7] -fno-omit-frame-pointer[7] -fstack-protector[7] -no-canonical-prefixes[7] -pthread[7] -target[7] arm64-apple-macosx26.5[7]
+  only buildlog: --target=arm64-apple-macos13[7] -g[7]
+  search paths: Bazel [3, 4, 5, 13], buildlog [2, 3]
+target custom (1 matched):
+  Bazel:    $OUT_exec/bin/external/flatbuffers+/flatc -I ./ -I $OUT_target/bin -I $OUT_target/bin -I $OUT_exec/bin/external/flatbuffers+/flatc.runfiles/flatbuffers+ --gen-object-api --gen-compare --no-includes --gen-mutable --reflect-names --cpp-ptr-type flatbuffers::unique_ptr -c -o $OUT_target/bin $f
+  buildlog: $BUILD/bin/arm64-macos.release.none/flatc -I $SRC --gen-object-api --gen-compare --no-includes --gen-mutable --reflect-names --cpp-ptr-type flatbuffers::unique_ptr -c -o gen/arm64-macos.debug.none/monster_fbs $SRC/samples/monster.fbs
+  tool built in: Bazel exec, buildlog exec (arm64-macos.release.none)
+target link (1 matched):
+  only bazel: -Wl,-no_warn_duplicate_libraries[1] -Xlinker[1] -fobjc-link-runtime[1] -framework[1] -headerpad_max_install_names[1] -lc++[1] -no-canonical-prefixes[1] -no_deduplicate[1] -target[1] Foundation[1] STRIP_DEBUG_SYMBOLS[1] arm64-apple-macosx26.5[1]
+  only buildlog: --target=arm64-apple-macos13[1]

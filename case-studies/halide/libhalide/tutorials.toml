@@ -1,0 +1,104 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# tutorial/CMakeLists.txt (tutorials.dl).
+halide_tutorial = [
+  "lesson_01_basics",
+  "lesson_02_input_image",
+  "lesson_03_debugging_1",
+  "lesson_04_debugging_2",
+  "lesson_05_scheduling_1",
+  "lesson_06_realizing_over_shifted_domains",
+  "lesson_07_multi_stage_pipelines",
+  "lesson_08_scheduling_2",
+  "lesson_09_update_definitions",
+  "lesson_11_cross_compilation",
+  "lesson_12_using_the_gpu",
+  "lesson_13_tuples",
+  "lesson_14_types",
+  "lesson_17_predicated_rdom",
+  "lesson_18_parallel_associative_reductions",
+  "lesson_19_wrapper_funcs",
+  "lesson_20_cloning_funcs",
+  "lesson_22_jit_performance",
+  "lesson_23_serialization",
+  "lesson_24_async",
+  "lesson_10_aot_compilation_generate",
+]
+halide_tutorial_image_io = [
+  "lesson_02_input_image",
+  "lesson_07_multi_stage_pipelines",
+  "lesson_08_scheduling_2",
+  "lesson_09_update_definitions",
+  "lesson_12_using_the_gpu",
+  "lesson_23_serialization",
+]
+halide_tutorial_group = [
+  ["lesson_04_debugging_2", "multithreaded"],
+  ["lesson_05_scheduling_1", "multithreaded"],
+  ["lesson_08_scheduling_2", "multithreaded"],
+  ["lesson_09_update_definitions", "multithreaded"],
+  ["lesson_12_using_the_gpu", "multithreaded"],
+  ["lesson_18_parallel_associative_reductions", "multithreaded"],
+  ["lesson_24_async", "multithreaded"],
+]
+halide_tutorial_generator = [
+  ["lesson_15_generate", "lesson_15_generators.cpp"],
+  ["lesson_16_rgb_generate", "lesson_16_rgb_generate.cpp"],
+  ["lesson_21_auto_scheduler_generate", "lesson_21_auto_scheduler_generate.cpp"],
+]
+halide_tutorial_lib = [
+  ["my_first_generator", "lesson_15_generate", "my_first_generator"],
+  ["my_second_generator_1", "lesson_15_generate", "my_second_generator"],
+  ["my_second_generator_2", "lesson_15_generate", "my_second_generator"],
+  ["my_second_generator_3", "lesson_15_generate", "my_second_generator"],
+  ["brighten_planar", "lesson_16_rgb_generate", "brighten"],
+  ["brighten_interleaved", "lesson_16_rgb_generate", "brighten"],
+  ["brighten_either", "lesson_16_rgb_generate", "brighten"],
+  ["brighten_specialized", "lesson_16_rgb_generate", "brighten"],
+  ["auto_schedule_false", "lesson_21_auto_scheduler_generate", "auto_schedule_gen"],
+  ["auto_schedule_true", "lesson_21_auto_scheduler_generate", "auto_schedule_gen"],
+]
+halide_tutorial_lib_param = [
+  ["my_second_generator_1", "parallel=false"],
+  ["my_second_generator_1", "scale=3.0"],
+  ["my_second_generator_1", "rotation=ccw"],
+  ["my_second_generator_1", "output.type=uint16"],
+  ["my_second_generator_2", "scale=9.0"],
+  ["my_second_generator_2", "rotation=ccw"],
+  ["my_second_generator_2", "output.type=float32"],
+  ["my_second_generator_3", "parallel=false"],
+  ["my_second_generator_3", "output.type=float64"],
+  ["brighten_planar", "layout=planar"],
+  ["brighten_interleaved", "layout=interleaved"],
+  ["brighten_either", "layout=either"],
+  ["brighten_specialized", "layout=specialized"],
+  ["auto_schedule_true", "autoscheduler.parallelism=32"],
+  ["auto_schedule_true", "autoscheduler.last_level_cache_size=16777216"],
+  ["auto_schedule_true", "autoscheduler.balance=40"],
+]
+halide_tutorial_lib_cmake_target = [
+  "brighten_planar",
+  "brighten_interleaved",
+  "brighten_either",
+  "brighten_specialized",
+  "auto_schedule_false",
+  "auto_schedule_true",
+]
+halide_tutorial_lib_scheduler = [["auto_schedule_true", "Mullapudi2016"]]
+halide_tutorial_run = [
+  ["lesson_16_rgb_run", "lesson_16_rgb_run.cpp"],
+  ["lesson_21_auto_scheduler_run", "lesson_21_auto_scheduler_run.cpp"],
+]
+halide_tutorial_run_dep = [
+  ["lesson_16_rgb_run", "brighten_planar"],
+  ["lesson_16_rgb_run", "brighten_interleaved"],
+  ["lesson_16_rgb_run", "brighten_either"],
+  ["lesson_16_rgb_run", "brighten_specialized"],
+  ["lesson_16_rgb_run", "Halide_ImageIO"],
+  ["lesson_16_rgb_run", "Halide_Tools"],
+  ["lesson_21_auto_scheduler_run", "auto_schedule_false"],
+  ["lesson_21_auto_scheduler_run", "auto_schedule_true"],
+  ["lesson_21_auto_scheduler_run", "Halide_Tools"],
+]
+halide_tutorial_run_group = [["lesson_21_auto_scheduler_run", "multithreaded"]]

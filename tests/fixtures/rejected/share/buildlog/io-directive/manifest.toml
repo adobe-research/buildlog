@@ -1,0 +1,5 @@
+# Rejected: the layer file carries its own IO directives.
+name = "io-directive"
+version = "0.1.0"
+rank = 5
+layers = ["io_directive.dl"]

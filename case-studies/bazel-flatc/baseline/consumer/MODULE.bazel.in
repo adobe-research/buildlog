@@ -1,0 +1,19 @@
+module(name = "bazel_flatc_case")
+
+# A consumer of flatbuffers' Bazel module, the way upstream's own
+# tests/bazel_repository_test_dir consumes it (local_path_override onto the
+# pinned checkout; run-bazel.sh fills in the path).
+#
+# apple_support first: its toolchain registration then precedes rules_cc's
+# auto-configured local_config_cc (the documented setup for macOS; it is also
+# what makes --platforms=@build_bazel_apple_support//platforms:darwin_x86_64
+# work). Without it, local_config_cc detects Homebrew's ld64.lld on PATH and
+# links with the invalid -fuse-ld=ld64.lld: (README, ledger).
+bazel_dep(name = "apple_support", version = "1.23.1", repo_name = "build_bazel_apple_support")
+bazel_dep(name = "flatbuffers", repo_name = "com_github_google_flatbuffers")
+local_path_override(
+    module_name = "flatbuffers",
+    path = "@FLATBUFFERS_SRC@",
+)
+
+bazel_dep(name = "rules_cc", version = "0.0.16")

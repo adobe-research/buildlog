@@ -1,0 +1,8 @@
+config_decl = [["release", "${EXAMPLE_PLATFORM}"]]
+config_decl_setting = [["release", "native.opt", "release"]]
+request_all = [["app"]]
+
+[target.app]
+native_kind = "executable"
+sources = ["main.cpp", "answer.const", "bonus.offset"]
+dep = { "constgen:rt" = "private", "offsetgen:rt" = "private" }

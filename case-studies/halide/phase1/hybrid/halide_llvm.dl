@@ -1,0 +1,114 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Hybrid sketch (M3 phase 1 assessment): FindHalide_LLVM.cmake's derivation as
+// Datalog over two binding sources, run with stock Soufflé by
+// option2_llvm_config.py --hybrid:
+//   - LLVM's configured values as tool_word rows, either from llvm-config
+//     (--source llvm-config) or read statically from LLVMConfig.cmake and the
+//     *ConfigVersion.cmake files by config_values.py (--source cmake-config);
+//   - rows of LLVMExports/ClangTargets/LLDTargets.cmake from buildlog-cpp's
+//     existing CMake-export importer (the imp_* inputs).
+// The heads mirror the importers' res_pkg_* rows (without the request column)
+// so they can be compared with Option 1. In buildlog this would be the
+// Halide rule package's layer writing dep/prop/target instead.
+
+.decl tool_word(query:symbol, i:number, w:symbol)          // llvm-config --<query>
+.decl lld_version(v:symbol)                                // ld.lld --version
+.decl lld_root(r:symbol)                                   // the LLD binding
+.decl clang_version(v:symbol)                              // clang-N --version
+.decl want_component(c:symbol, n:number, required:number)  // find_package(... COMPONENTS)
+.decl imp_target(t:symbol, kind:symbol)
+.decl imp_dep(t:symbol, d:symbol, vis:symbol, cond:symbol)
+.decl imp_prop(t:symbol, k:symbol, v:symbol, cond:symbol)
+.decl imp_location(t:symbol, p:symbol, cond:symbol)
+.input tool_word, lld_version, lld_root, clang_version, want_component
+.input imp_target, imp_dep, imp_prop, imp_location
+
+.decl res_pkg_target(t:symbol, kind:symbol)
+.decl res_pkg_dep(t:symbol, d:symbol, vis:symbol, cond:symbol)
+.decl res_pkg_prop(t:symbol, k:symbol, v:symbol, cond:symbol)
+.decl res_pkg_location(t:symbol, p:symbol, cond:symbol)
+.decl res_probe_setting(k:symbol, v:symbol)
+.decl error(msg:symbol)
+.output res_pkg_target, res_pkg_dep, res_pkg_prop, res_pkg_location, res_probe_setting, error
+
+// ---- facts about LLVM, from tool_word ----------------------------------------------
+.decl llvm_version(v:symbol)
+llvm_version(cat(a, ".", b, ".", c)) :-
+  tool_word("version", 0, a), tool_word("version", 1, b), tool_word("version", 2, c).
+.decl built(c:symbol)
+built(c) :- tool_word("targets-built", _, c).
+.decl dylib()
+dylib() :- tool_word("shared-mode", 0, "shared").
+
+// ---- FindHalide_LLVM.cmake ------------------------------------------------------
+// Halide_LLVM_SHARED_LIBS defaults to YES iff WebAssembly is built and LLVM
+// links its own dylib (lines 30-39); a cache override would be a pin.
+.decl shared()
+shared() :- dylib(), built("WebAssembly").
+// Clang and LLD must be the exact LLVM version (lines 50, 62).
+error(cat("Clang ", v, " is not LLVM ", l)) :- clang_version(v), llvm_version(l), v != l.
+.decl lld_ok()
+lld_ok() :- lld_version(v), llvm_version(v).
+// A component is found if LLVM built it; WebAssembly also needs LLD and must
+// not mix a static Halide with lld's shared LLVM (lines 58-97).
+.decl found(c:symbol)
+found(c) :- want_component(c, _, _), built(c), c != "WebAssembly".
+found("WebAssembly") :- want_component("WebAssembly", _, _), built("WebAssembly"), lld_ok(),
+  !static_with_dylib().
+.decl static_with_dylib()
+static_with_dylib() :- dylib(), !shared().
+error(cat("required LLVM component not found: ", c)) :- want_component(c, _, 1), !found(c).
+error("static LLVM (llvm_map_components_to_libnames) is not in this sketch") :- !shared().
+
+// Halide_LLVM::Core (lines 133-163).
+res_pkg_target("Halide_LLVM::Core", "interface").
+res_pkg_prop("Halide_LLVM::Core", "cc.define", substr(w, 2, strlen(w) - 2), "") :-
+  tool_word("cppflags", _, w), substr(w, 0, 2) = "-D", w != "-D_GLIBCXX_ASSERTIONS".
+res_pkg_prop("Halide_LLVM::Core", "cc.define", cat("LLVM_VERSION=", a, b), "") :-
+  tool_word("version", 0, a), tool_word("version", 1, b).
+res_pkg_prop("Halide_LLVM::Core", "cc.include_dir", d, "") :- tool_word("includedir", 0, d).
+res_pkg_dep("Halide_LLVM::Core", "LLVM", "public", "") :- shared().
+
+// Halide_LLVM::<comp> (lines 166-180).
+res_pkg_target(cat("Halide_LLVM::", c), "interface") :- found(c).
+res_pkg_dep(cat("Halide_LLVM::", c), "Halide_LLVM::Core", "public", "") :- found(c).
+res_pkg_prop("Halide_LLVM::WebAssembly", "cc.include_dir", cat(r, "/include"), "") :-
+  found("WebAssembly"), lld_root(r).
+res_pkg_dep("Halide_LLVM::WebAssembly", "lldWasm", "public", "") :- found("WebAssembly").
+res_pkg_dep("Halide_LLVM::WebAssembly", "lldCommon", "public", "") :- found("WebAssembly").
+
+// ---- imported artifacts: the closure of what the rules name, plus the tools ----
+.decl needed(t:symbol)
+needed(d) :- res_pkg_dep(_, d, _, _).
+needed("clang").
+needed("llvm-as").
+needed(d) :- needed(t), imp_dep(t, d, _, _).
+res_pkg_target(t, k) :- needed(t), imp_target(t, k).
+res_pkg_dep(t, d, v, c) :- needed(t), imp_dep(t, d, v, c).
+res_pkg_prop(t, k, v, c) :- needed(t), imp_prop(t, k, v, c).
+res_pkg_location(t, p, c) :- needed(t), imp_location(t, p, c).
+
+// ---- settings Halide's CMakeLists reads ------------------------------------------
+res_probe_setting("halide_llvm.version", v) :- llvm_version(v).
+res_probe_setting("halide_llvm.shared_libs", "YES") :- shared().
+res_probe_setting("halide_llvm.shared_libs", "NO") :- !shared().
+res_probe_setting("halide_llvm.rtti", "ON") :- tool_word("has-rtti", 0, "YES").
+res_probe_setting("halide_llvm.rtti", "OFF") :- tool_word("has-rtti", 0, "NO").
+// Halide_LLVM_COMPONENTS: the found components in request order, ;-joined.
+// Gated like core's ordered join: a tie (two components at one request index,
+// or one component at two) makes the order ill-formed, which is an error and
+// is not folded; otherwise each rank has one prefix, not one per choice (2^n).
+.decl ranked_bad()
+ranked_bad() :- want_component(a, n, _), want_component(b, n, _), a < b.
+ranked_bad() :- want_component(a, m, _), want_component(a, n, _), m < n.
+error("Halide_LLVM_COMPONENTS: two components share a request index, or one is requested twice") :-
+  ranked_bad().
+.decl ranked(c:symbol, r:number)
+ranked(c, r) :- found(c), want_component(c, n, _), !ranked_bad(),
+  r = count : { found(c2), want_component(c2, m, _), m < n }.
+.decl joined(r:number, s:symbol)
+joined(0, c) :- ranked(c, 0).
+joined(r + 1, cat(s, ";", c)) :- joined(r, s), ranked(c, r + 1).
+res_probe_setting("halide_llvm.components", s) :- joined(r, s), r = max x : { ranked(_, x) }.

@@ -1,0 +1,7 @@
+# Core-only: declares target namespace amba; defines amba::util and amba::only.
+name = "ids-amb-a"
+version = "0.1.0"
+rank = 1
+target_namespace = "amba"
+layers = []
+facts = ["facts.toml"]

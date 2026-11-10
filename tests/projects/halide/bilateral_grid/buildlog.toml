@@ -1,0 +1,4 @@
+# Halide is found on a search path, e.g. --package-path tests/fixtures/rule-packages.
+uses = ["buildlog-cpp", "halide"]
+source_root = "${HALIDE_SRC}/apps"
+spec = ["../workspace.toml", "project.toml"]

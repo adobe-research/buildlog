@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# python_bindings/halide/test/generators/CMakeLists.txt: the C++ generators
+# (a generator executable, a <n>_pystub module, and AOT libraries with their
+# extension modules) and the script generators (AOT libraries and modules).
+halide_py_cpp_generator = [
+  ["addconstantcpp", "addconstantcpp_generator.cpp"],
+  ["bitcpp", "bitcpp_generator.cpp"],
+  ["complexcpp", "complexcpp_generator.cpp"],
+  ["simplecpp", "simplecpp_generator.cpp"],
+  ["user_context", "user_context_generator.cpp"],
+]
+halide_py_py_generator = [
+  ["addconstantpy", "addconstantpy_generator.py"],
+  ["bitpy", "bitpy_generator.py"],
+  ["complexpy", "complexpy_generator.py"],
+  ["simplepy", "simplepy_generator.py"],
+]
+halide_py_lib = [
+  ["addconstantcpp", "addconstantcpp"],
+  ["addconstantcpp", "addconstantcpp_with_offset_42"],
+  ["addconstantcpp", "addconstantcpp_with_negative_offset"],
+  ["bitcpp", "bitcpp"],
+  ["complexcpp", "complexcpp"],
+  ["simplecpp", "simplecpp"],
+  ["user_context", "user_context"],
+  ["addconstantpy", "addconstantpy"],
+  ["addconstantpy", "addconstantpy_with_offset_42"],
+  ["addconstantpy", "addconstantpy_with_negative_offset"],
+  ["bitpy", "bitpy"],
+  ["complexpy", "complexpy"],
+  ["simplepy", "simplepy"],
+]
+halide_py_lib_feature = [["user_context", "user_context"]]
+# Types and sizes the stubs leave open, fixed for AOT (GENPARAMS_complexcpp/py).
+halide_py_lib_param = [
+  ["complexcpp", "simple_input.type=uint8"],
+  ["complexcpp", "tuple_output.type=float32,float32"],
+  ["complexcpp", "untyped_buffer_input.type=uint8"],
+  ["complexcpp", "untyped_buffer_output.type=uint8"],
+  ["complexcpp", "untyped_buffer_output.dim=3"],
+  ["complexpy", "simple_input.type=uint8"],
+  ["complexpy", "tuple_output.type=float32,float32"],
+  ["complexpy", "untyped_buffer_input.type=uint8"],
+  ["complexpy", "untyped_buffer_output.type=uint8"],
+  ["complexpy", "untyped_buffer_output.dim=3"],
+]
+# simplecpp and user_context are bound into one extension, so they share a
+# runtime (add_halide_runtime(multi_lib_runtime)).
+halide_py_lib_runtime = [
+  ["simplecpp", "multi_lib_runtime"],
+  ["user_context", "multi_lib_runtime"],
+]
+halide_py_multi = [["pyext_multi_method_module", "multi_method_module"]]
+halide_py_multi_lib = [
+  ["pyext_multi_method_module", 0, "simplecpp"],
+  ["pyext_multi_method_module", 1, "user_context"],
+]

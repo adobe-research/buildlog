@@ -1,0 +1,9 @@
+# app (a toy "compile") consumes blob, which runs gen and loads fmt. Nothing
+# says gen or fmt run during the build: blob's action names them.
+target = [["app"], ["blob"], ["gen"], ["fmt"]]
+execdemo_tool = [["app", "app.txt"], ["gen", "gen.sh"], ["fmt", "fmt.txt"]]
+execdemo_gen = [["blob", "gen", "halide_blob", "input.txt"]]
+execdemo_plugin = [["blob", "fmt"]]
+dep = [["app", "blob", "private"]]
+config_decl = [["cross", "toy-a"], ["native", "toy"]]
+request = [["app", "cross"]]

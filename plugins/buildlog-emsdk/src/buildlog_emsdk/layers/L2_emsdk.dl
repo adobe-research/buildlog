@@ -1,0 +1,65 @@
+// SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// L2 (buildlog-emsdk): Emscripten as a toolchain and its platform, what
+// Emscripten.cmake is to a CMake project. emsdk.py finds it from EMSDK; here
+// its rows become the wasm32-emscripten platform and the emscripten toolchain.
+// Provisional: just enough for the case studies.
+
+.decl req_emsdk_inventory(id:symbol)
+.decl domain_emsdk_inventory(id:symbol)
+req_emsdk_inventory("emsdk-inventory:default") :- config_decl(_, _).
+domain_emsdk_inventory("emsdk-inventory:default") :- config_decl(_, _).
+
+.decl res_cross_emsdk_status(req:symbol, found:symbol)
+.decl res_cross_emsdk_platform(req:symbol, p:symbol, triple:symbol)
+.decl res_cross_emsdk_platform_constraint(req:symbol, p:symbol, key:symbol, value:symbol)
+.decl res_cross_emsdk_toolchain(req:symbol, tc:symbol, family:symbol, version:symbol)
+.decl res_cross_emsdk_toolchain_tool(req:symbol, tc:symbol, role:symbol, path:symbol)
+.decl res_cross_emsdk_toolchain_runs_on(req:symbol, tc:symbol, p:symbol)
+.decl res_cross_emsdk_toolchain_target(req:symbol, tc:symbol, p:symbol)
+
+platform(p, triple) :- res_cross_emsdk_platform(req, p, triple), req_emsdk_inventory(req).
+platform_constraint(p, k, v) :- res_cross_emsdk_platform_constraint(req, p, k, v), req_emsdk_inventory(req).
+toolchain(tc, f, v) :- res_cross_emsdk_toolchain(req, tc, f, v), req_emsdk_inventory(req).
+toolchain_tool(tc, r, p) :- res_cross_emsdk_toolchain_tool(req, tc, r, p), req_emsdk_inventory(req).
+toolchain_runs_on(tc, p) :- res_cross_emsdk_toolchain_runs_on(req, tc, p), req_emsdk_inventory(req).
+cross_target(tc, p) :- res_cross_emsdk_toolchain_target(req, tc, p), req_emsdk_inventory(req).
+
+platform_vocabulary("os", "emscripten"). platform_vocabulary("cpu", "wasm32").
+platform_os_threads_arg("emscripten", ""). platform_os_dl_lib("emscripten", "").
+
+// ---- settings: what a wasm32-emscripten configuration may vary ----
+// Positions 0-2 are the native layer's. Both are build tools' defaults when
+// built for the host (exec value off) and are left out of configuration
+// names, so wasm32-emscripten.release.none keeps its name; the others read
+// .simd128, .threads, .simd128.threads.
+setting_key("emscripten.simd", 3).
+setting_value("emscripten.simd", "off"). setting_value("emscripten.simd", "simd128").
+setting_default("emscripten.simd", "off").
+setting_exec_value("emscripten.simd", "off").
+setting_name_elide("emscripten.simd", "off").
+setting_key("emscripten.threads", 4).
+setting_value("emscripten.threads", "off"). setting_value("emscripten.threads", "threads").
+setting_default("emscripten.threads", "off").
+setting_exec_value("emscripten.threads", "off").
+setting_name_elide("emscripten.threads", "off").
+error("an emscripten setting on a platform that is not emscripten", cat(k, "=", v, " in ", n)) :-
+  config_setting(c, k, v), (k = "emscripten.simd" ; k = "emscripten.threads"), v != "off",
+  config_platform(c, p), !platform_constraint(p, "os", "emscripten"), cfg_name(c, n).
+
+// The CPU features those settings enable, stated for rules that name neither
+// Emscripten nor its settings (buildlog-cpp's config_cpu_feature).
+config_cpu_feature(c, "simd128") :- config_setting(c, "emscripten.simd", "simd128").
+config_cpu_feature(c, "threads") :- config_setting(c, "emscripten.threads", "threads").
+
+// ---- ports: emcc's --use-port=<name>, a package the SDK provides ----
+// A project depends on emscripten::<port>; the flag reaches its compiles and
+// its link, as find_package would give an installed library's usage.
+.decl emscripten_port(name:symbol)
+emscripten_port("sdl2").
+.decl emscripten_port_target(name:symbol, t:symbol)
+emscripten_port_target(n, cat("emscripten::", n)) :- emscripten_port(n).
+imported(t), imported_kind(t, "interface"),
+prop(t, "cc.compile_flag", cat("--use-port=", n), "interface"),
+prop(t, "native.link_option", cat("--use-port=", n), "interface") :- emscripten_port_target(n, t).

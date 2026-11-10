@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: Copyright 2026 Adobe. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+name = "LLD"
+version = "21.1.8"
+rank = 4
+namespace = "lld"
+layers = ["LLD.dl"]
+facts = ["facts.toml"]
+requires = { buildlog-cpp = ">=0.1", LLVM = "==21.1.8" }
+imports = [
+  { format = "cmake", file = "../../../lib/cmake/lld/LLDTargets.cmake", namespace = "LLD" }
+]
+extends = [
+  "package_version",
+  "package_attr",
+]
+accepts = [
+  "lld_version",
+  "lld_include_dir",
+]
